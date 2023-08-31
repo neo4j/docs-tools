@@ -1,0 +1,21 @@
+extends: capitalization
+message: "'%s' should use sentence-style capitalization."
+link: 'https://developers.google.com/style/capitalization#capitalization-in-titles-and-headings'
+level: warning
+scope: heading
+match: $sentence
+# Exception should be made for product names
+exceptions:
+  - Aura
+  - AuraDB
+  - AuraDS
+  - BI
+  - Bloom
+  - Browser
+  - Community Edition
+  - Cypher
+  - Cypher Shell
+  - Desktop
+  - Enterprise 
+  - GDS
+  - Neo4j

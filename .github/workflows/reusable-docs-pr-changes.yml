@@ -1,0 +1,122 @@
+# Documentation Style Guide Lint
+# Uses Vale to lint documentation against the Documentation Style Guide
+# Current POC uses the Google style guide as a base set of rules
+# See .vale.ini for the current set of rules
+
+name: "Documentation Changelist"
+
+on:
+  workflow_call:
+    inputs:
+      pages-modified:
+        description: 'A list of asciidoc files changed in this PR'
+        type: string
+        default: ''
+      pages-added:
+        description: 'A list of asciidoc files added in this PR'
+        type: string
+        default: ''
+
+jobs:
+  save-changelog-comment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get deploy URL
+        id: get-deploy-url
+        env:
+          ORG: ${{ github.event.repository.owner.login }}
+          REPO: ${{ github.event.repository.name }}
+          DEPLOYID: ${{ github.event.number }}
+        run: |
+          deployurl=$ORG-$REPO-$DEPLOYID.surge.sh
+          echo "deploy-url=$deployurl" >> $GITHUB_OUTPUT
+
+      - name: Get page list for PR changelog
+        id: get-page-list
+        uses: actions/download-artifact@v3
+        with:
+          name: page-list
+
+            # tbc - checkout the script from a repo so all docs projects can reuse it
+      - name: Generate PR changelog comment
+        if: inputs.pages-modified != '' || inputs.pages-added != ''
+        uses: actions/github-script@v6.4.1
+        env:
+          WORKSPACE: ${{ github.workspace }}
+          DEPLOYURL: ${{ steps.get-deploy-url.outputs.deploy-url }}
+          MODIFIEDFILES: ${{ inputs.pages-modified }}
+          NEWFILES: ${{ inputs.pages-added }}
+        with:
+          script: |
+            var { readFileSync, writeFileSync } = require('fs');
+            const { MODIFIEDFILES, NEWFILES, DEPLOYURL, WORKSPACE } = process.env
+            const modifiedFiles = MODIFIEDFILES.split(',').slice(0,9)
+            const newFiles = NEWFILES.split(',').slice(0,9)
+            const pageFiles = JSON.parse(readFileSync(`${WORKSPACE}/pageList`))
+            const deployurl = `https://${DEPLOYURL}`
+            const preamble = `This PR includes documentation updates\n\View the updated docs at ${deployurl}`
+
+            let newFilesList = ''
+            let modifiedFilesList = ''
+            let others = []
+            
+            if (newFiles) {
+            const links = []
+            for (const file of newFiles) {
+                if (file.includes('/pages/')) {
+                if (Object.keys(pageFiles).includes(file)) {
+                    const url = pageFiles[file].url.replace("/index.html", "")
+                    const title = pageFiles[file].title
+                    links.push(`- [${title}](${deployurl}/${url})`)
+                } else {
+                    others.push(` - ${file} (**NEW**)`)
+                }
+                }
+            }
+            
+            if (links.length !== 0) {
+                newFilesList = `\n\nNew pages:\n${links.join('\n')}`
+            }
+            
+            }
+            
+            if (modifiedFiles) {
+            const links = []
+            for (const file of modifiedFiles) {
+                if (file.includes('/pages/')) {
+                if (Object.keys(pageFiles).includes(file)) {
+                    const url = pageFiles[file].url.replace("/index.html", "")
+                    const title = pageFiles[file].title
+                    links.push(`- [${title}](${deployurl}/${url})`)
+                } else {
+                    others.push(` - ${file} (updated)`)
+                }
+                }
+            }
+            
+            if (links.length !== 0) {
+                modifiedFilesList = `\n\nUpdated pages:\n${links.join('\n')}`
+            }
+            
+            }
+
+            let comment = preamble
+            
+            if (newFilesList !== '' || modifiedFilesList !== '') {
+            comment = comment.concat(newFilesList,modifiedFilesList)
+            console.log(`Comment: ${comment}`)
+            }
+
+            if (others.length !== 0) {
+            comment.concat(`\n\nNew or updated pages that are not in the deployed HTML:\n${others.join('\n')}`)
+            }
+            
+            writeFileSync(`${WORKSPACE}/changelog`, Buffer.from(comment));
+
+      - name: Upload changelog
+        if: ${{ hashFiles('changelog') != '' }}
+        uses: actions/upload-artifact@v3
+        with:
+            name: docs
+            path: changelog

@@ -1,0 +1,23 @@
+# header and navigation links
+/docs/$
+/docs/.*/current/$
+/docs/aura/?$
+/docs/aura/auradb/?$
+/docs/aura/aurads/?$
+/docs/driver-manual/1.7/$
+/docs/kafka
+/docs/spark/$
+
+/developer/
+/labs/
+/assets/
+/download/
+_/fonts/
+
+# footer links
+docs.google.com
+twitter.com
+
+# graph academy
+graphacademy.neo4j.com
+neo4j.com/graphacademy/

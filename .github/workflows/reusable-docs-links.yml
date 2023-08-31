@@ -1,0 +1,79 @@
+name: Check links
+
+on:
+  workflow_call:
+    inputs:
+      package-script:
+        description: 'The name of the script to run in package.json '
+        type: string
+        default: 'check-links'
+      retain-artifacts:
+        description: 'The number of days to retain artifacts'
+        type: number
+        default: 7
+  workflow_dispatch:
+    inputs:
+      package-script:
+        description: 'The name of the script to run in package.json '
+        required: true
+        type: string
+        default: 'check-links'
+      retain-artifacts:
+        description: 'The number of days to retain artifacts'
+        type: number
+        default: 7
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+
+    env:
+      PACKAGE_SCRIPT: ${{ inputs.package-script }}
+
+    steps:    
+    - name: Checkout package file
+      uses: actions/checkout@v3
+      with:
+        sparse-checkout: |
+          package.json
+          scripts/
+        sparse-checkout-cone-mode: false
+
+    - name: Download HTML
+      uses: actions/download-artifact@v3
+      with:
+        name: docs
+        path: build
+
+    - name: Use Node.js 16
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install link checker
+      run: npm install github:recrwplay/link-checker#v0.2.0
+
+    - name: Run package script
+      run: |
+        npm run $PACKAGE_SCRIPT |& tee link-log.txt
+        warncount=$(grep -e "[0-9]* warnings" -o link-log.txt | sed 's/ warnings//' )
+        if [ $warncount -gt 0 ]; then
+          echo "::warning:: $warncount warnings"
+        fi
+        errorcount=$(grep -e "[0-9]* errors" -o link-log.txt | sed 's/ errors//' )
+        if [ $errorcount -gt 0 ]; then
+          echo "::error:: Errors found: See the output of the Check links step for details"
+          exit 1
+        fi
+
+    # upload artifacts
+
+    - name: Save log
+      uses: actions/upload-artifact@v3
+      with:
+        name: linklog
+        path: link-log.txt
+
+    # if errors, raise an issue in the repo and exit 1 to fail the workflow
+    # tbc...
+    # create an action. action needs authed token. attach log to issue. extract errors as issue text?

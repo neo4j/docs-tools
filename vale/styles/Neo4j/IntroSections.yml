@@ -1,0 +1,10 @@
+extends: existence
+scope: paragraph
+message: Try to avoid using '%s' to introduce content.
+level: suggestion
+ignorecase: false
+tokens:
+    - This manual
+    - This chapter
+    - This section
+    - This page

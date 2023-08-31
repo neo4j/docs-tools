@@ -1,0 +1,7 @@
+extends: existence
+scope: paragraph
+message: Use a new line for each sentence in a paragraph of text.
+level: warning
+ignorecase: false
+raw:
+    - '\. +\S'
