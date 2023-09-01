@@ -1,0 +1,8 @@
+# Docs tools
+
+Use these docs to test workflows and extensions.
+
+## Include test
+
+include::partial$include-target.adoc[]
+

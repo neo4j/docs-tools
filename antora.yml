@@ -1,0 +1,6 @@
+name: docs-tools
+title: Docs Tools
+version: 'dev'
+start_page: ROOT:index.adoc
+nav:
+- modules/ROOT/content-nav.adoc
