@@ -1,0 +1,14 @@
+{
+  "name": "@neo4j-antora/antora-unlisted-pages",
+  "version": "0.1.0",
+  "description": "An Antora 3 extension to detect pages not found in the navigation",
+  "main": "unlisted-pages.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "antora"
+  ],
+  "author": "Neo4j",
+  "license": "MIT"
+}

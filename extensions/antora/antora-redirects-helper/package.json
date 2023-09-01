@@ -1,0 +1,14 @@
+{
+  "name": "@neo4j-antora/aliases-redirects",
+  "version": "0.2.0",
+  "description": "Help with redirects and page aliases",
+  "main": "redirects-helper.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "antora"
+  ],
+  "author": "Neo4j",
+  "license": "MIT"
+}
