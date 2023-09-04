@@ -71,7 +71,7 @@ jobs:
         shell: bash
         env:
           DEPLOY_URL: ${{ steps.get-deploy-url.outputs.deploy-url }}
-          SURGE_TOKEN: "${{ secrets.SURGE_TOKEN }}"
+          SURGE_TOKEN: "${{ secrets.DOCS_SURGE_TOKEN }}"
         run: |
           npm install -g surge
           surge ./site $DEPLOY_URL --token "$SURGE_TOKEN"
@@ -86,7 +86,7 @@ jobs:
           recreate: true
           header: docs-pr-changes
           path: changelog
-          GITHUB_TOKEN: ${{ secrets.PR_COMMENT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.DOCS_PR_COMMENT_TOKEN }}
 
       # If there's no changelog, add a generic comment to the PR
       - name: Comment on PR (no changelog)
@@ -101,25 +101,4 @@ jobs:
             Looks like you've updated the documentation!
 
             Check out your changes at https://${{ env.DEPLOY_URL }}
-          GITHUB_TOKEN: ${{ secrets.PR_COMMENT_TOKEN }}
-
-
-      # These next steps are experimental
-      # They requires an authorised github app
-      # The app key is used to generate a token, which is used to add a check to the PR
-      # It puts the status of this workflow into the PR checks so it is easier to spot when it fails
-      # - uses: tibdex/github-app-token@v1
-      #   id: get-installation-token
-      #   with: 
-      #     app_id: 377941
-      #     private_key: ${{ secrets.CHECKS_APP_TOKEN }}
-
-
-      # - name: Add Check status to PR
-      #   uses: LouisBrunner/checks-action@v1.6.2
-      #   if: always()
-      #   with:
-      #     sha: ${{ github.event.workflow_run.head_sha }}
-      #     token: ${{ steps.get-installation-token.outputs.token }}
-      #     name: Docs deploy
-      #     conclusion: ${{ job.status }}
+          GITHUB_TOKEN: ${{ secrets.DOCS_PR_COMMENT_TOKEN }}
