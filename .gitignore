@@ -105,3 +105,9 @@ dist
 
 # Antora
 build/
+
+# Exclude external styles
+vale/styles
+!vale/styles/Neo4j
+!vale/styles/Vocab
+!vale/styles/Experimental
