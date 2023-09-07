@@ -1,6 +1,15 @@
-Cypher
+Apache Arrow
+AuraDB Enterprise
+AuraDB Free
+AuraDB Professional
+AuraDS Enterprise
+AuraDS Professional
 Neo4j Aura
 Neo4j AuraDB
 Neo4j AuraDS
 Neo4j Bloom
 Neo4j Browser
+Neo4j Cypher Shell
+Neo4j Desktop
+Neo4j Server
+Spring Boot

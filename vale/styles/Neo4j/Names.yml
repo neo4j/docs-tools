@@ -3,3 +3,4 @@ message: Use '%s' instead of '%s'.
 level: error
 swap:
   - neo4j: Neo4j
+  - cypher: Cypher
