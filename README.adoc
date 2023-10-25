@@ -2,3 +2,19 @@
 
 The `docs-tools` repository contains tools owned and maintained by the Neo4j documentation team, including Github workflows, Antora and AsciiDoctor extensions.
 
+## Adding a workflow from this repo
+
+### Add `antora-page-list`
+
+To both `package.json` and to `preview.yml`
+
+### Authorise GitHub Actions
+
+Make sure the following workflows are allowed in the repo `Settings -> Actions -> General`:
+
+* neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@dev,
+* neo4j/docs-tools/.github/workflows/reusable-docs-pr-changes.yml@dev,
+* neo4j/docs-tools/.github/workflows/reusable-docs-vale.yml@dev,
+* neo4j/docs-tools/.github/workflows/reusable-docs-verify.yml@dev,
+* tj-actions/changed-files@v37
+* errata-ai/vale-action@reviewdog
