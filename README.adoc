@@ -2,7 +2,7 @@
 
 The `docs-tools` repository contains tools owned and maintained by the Neo4j documentation team, including Github workflows, Antora and AsciiDoctor extensions.
 
-## Adding sworkflows from this repo
+## Adding workflows from this repo
 
 ### Copy the workflow files
 
