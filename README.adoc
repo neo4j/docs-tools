@@ -23,7 +23,9 @@ errata-ai/vale-action@reviewdog
 
 ### Add the `antora-page-list` extension (optional)
 
-If you want to use the link:https://www.npmjs.com/package/@neo4j-antora/antora-page-list[antora-page-list] extension, you need to install it in your repo (if it not already).
+If you do **not** want to use the link:https://www.npmjs.com/package/@neo4j-antora/antora-page-list[antora-page-list] extension, set `pageList: false` in the `docs-build-pr` job within `docs-pr-checks.yml`.
+
+Otherwise, you need to install it in your repo (if it is not already).
 
 Add the following to `package.json`:
 
@@ -39,5 +41,3 @@ antora:
   extensions:
   - require: "@neo4j-antora/antora-page-list"
 ```
-
-If you do **not** want to use it, set `pageList: false` in the `docs-build-pr` job within `docs-pr-checks.yml`.
