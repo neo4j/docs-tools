@@ -14,7 +14,7 @@ on:
         type: string
       vale-config-file:
         description: 'The vale ini file to use'
-        default: './vale/.vale.ini'
+        default: './lint/vale/.vale.ini'
         type: string
       use-default-rules:
         description: 'Use default rules'
@@ -40,7 +40,7 @@ on:
         type: string
       vale-config-file:
         description: 'The vale ini file to use'
-        default: './vale/.vale.ini'
+        default: './lint/vale/.vale.ini'
         type: string
       use-default-rules:
         description: 'Use default rules'
