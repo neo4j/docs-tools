@@ -41,3 +41,7 @@ antora:
   extensions:
   - require: "@neo4j-antora/antora-page-list"
 ```
+
+## Using Vale
+
+Vale-specific instructions are in the link:vale/README.adoc[Vale README].
