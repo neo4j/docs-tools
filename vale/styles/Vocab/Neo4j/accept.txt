@@ -1,15 +1,21 @@
 Apache Arrow
+Apache Spark
+Apache Kafka
 AuraDB Enterprise
 AuraDB Free
 AuraDB Professional
 AuraDS Enterprise
 AuraDS Professional
+Graph Data Science
 Neo4j Aura
 Neo4j AuraDB
 Neo4j AuraDS
 Neo4j Bloom
 Neo4j Browser
+Neo4j Connector
 Neo4j Cypher Shell
+Neo4j Data Importer
 Neo4j Desktop
 Neo4j Server
+Neo4j Workspace
 Spring Boot
