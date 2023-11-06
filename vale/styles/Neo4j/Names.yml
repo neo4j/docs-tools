@@ -1,10 +1,11 @@
 extends: substitution
 message: Use '%s' instead of '%s'.
 level: error
+ignorecase: true
 action:
   name: replace
 swap:
   - neo4j: Neo4j
   - cypher: Cypher
-  - (?i)aurads: AuraDS
-  - (?i)auradb: AuraDB
+  - aurads: AuraDS
+  - auradb: AuraDB

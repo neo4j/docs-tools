@@ -1,11 +1,11 @@
-Apache Arrow
-Apache Spark
-Apache Kafka
+API
+APOC
 AuraDB Enterprise
 AuraDB Free
 AuraDB Professional
 AuraDS Enterprise
 AuraDS Professional
+CSV
 Graph Data Science
 Neo4j Aura
 Neo4j AuraDB
@@ -18,4 +18,4 @@ Neo4j Data Importer
 Neo4j Desktop
 Neo4j Server
 Neo4j Workspace
-Spring Boot
+Python
