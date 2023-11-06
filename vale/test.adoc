@@ -6,3 +6,10 @@ Open Neo4j AuraDb.
 Use AuraDB enterprise.
 Use Neo4j AuraDb enterprise.
 Read the cypher cheatsheet.
+
+Test the ParaNewLine rule. Added for this reason.
+ParaNewLine should not interfere with lists:
+
+. First item. Always at the top.
+. Second item.
+. Third item.
