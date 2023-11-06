@@ -8,3 +8,4 @@ vale/test.adoc:7:5:Vale.Terms:Use 'Neo4j AuraDB' instead of 'Neo4j AuraDb'.
 vale/test.adoc:7:11:Neo4j.Names:Use 'AuraDB' instead of 'AuraDb'.
 vale/test.adoc:8:10:Neo4j.Names:Use 'Cypher' instead of 'cypher'.
 vale/test.adoc:10:26:Neo4j.ParaNewLine:Use a new line for each sentence in a paragraph of text.
+vale/test.adoc:13:13:Neo4j.ParaNewLine:Use a new line for each sentence in a paragraph of text.
