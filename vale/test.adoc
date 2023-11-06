@@ -1,6 +1,7 @@
 Use the Neo4j browser.
 Use the browser.
 Use neo4j.
+Run AuraDb.
 Open Neo4j AuraDb.
 Use AuraDB enterprise.
 Use Neo4j AuraDb enterprise.
