@@ -36,4 +36,9 @@ NOTE: Any styles added to the `vale/styles` directory except our custom ones are
 
 You can add terms with their accepted spelling in the `accept.txt` file(s) within the `vale/Vocab` subdirectories.
 
-NOTE: Do not add entries where an entry fully contains another one, such as `Neo4j` and `Neo4j Aura`. Use the `Neo4j/Names.yml` rule for single words instead.
+NOTE: Do not add entries where an entry fully contains another one, such as `Neo4j` and `Neo4j Aura`.
+Use the `Neo4j/Names.yml` rule for single words instead.
+
+## Run tests
+
+After any update, run the `test-script.sh` script and inspect any differences in the test results file.
