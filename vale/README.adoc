@@ -41,4 +41,4 @@ Use the `Neo4j/Names.yml` rule for single words instead.
 
 ## Run tests
 
-After any update, run the `test-vale.sh` script and inspect any differences in the test results file.
+After any update, run the `test-script.sh` script and inspect any differences in the test results file.
