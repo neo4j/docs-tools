@@ -2,15 +2,15 @@
 
 The `docs-tools` repository contains tools owned and maintained by the Neo4j documentation team, including Github workflows, Antora and AsciiDoctor extensions.
 
-## Adding workflows from this repo
+## Adding workflows from this repository
 
 ### Copy the workflow files
 
-Copy the `docs-*.yml` files from this repo to your `.github/workflows` directory.
+Copy the `docs-*.yml` files from this repository to your `.github/workflows` directory.
 
-### Authorise the GitHub Actions
+### Authorize the GitHub Actions
 
-Make sure the following workflows are allowed in your repo under `Settings -> Actions -> General`:
+Make sure the following workflows are allowed in your repository under `Settings -> Actions -> General`:
 
 ```
 neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@dev,
@@ -25,17 +25,17 @@ errata-ai/vale-action@reviewdog
 
 If you do **not** want to use the link:https://www.npmjs.com/package/@neo4j-antora/antora-page-list[antora-page-list] extension, set `pageList: false` in the `docs-build-pr` job within `docs-pr-checks.yml`.
 
-Otherwise, you need to install it in your repo (if it is not already).
+Otherwise, you need to install it in your repository (if it is not already).
 
-Add the following to `package.json`:
-
+. Add the following to `package.json`:
++
 ```
 "@neo4j-antora/antora-page-list": "^0.1.1",
 ```
 
-Then, run `npm install`.
-After installation, add the following to `preview.yml` and/or `publish.yml`:
-
+. Run `npm install`.
+. Add the following to `preview.yml` and/or `publish.yml`:
++
 ```
 antora:
   extensions:
