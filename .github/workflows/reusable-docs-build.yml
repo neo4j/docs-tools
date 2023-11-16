@@ -1,0 +1,98 @@
+name: Generate HTML
+
+on:
+  workflow_call:
+    inputs:
+      package-script:
+        description: 'The name of the script to run in package.json '
+        type: string
+        default: 'build-verify'
+      deploy-id:
+        description: 'The Deploy ID or PR number if workflow called by a PR'
+        required: true
+        type: number
+        default: 0
+      retain-artifacts:
+        description: 'The number of days to retain artifacts'
+        type: number
+        default: 7
+      pageList:
+        description: 'Upload page list artifact'
+        type: boolean
+        default: false
+    outputs:
+        pages-listed:
+          description: "Page list artifact was uploaded"
+          value: ${{ jobs.build-docs.outputs.pages-listed }}
+  workflow_dispatch:
+    inputs:
+      package-script:
+        description: 'The name of the script to run in package.json '
+        required: true
+        type: string
+        default: 'build-verify'
+      deploy-id:
+        description: 'A deploy ID'
+        required: true
+        type: number
+        default: 0
+      retain-artifacts:
+        description: 'The number of days to retain artifacts'
+        type: number
+        default: 7
+      pageList:
+        description: 'Upload page list artifact'
+        required: false
+        type: boolean
+        default: false
+
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    outputs:
+      pages-listed: ${{ steps.page-list-artifact.outcome }}
+
+    env:
+      PACKAGE_SCRIPT: ${{ inputs.package-script }}
+      DEPLOY_ID: ${{ inputs.deploy-id }}
+
+    steps:    
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js 16
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install dependencies
+      run: npm install --omit=dev
+
+    - name: Run package script
+      run: npm run $PACKAGE_SCRIPT
+
+    - name: Save event-id
+      run: echo $DEPLOY_ID > ./build/deployid
+
+    - name: Upload HTML artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs
+        path: build/
+        retention-days: ${{ inputs.retain-artifacts }}          
+
+    - name: Upload Log artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: antora-log
+        path: build/log
+        retention-days: ${{ inputs.retain-artifacts }}
+
+    - name: Upload Page List artifact
+      id: page-list-artifact
+      if: ${{ inputs.pageList }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: page-list
+        path: build/site/.meta/pageList
+        retention-days: ${{ inputs.retain-artifacts }}
