@@ -1,0 +1,31 @@
+name: Verify HTML
+
+on:
+  workflow_call:
+    inputs:
+      failOnErrors:
+        description: 'Fail on log errors (boolean)'
+        type: boolean
+        default: true
+      failOnWarnings:
+        description: 'Fail on log warnings (boolean)'
+        type: boolean
+        default: false
+        
+jobs:
+  log-report:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Download Antora log
+      uses: actions/download-artifact@v3
+      with:
+        name: antora-log
+
+    - name: Analyze Antora log
+      id: antora-log-check-test
+      uses: recrwplay/antora-log-analyzer@main
+      with:
+        fail-on-errors: ${{ inputs.failOnErrors }}
+        fail-on-warnings: ${{ inputs.failOnWarnings }}
