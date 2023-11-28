@@ -29,7 +29,3 @@ asciidoc:
 ```
 
 If you don't add `page-terms-marker`, the default value is used. The default value is `&reg;`
-
-## Limitationa and known issues
-
-The extension reads the document blocks and matches 
