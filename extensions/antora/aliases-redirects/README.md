@@ -1,4 +1,4 @@
-# liases-redirects
+# aliases-redirects
 
 Use the `aliases-redirects` extension to modify the default Antora sitemap generation.
 
