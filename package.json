@@ -22,7 +22,6 @@
   "dependencies": {
     "@antora/cli": "^3.1.4",
     "@antora/site-generator-default": "^3.1.4",
-    "@neo4j-antora/antora-modify-sitemaps": "^0.4.4",
     "@recrwplay/link-checker": "github:recrwplay/link-checker#v0.2.0"
   },
   "devDependencies": {

@@ -5,7 +5,7 @@ site:
 content:
   sources:
   - url: ./
-    branches: ['main', 'dev']
+    branches: ['dev']
     exclude:
     - '!**/_includes/*'
     - '!**/readme.adoc'
@@ -25,10 +25,9 @@ antora:
     sitemap_version: 'dev'
     sitemap_loc_version: 'current'
     move_sitemaps_to_components: true
-  - require: "./scripts/pageList.js"
-
-urls:
-  html_extension_style: indexify
+  - require: "./extensions/antora/antora-page-list/page-list.js"
+  - require: "./extensions/antora/aliases-redirects/aliases-redirects.js"
+    redirect_format: neo4j
 
 asciidoc:
   attributes:

@@ -162,24 +162,37 @@ module.exports.register = function ({ config }) {
     // generate specific Neo4j nginx redirects if the playbook specifies redirect_facility: neo4j
     if (playbook.urls.redirectFacility !== 'neo4j') return
 
-    const aliases = contentCatalog.findBy({ family: 'alias' })
     const delegate = this.getFunctions().produceRedirects
     this.replaceFunctions({
       produceRedirects(playbook, aliases) {
-        const siteUrl = playbook.site.url
+
+        if (!aliases.length) return []
+
+        let siteUrl = playbook.site.url
+        if (siteUrl) siteUrl = stripTrailingSlash(siteUrl, '')
+
+        // for local builds publish a site index page
+        // with a static redirect to the home page specified in the playbook
+        populateStaticRedirectFiles(
+          aliases.filter((it) => it.out && it.pub.url === '/'),
+          siteUrl
+        )
+        // create a file containing redirects
         return createNeoRewriteConf(aliases, extractUrlPath(siteUrl))
       }
 
     })
 
-  }) 
+  })
 
   function createNeoRewriteConf (files, urlPath) {
     const componentList = files.map((file) => { return file.src.component })
     const uniqueComponents = Array.from(new Set(componentList));
     let rewriteFiles = []
-    uniqueComponents.forEach((component) => {
-      const filteredFiles = files.filter(file => file.src.component === component && file.pub.url !== '/')
+    uniqueComponents
+    .filter(component => component !== 'ROOT')
+    .forEach((component) => {
+      const filteredFiles = files.filter(file => file.src.component === component )
       const rules = filteredFiles.map((file) => {
         delete file.out
         let fromUrl = file.pub.url
@@ -189,11 +202,12 @@ module.exports.register = function ({ config }) {
         toUrl = ~toUrl.indexOf('%20') ? `'${urlPath}${toUrl.replace(ENCODED_SPACE_RX, ' ')}'` : stripTrailingSlash(urlPath) + ensureTrailingSlash(toUrl)
         if (fromUrl === toUrl) return // don't redirect to the same url
         return `rewrite ^${fromUrl}? ${toUrl} permanent;`
-
       })
       if (rules.length) {
         logger.info({  }, 'Generating %d Neo4j %s for %s', rules.length, pluralize(rules.length, 'redirect'), component)
         rewriteFiles.push(new File({ contents: Buffer.from(rules.join('\n') + '\n'), out: { path: `.etc/nginx/redirects-${component}.conf` } }))
+      } else {
+        logger.info({  }, 'No Neo4j redirects for \'%s\'', component)
       }
   
     })
@@ -222,3 +236,38 @@ function stripTrailingSlash (str) {
   const lastIdx = str.length - 1
   return str.charAt(lastIdx) === '/' ? str.substr(0, lastIdx) : str
 }
+
+  // copy of the same function in @antora/redirect-producer
+  function populateStaticRedirectFiles (files, siteUrl) {
+    files.forEach((file) => (file.contents = Buffer.from(createStaticRedirectContents(file, siteUrl) + '\n')))
+    return []
+  }
+
+  // copy of the same function in @antora/redirect-producer
+  function createStaticRedirectContents (file, siteUrl) {
+    const targetUrl = file.rel.pub.url
+    let linkTag
+    let to = targetUrl.charAt() === '/' ? computeRelativeUrlPath(file.pub.url, targetUrl) : undefined
+    let toText = to
+    if (to) {
+      if (siteUrl && siteUrl.charAt() !== '/') {
+        linkTag = `<link rel="canonical" href="${(toText = siteUrl + targetUrl)}">\n`
+      }
+    } else {
+      linkTag = `<link rel="canonical" href="${(toText = to = targetUrl)}">\n`
+    }
+    return `<!DOCTYPE html>
+  <meta charset="utf-8">
+  ${linkTag || ''}<script>location="${to}"</script>
+  <meta http-equiv="refresh" content="0; url=${to}">
+  <meta name="robots" content="noindex">
+  <title>Redirect Notice</title>
+  <h1>Redirect Notice</h1>
+  <p>The page you requested has been relocated to <a href="${to}">${toText}</a>.</p>`
+  }
+
+  // copy of the same function in @antora/redirect-producer
+  function computeRelativeUrlPath (from, to) {
+    if (to === from) return to.charAt(to.length - 1) === '/' ? './' : path.basename(to)
+    return (path.relative(path.dirname(from + '.'), to) || '.') + (to.charAt(to.length - 1) === '/' ? '/' : '')
+  }
