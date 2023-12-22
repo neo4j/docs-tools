@@ -11,7 +11,7 @@ on:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: '-- --extension ./extensions/antora/antora-page-list'
+        default: '-- --extension ./.docs-tools/extensions/antora/antora-page-list'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
@@ -78,7 +78,7 @@ jobs:
         ref: dev
         sparse-checkout: |
           extensions/antora
-        path: extensions/antora
+        path: .docs-tools
 
     - name: Use Node.js 16
       uses: actions/setup-node@v3
