@@ -31,6 +31,11 @@ on:
         required: true
         type: string
         default: 'build-verify'
+      cli-options:
+        description: 'Options to pass to the build script'
+        required: false
+        type: string
+        default: '-- --extension ./extensions/antora/antora-page-list'
       deploy-id:
         description: 'A deploy ID'
         required: true
@@ -56,9 +61,19 @@ jobs:
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
+      CLI_OPTIONS: ${{ inputs.cli-options }}
 
     steps:    
     - uses: actions/checkout@v3
+
+    - name: Checkout tools repo
+      uses: actions/checkout@v4
+      with:
+        repository: neo4j/docs-tools
+        ref: dev
+        sparse-checkout: |
+          extensions/antora
+        path: extensions/antora
 
     - name: Use Node.js 16
       uses: actions/setup-node@v3
@@ -69,7 +84,7 @@ jobs:
       run: npm install --omit=dev
 
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT
+      run: npm run $PACKAGE_SCRIPT $CLI_OPTIONS
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
