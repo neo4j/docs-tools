@@ -24,7 +24,7 @@ on:
       pageList:
         description: 'Upload page list artifact'
         type: boolean
-        default: false
+        default: true
     outputs:
         pages-listed:
           description: "Page list artifact was uploaded"
@@ -54,7 +54,7 @@ on:
         description: 'Upload page list artifact'
         required: false
         type: boolean
-        default: false
+        default: true
 
 
 jobs:
