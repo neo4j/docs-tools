@@ -40,7 +40,7 @@ on:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: '-- --extension ./extensions/antora/antora-page-list'
+        default: '-- --extension ./.docs-tools/extensions/antora/antora-page-list'
       deploy-id:
         description: 'A deploy ID'
         required: true
