@@ -7,6 +7,11 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'build-verify'
+      cli-options:
+        description: 'Options to pass to the build script'
+        required: false
+        type: string
+        default: '-- --extension ./extensions/antora/antora-page-list'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
