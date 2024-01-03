@@ -11,7 +11,7 @@ on:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: '-- --extension ./.docs-tools/extensions/antora/antora-page-list'
+        default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
@@ -40,7 +40,7 @@ on:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: '-- --extension ./.docs-tools/extensions/antora/antora-page-list'
+        default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
       deploy-id:
         description: 'A deploy ID'
         required: true
@@ -89,7 +89,7 @@ jobs:
       run: npm install --omit=dev
 
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT $CLI_OPTIONS
+      run: npm run $PACKAGE_SCRIPT -- $CLI_OPTIONS
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
