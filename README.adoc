@@ -17,7 +17,7 @@ neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@dev,
 neo4j/docs-tools/.github/workflows/reusable-docs-pr-changes.yml@dev,
 neo4j/docs-tools/.github/workflows/reusable-docs-vale.yml@dev,
 neo4j/docs-tools/.github/workflows/reusable-docs-verify.yml@dev,
-tj-actions/changed-files@v37,
+tj-actions/changed-files@v41,
 errata-ai/vale-action@reviewdog
 ```
 
