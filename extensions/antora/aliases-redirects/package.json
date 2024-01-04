@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/aliases-redirects",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Help with redirects and page aliases",
   "main": "aliases-redirects.js",
   "scripts": {

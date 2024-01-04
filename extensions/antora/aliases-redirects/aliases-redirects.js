@@ -3,6 +3,10 @@ const File = require('vinyl')
 
 module.exports.register = function ({ config }) {
 
+  const { playbook } = this.getVariables()
+
+  const { redirectFormat = 'neo4j', aliasLogLevel = playbook.asciidoc.attributes.aliasLogLevel || 'info', logFoundAliases = playbook.asciidoc.attributes.logFoundAliases || false } = config
+
   const pluralize = (count, noun, suffix = 's', plural = '') => {
     if (count !== 1) {
       return plural !== '' ? plural : `${noun}${suffix}`
@@ -16,7 +20,6 @@ module.exports.register = function ({ config }) {
   .on('contextStarted', () => {
 
     // set the redirect_facility to the value in the playbook
-    const { redirectFormat } = config
     if (!redirectFormat) return
     const { playbook } = this.getVariables()
     playbook.urls.redirectFacility = redirectFormat
@@ -108,7 +111,7 @@ module.exports.register = function ({ config }) {
           // alias.pub.url is constructed from the page-alias value
           // alias.rel.pub.url is constructed from the output path of the file that contains the page-alias
 
-          if (aliasesToHere.length > 0) {
+          if (aliasesToHere.length > 0 && logFoundAliases) {
             aliasesToHere.forEach(alias => {
               // console.log(alias.rel.pub)
               // console.log(alias.pub)
@@ -117,6 +120,12 @@ module.exports.register = function ({ config }) {
               logger.info({ 'file': page.src, 'source': page.src.origin  }, 'Alias %s found for %s (%s) which was removed from %s to %s', alias.rel.pub.url, page.src.relative, page.asciidoc.doctitle, redirectFromVersion, redirectToVersion)
             })
             return // nothing to do here if there is at least one alias to this page
+          }
+
+          // return if the page has a page-moved-to attribute, indicating that it has been moved outside this component
+          if (page.asciidoc.attributes['page-moved-to'] && logFoundAliases) {
+            logger.info({ 'file': page.src, 'source': page.src.origin  }, 'Page %s (%s) has been moved to %s', page.src.relative, page.asciidoc.doctitle, page.asciidoc.attributes['page-moved-to'])
+            return
           }
 
           // the path we need to redirect from is the old path but with the new version
@@ -145,7 +154,7 @@ module.exports.register = function ({ config }) {
             })
     
           } else {
-            logger.info({ 'file': page.out.dirname, 'source': page.src.origin  }, 'No aliases found for %s (%s) which was removed in version %s', page.src.path, searchTitle, redirectToVersion)
+            logger[aliasLogLevel]({ 'file': page.out.dirname, 'source': page.src.origin  }, 'No aliases found for %s (%s) which was removed in version %s', page.src.path, searchTitle, redirectToVersion)
           }
     
         })
