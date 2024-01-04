@@ -2,7 +2,7 @@
 name: "Verify Branch"
 
 on:
-  push:
+  # push:
     # branches:
     # - dev
   # schedule:
