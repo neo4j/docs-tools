@@ -3,8 +3,8 @@ name: "Verify Branch"
 
 on:
   push:
-    branches:
-    - dev
+    # branches:
+    # - dev
   # schedule:
     # - cron:  '00 16 * * *'
   workflow_dispatch:
