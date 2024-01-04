@@ -7,10 +7,28 @@ on:
     - dev
   # schedule:
     # - cron:  '00 16 * * *'
+  workflow_dispatch:
+    inputs:
+      html:
+        description: 'Generate HTML'
+        type: boolean
+        required: false
+        default: true
+      links:
+        description: 'Check links'
+        type: boolean
+        required: false
+        default: true
+      lint:
+        description: 'Lint docs'
+        type: boolean
+        required: false
+        default: true
 
 jobs:
 
   docs-build:
+    if: ${{ inputs.html }}
     name: Generate HTML
     uses: neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@main
     with:
@@ -25,10 +43,12 @@ jobs:
     uses: neo4j/docs-tools/.github/workflows/reusable-docs-verify.yml@main
 
   docs-links:
+    if: ${{ inputs.links }}
     name: Check links
     needs: docs-build
     uses: neo4j/docs-tools/.github/workflows/reusable-docs-links.yml@main
 
   docs-lint:
+    if: ${{ inputs.lint }}
     name: Lint docs
     uses: neo4j/docs-tools/.github/workflows/reusable-docs-vale.yml@main
