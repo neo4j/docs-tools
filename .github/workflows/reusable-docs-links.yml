@@ -65,7 +65,7 @@ jobs:
 
     - name: Run link checker
       run: |
-        npx link-checker $DOCS_PATH --skip-file $SKIPFILE |& tee link-log.txt
+        npx link-checker $DOCS_PATH --skip-file $SKIPFILE -e |& tee link-log.txt
         warncount=$(grep -e "[0-9]* warnings" -o link-log.txt | sed 's/ warnings//' )
         if [ $warncount -gt 0 ]; then
           echo "::warning:: $warncount warnings"
