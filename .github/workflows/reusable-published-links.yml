@@ -63,21 +63,26 @@ jobs:
       with:
         node-version: '16'
 
-    - name: Install link checker
-      run: npm install github:recrwplay/link-checker#v0.2.0
+    # - name: Install link checker
+    #   run: npm install github:recrwplay/link-checker#v0.2.0
 
     - name: Run link checker
-      run: |
-        npx link-checker $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e |& tee link-log.txt
-        warncount=$(grep -e "[0-9]* warnings" -o link-log.txt | sed 's/ warnings//' )
-        if [ $warncount -gt 0 ]; then
-          echo "::warning:: $warncount warnings"
-        fi
-        errorcount=$(grep -e "[0-9]* errors" -o link-log.txt | sed 's/ errors//' )
-        if [ $errorcount -gt 0 ]; then
-          echo "::error:: Errors found: See the output of the Check links step for details"
-          exit 1
-        fi
+      uses: filiph/linkcheck@2.0.23
+      with:
+        arguments: $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e
+
+    # - name: Run link checker
+    #   run: |
+    #     npx link-checker $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e |& tee link-log.txt
+    #     warncount=$(grep -e "[0-9]* warnings" -o link-log.txt | sed 's/ warnings//' )
+    #     if [ $warncount -gt 0 ]; then
+    #       echo "::warning:: $warncount warnings"
+    #     fi
+    #     errorcount=$(grep -e "[0-9]* errors" -o link-log.txt | sed 's/ errors//' )
+    #     if [ $errorcount -gt 0 ]; then
+    #       echo "::error:: Errors found: See the output of the Check links step for details"
+    #       exit 1
+    #     fi
 
     # upload artifacts
 
