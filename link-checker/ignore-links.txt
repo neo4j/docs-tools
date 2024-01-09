@@ -30,6 +30,9 @@ neo4j.com/download-center/
 fonts.googleapis.com
 fonts.gstatic.com
 
+# github
+github.com
+
 docs.spring.io
 
 robots.txt
