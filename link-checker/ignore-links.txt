@@ -21,3 +21,27 @@ twitter.com
 # graph academy
 graphacademy.neo4j.com
 neo4j.com/graphacademy/
+
+# neo4j.com
+# neo4j.com/docs/
+neo4j.com/download-center/
+
+# fonts
+fonts.googleapis.com
+fonts.gstatic.com
+
+docs.spring.io
+
+robots.txt
+file:
+# localhost
+# (?!localhost):\d{4}
+:7473
+:7474
+:7475
+:7476
+:7477
+20.237.50.207
+<external-ip>
+external_ip
+ingress_ip
