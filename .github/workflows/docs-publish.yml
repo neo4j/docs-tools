@@ -27,10 +27,14 @@ jobs:
   #   with:
   #     failOnWarnings: true
 
-  publish:
-    # needs: docs-verify
-    uses: peter-evans/repository-dispatch@main
-    with:
-      token: ${{ secrets.DISPATCH_TOKEN }}
-      repository: neo4j/docs-publish
-      event-type: docs-tools
+  trigger-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Publish
+        # needs: docs-verify
+        uses: peter-evans/repository-dispatch@main
+        with:
+          token: ${{ secrets.DISPATCH_TOKEN }}
+          repository: neo4j/docs-publish
+          event-type: docs-tools
