@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Trigger Publish
-        # needs: docs-verify
+        needs: docs-verify
         uses: peter-evans/repository-dispatch@main
         with:
           token: ${{ secrets.DISPATCH_TOKEN }}
