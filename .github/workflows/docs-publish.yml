@@ -28,11 +28,11 @@ jobs:
       failOnWarnings: true
 
   trigger-publish:
+    needs: docs-verify
     runs-on: ubuntu-latest
 
     steps:
       - name: Trigger Publish
-        needs: docs-verify
         uses: peter-evans/repository-dispatch@main
         with:
           token: ${{ secrets.DISPATCH_TOKEN }}
