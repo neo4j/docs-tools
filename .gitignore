@@ -111,3 +111,6 @@ vale/styles
 !vale/styles/Neo4j
 !vale/styles/Vocab
 !vale/styles/Experimental
+
+# IDE
+.vscode
