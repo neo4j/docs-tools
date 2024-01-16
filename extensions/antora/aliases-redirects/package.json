@@ -1,8 +1,8 @@
 {
   "name": "@neo4j-antora/aliases-redirects",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "description": "Help with redirects and page aliases",
-  "main": "redirects-helper.js",
+  "main": "aliases-redirects.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

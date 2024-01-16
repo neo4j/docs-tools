@@ -7,6 +7,11 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'build-verify'
+      cli-options:
+        description: 'Options to pass to the build script'
+        required: false
+        type: string
+        default: ''
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
@@ -19,7 +24,7 @@ on:
       pageList:
         description: 'Upload page list artifact'
         type: boolean
-        default: false
+        default: true
     outputs:
         pages-listed:
           description: "Page list artifact was uploaded"
@@ -31,6 +36,11 @@ on:
         required: true
         type: string
         default: 'build-verify'
+      cli-options:
+        description: 'Options to pass to the build script'
+        required: false
+        type: string
+        default: ''
       deploy-id:
         description: 'A deploy ID'
         required: true
@@ -44,7 +54,7 @@ on:
         description: 'Upload page list artifact'
         required: false
         type: boolean
-        default: false
+        default: true
 
 
 jobs:
@@ -56,9 +66,20 @@ jobs:
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
+      CLI_DEFAULT: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
+      CLI_OPTIONS: ${{ inputs.cli-options }}
 
     steps:    
     - uses: actions/checkout@v3
+
+    - name: Checkout tools repo
+      uses: actions/checkout@v4
+      with:
+        repository: neo4j/docs-tools
+        ref: dev
+        sparse-checkout: |
+          extensions/antora
+        path: .docs-tools
 
     - name: Use Node.js 16
       uses: actions/setup-node@v3
@@ -69,7 +90,7 @@ jobs:
       run: npm install --omit=dev
 
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT
+      run: npm run $PACKAGE_SCRIPT -- $CLI_DEFAULT $CLI_OPTIONS
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid

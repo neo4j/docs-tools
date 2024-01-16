@@ -3,6 +3,10 @@ const File = require('vinyl')
 
 module.exports.register = function ({ config }) {
 
+  const { playbook } = this.getVariables()
+
+  const { redirectFormat = 'neo4j', aliasLogLevel = playbook.asciidoc.attributes.aliasLogLevel || 'info', logFoundAliases = playbook.asciidoc.attributes.logFoundAliases || false } = config
+
   const pluralize = (count, noun, suffix = 's', plural = '') => {
     if (count !== 1) {
       return plural !== '' ? plural : `${noun}${suffix}`
@@ -10,13 +14,12 @@ module.exports.register = function ({ config }) {
     return noun
   }
 
-  const logger = this.getLogger('neo-aliases-redirects')
+  const logger = this.getLogger('aliases-redirects')
   
   this
   .on('contextStarted', () => {
 
     // set the redirect_facility to the value in the playbook
-    const { redirectFormat } = config
     if (!redirectFormat) return
     const { playbook } = this.getVariables()
     playbook.urls.redirectFacility = redirectFormat
@@ -108,7 +111,7 @@ module.exports.register = function ({ config }) {
           // alias.pub.url is constructed from the page-alias value
           // alias.rel.pub.url is constructed from the output path of the file that contains the page-alias
 
-          if (aliasesToHere.length > 0) {
+          if (aliasesToHere.length > 0 && logFoundAliases) {
             aliasesToHere.forEach(alias => {
               // console.log(alias.rel.pub)
               // console.log(alias.pub)
@@ -117,6 +120,12 @@ module.exports.register = function ({ config }) {
               logger.info({ 'file': page.src, 'source': page.src.origin  }, 'Alias %s found for %s (%s) which was removed from %s to %s', alias.rel.pub.url, page.src.relative, page.asciidoc.doctitle, redirectFromVersion, redirectToVersion)
             })
             return // nothing to do here if there is at least one alias to this page
+          }
+
+          // return if the page has a page-moved-to attribute, indicating that it has been moved outside this component
+          if (page.asciidoc.attributes['page-moved-to'] && logFoundAliases) {
+            logger.info({ 'file': page.src, 'source': page.src.origin  }, 'Page %s (%s) has been moved to %s', page.src.relative, page.asciidoc.doctitle, page.asciidoc.attributes['page-moved-to'])
+            return
           }
 
           // the path we need to redirect from is the old path but with the new version
@@ -138,36 +147,14 @@ module.exports.register = function ({ config }) {
           
           // if there is a page to redirect from, we should check for a page-alias on the new page
           if (redirectTo && redirectTo.length >= 1) {
-            // const newFile = contentCatalog.getByPath({component: redirectTo[0].component, version: redirectTo[0].version, path: redirectTo[0].path})
-            // const aliases = allAliases.filter(alias => alias.rel.pub.url === newFile.pub.url)
-            // const aliasFound = aliases.reduce((found, alias) => {
-            //   // console.log(alias.rel.pub.url)
-            //   // console.log(alias.pub.url)
-            //   if (alias.pub.url === requiredAliasTarget) {
-            //     console.log(`${requiredAliasTarget} found`)
-            //     return true
-            //   }
-            //   return found
-            // }, false)
-    
-            // // if aliasFound is true then the page-alias is already specified in the new page
-            // if (aliasFound) return
-    
-            // if we didn't find an alias we should:        
-            // 1. register the page-alias so Antora generates a redirect for it
-            // contentCatalog.registerPageAlias(page.src.relative,newFile)
-            
-            // 2. suggest the page-alias to be added to the file
-            // logger.warn({ 'file': newFile.src, 'source': newFile.src.origin  },'[recommendation] Add :page-alias: %s to version %s of %s',page.src.relative, redirectToVersion, newFile.src.relative)
-
             redirectTo.forEach( (target, i) => {
               const newFile = contentCatalog.getByPath({component: target.component, version: target.version, path: target.path})
               // if (i ==0) contentCatalog.registerPageAlias(page.src.relative,newFile)
-              logger.warn({ 'file': newFile.src, 'source': newFile.src.origin  }, '%s is a possible alias found for %s (%s) which was removed from %s to %s', newFile.src.relative, page.src.relative, searchTitle, redirectFromVersion, redirectToVersion)
+              logger.info({ 'file': newFile.src, 'source': newFile.src.origin  }, '%s is a possible alias found for %s (%s) which was removed from %s to %s', newFile.src.relative, page.src.relative, searchTitle, redirectFromVersion, redirectToVersion)
             })
     
           } else {
-            logger.warn({ 'file': page.out.dirname, 'source': page.src.origin  }, 'No aliases found for %s (%s) which was removed in version %s', page.src.path, searchTitle, redirectToVersion)
+            logger[aliasLogLevel]({ 'file': page.out.dirname, 'source': page.src.origin  }, 'No aliases found for %s (%s) which was removed in version %s', page.src.path, searchTitle, redirectToVersion)
           }
     
         })
@@ -184,25 +171,37 @@ module.exports.register = function ({ config }) {
     // generate specific Neo4j nginx redirects if the playbook specifies redirect_facility: neo4j
     if (playbook.urls.redirectFacility !== 'neo4j') return
 
-    const aliases = contentCatalog.findBy({ family: 'alias' })
     const delegate = this.getFunctions().produceRedirects
     this.replaceFunctions({
       produceRedirects(playbook, aliases) {
-        const siteUrl = playbook.site.url
+
+        if (!aliases.length) return []
+
+        let siteUrl = playbook.site.url
+        if (siteUrl) siteUrl = stripTrailingSlash(siteUrl, '')
+
+        // for local builds publish a site index page
+        // with a static redirect to the home page specified in the playbook
+        populateStaticRedirectFiles(
+          aliases.filter((it) => it.out && it.pub.url === '/'),
+          siteUrl
+        )
+        // create a file containing redirects
         return createNeoRewriteConf(aliases, extractUrlPath(siteUrl))
       }
 
     })
 
-  }) 
-
+  })
 
   function createNeoRewriteConf (files, urlPath) {
     const componentList = files.map((file) => { return file.src.component })
     const uniqueComponents = Array.from(new Set(componentList));
     let rewriteFiles = []
-    uniqueComponents.forEach((component) => {
-      const filteredFiles = files.filter(file => file.src.component === component && file.pub.url !== '/')
+    uniqueComponents
+    .filter(component => component !== 'ROOT')
+    .forEach((component) => {
+      const filteredFiles = files.filter(file => file.src.component === component )
       const rules = filteredFiles.map((file) => {
         delete file.out
         let fromUrl = file.pub.url
@@ -210,11 +209,14 @@ module.exports.register = function ({ config }) {
         fromUrl = ~fromUrl.indexOf('%20') ? `'${urlPath}${fromUrl.replace(ENCODED_SPACE_RX, ' ')}'` : stripTrailingSlash(urlPath) + ensureTrailingSlash(fromUrl)
         let toUrl = file.rel.pub.url
         toUrl = ~toUrl.indexOf('%20') ? `'${urlPath}${toUrl.replace(ENCODED_SPACE_RX, ' ')}'` : stripTrailingSlash(urlPath) + ensureTrailingSlash(toUrl)
+        if (fromUrl === toUrl) return // don't redirect to the same url
         return `rewrite ^${fromUrl}? ${toUrl} permanent;`
       })
       if (rules.length) {
-        logger.warn({  }, 'Generating %d Neo4j %s for %s', rules.length, pluralize(rules.length, 'redirect'), component)
+        logger.info({  }, 'Generating %d Neo4j %s for %s', rules.length, pluralize(rules.length, 'redirect'), component)
         rewriteFiles.push(new File({ contents: Buffer.from(rules.join('\n') + '\n'), out: { path: `.etc/nginx/redirects-${component}.conf` } }))
+      } else {
+        logger.info({  }, 'No Neo4j redirects for \'%s\'', component)
       }
   
     })
@@ -234,8 +236,6 @@ function extractUrlPath (url) {
   }
 }
 
-
-
 function ensureTrailingSlash (str) {
   return str.charAt(str.length - 1) === '/' ? str : str + '/'
 }
@@ -245,3 +245,38 @@ function stripTrailingSlash (str) {
   const lastIdx = str.length - 1
   return str.charAt(lastIdx) === '/' ? str.substr(0, lastIdx) : str
 }
+
+  // copy of the same function in @antora/redirect-producer
+  function populateStaticRedirectFiles (files, siteUrl) {
+    files.forEach((file) => (file.contents = Buffer.from(createStaticRedirectContents(file, siteUrl) + '\n')))
+    return []
+  }
+
+  // copy of the same function in @antora/redirect-producer
+  function createStaticRedirectContents (file, siteUrl) {
+    const targetUrl = file.rel.pub.url
+    let linkTag
+    let to = targetUrl.charAt() === '/' ? computeRelativeUrlPath(file.pub.url, targetUrl) : undefined
+    let toText = to
+    if (to) {
+      if (siteUrl && siteUrl.charAt() !== '/') {
+        linkTag = `<link rel="canonical" href="${(toText = siteUrl + targetUrl)}">\n`
+      }
+    } else {
+      linkTag = `<link rel="canonical" href="${(toText = to = targetUrl)}">\n`
+    }
+    return `<!DOCTYPE html>
+  <meta charset="utf-8">
+  ${linkTag || ''}<script>location="${to}"</script>
+  <meta http-equiv="refresh" content="0; url=${to}">
+  <meta name="robots" content="noindex">
+  <title>Redirect Notice</title>
+  <h1>Redirect Notice</h1>
+  <p>The page you requested has been relocated to <a href="${to}">${toText}</a>.</p>`
+  }
+
+  // copy of the same function in @antora/redirect-producer
+  function computeRelativeUrlPath (from, to) {
+    if (to === from) return to.charAt(to.length - 1) === '/' ? './' : path.basename(to)
+    return (path.relative(path.dirname(from + '.'), to) || '.') + (to.charAt(to.length - 1) === '/' ? '/' : '')
+  }
