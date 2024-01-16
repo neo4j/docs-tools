@@ -70,28 +70,3 @@ jobs:
       uses: filiph/linkcheck@3.0.0
       with:
         arguments: $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e
-
-    # - name: Run link checker
-    #   run: |
-    #     npx link-checker $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e |& tee link-log.txt
-    #     warncount=$(grep -e "[0-9]* warnings" -o link-log.txt | sed 's/ warnings//' )
-    #     if [ $warncount -gt 0 ]; then
-    #       echo "::warning:: $warncount warnings"
-    #     fi
-    #     errorcount=$(grep -e "[0-9]* errors" -o link-log.txt | sed 's/ errors//' )
-    #     if [ $errorcount -gt 0 ]; then
-    #       echo "::error:: Errors found: See the output of the Check links step for details"
-    #       exit 1
-    #     fi
-
-    # upload artifacts
-
-    - name: Save log
-      uses: actions/upload-artifact@v3
-      with:
-        name: linklog
-        path: link-log.txt
-
-    # if errors, raise an issue in the repo and exit 1 to fail the workflow
-    # tbc...
-    # create an action. action needs authed token. attach log to issue. extract errors as issue text?

@@ -1,0 +1,72 @@
+name: Check links on neo4j.com
+
+on:
+  workflow_call:
+    inputs:
+      docs-path:
+        description: 'The path to the docs to check'
+        type: string
+        default: 'https://neo4j.com/docs'
+      docset:
+        description: 'The doc set to check'
+        type: string
+        default: 'operations-manual'
+      skipfile:
+        description: 'The path to the skipfile'
+        type: string
+        default: '.docs-tools/link-checker/ignore-links.txt'
+      retain-artifacts:
+        description: 'The number of days to retain artifacts'
+        type: number
+        default: 7
+  workflow_dispatch:
+    inputs:
+      docs-path:
+        description: 'The path to the docs to check'
+        type: string
+        default: 'https://neo4j.com/docs'
+      docset:
+        description: 'The doc set to check'
+        type: string
+        default: 'operations-manual'
+      skipfile:
+        description: 'The path to the skipfile'
+        type: string
+        default: '.docs-tools/link-checker/ignore-links.txt'
+      retain-artifacts:
+        description: 'The number of days to retain artifacts'
+        type: number
+        default: 7
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCS_PATH: ${{ inputs.docs-path }}
+      DOCSET: ${{ inputs.docset }}
+      SKIPFILE: ${{ inputs.skipfile }}
+
+    steps:
+
+    - name: Checkout tools repo
+      uses: actions/checkout@v4
+      with:
+        repository: neo4j/docs-tools
+        ref: dev
+        sparse-checkout: |
+          link-checker
+        path: .docs-tools
+
+    - name: Use Node.js 16
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    # - name: Install link checker
+    #   run: npm install github:recrwplay/link-checker#v0.2.0
+
+    - name: Run link checker
+      uses: filiph/linkcheck@3.0.0
+      with:
+        arguments: $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e
