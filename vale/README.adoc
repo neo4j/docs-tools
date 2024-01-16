@@ -30,11 +30,11 @@ To add a new style (for example the Google style guide) in the Vale configuratio
 1. Edit the `vale.ini` file to either add `Google` to the `BasedOnStyles` (to add all the style rules by default, and optionally disable some), or add single rules such as `Google.DateFormat = YES`.
 2. Run `vale --config vale/.vale.ini sync` to download the new style (if it has not been downloaded before).
 
-NOTE: Any styles added to the `vale/styles` directory except our custom ones are ignored by `git`.
+NOTE: Any external styles added to the `vale/styles` directory (except our custom ones) must be added to `.gitignore`.
 
 ## Add terms to the vocabulary
 
-You can add terms with their accepted spelling in the `accept.txt` file(s) within the `vale/Vocab` subdirectories.
+You can add terms with their accepted spelling in the `accept.txt` file(s) within the `vale/config/vocabularies` subdirectories.
 
 NOTE: Do not add entries where an entry fully contains another one, such as `Neo4j` and `Neo4j Aura`.
 Use the `Neo4j/Names.yml` rule for single words instead.
