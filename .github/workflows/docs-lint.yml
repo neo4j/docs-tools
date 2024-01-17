@@ -13,4 +13,4 @@ jobs:
 
   docs-lint:
     name: Lint docs
-    uses: neo4j/docs-tools/.github/workflows/reusable-docs-vale.yml@dev
+    uses: neo4j/docs-tools/.github/workflows/reusable-docs-lint.yml@dev

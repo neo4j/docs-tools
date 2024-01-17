@@ -53,7 +53,7 @@ on:
       reporter:
         description: 'Where action messages are reported'
         type: string
-        default: 'github-pr-scheck'
+        default: 'github-pr-check'
       separator:
         description: 'Delimiter for input files or folders'
         type: string
