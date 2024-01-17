@@ -1,0 +1,16 @@
+# Use vale to lint asciidoc
+name: "Check Docs style"
+
+on:
+  push:
+    branches:
+    - dev
+  workflow_dispatch:
+  # schedule:
+    # - cron:  '00 16 * * *'
+
+jobs:
+
+  docs-lint:
+    name: Lint docs
+    uses: ./.github/workflows/reusable-docs-lint.yml

@@ -1,4 +1,4 @@
-name: Check links
+name: Check links on neo4j.com
 
 on:
   workflow_call:
@@ -6,7 +6,11 @@ on:
       docs-path:
         description: 'The path to the docs to check'
         type: string
-        default: 'build/site'
+        default: 'https://neo4j.com/docs'
+      docset:
+        description: 'The doc set to check'
+        type: string
+        default: 'operations-manual'
       skipfile:
         description: 'The path to the skipfile'
         type: string
@@ -20,7 +24,11 @@ on:
       docs-path:
         description: 'The path to the docs to check'
         type: string
-        default: 'build/site'
+        default: 'https://neo4j.com/docs'
+      docset:
+        description: 'The doc set to check'
+        type: string
+        default: 'operations-manual'
       skipfile:
         description: 'The path to the skipfile'
         type: string
@@ -36,6 +44,7 @@ jobs:
 
     env:
       DOCS_PATH: ${{ inputs.docs-path }}
+      DOCSET: ${{ inputs.docset }}
       SKIPFILE: ${{ inputs.skipfile }}
 
     steps:
@@ -49,41 +58,15 @@ jobs:
           link-checker
         path: .docs-tools
 
-    - name: Download HTML
-      uses: actions/download-artifact@v4
-      with:
-        name: docs
-        path: build
-
     - name: Use Node.js 16
       uses: actions/setup-node@v4
       with:
         node-version: '16'
 
-    - name: Install link checker
-      run: npm install github:recrwplay/link-checker#v0.2.0
+    # - name: Install link checker
+    #   run: npm install github:recrwplay/link-checker#v0.2.0
 
     - name: Run link checker
-      run: |
-        npx link-checker $DOCS_PATH --skip-file $SKIPFILE -e |& tee link-log.txt
-        warncount=$(grep -e "[0-9]* warnings" -o link-log.txt | sed 's/ warnings//' )
-        if [ $warncount -gt 0 ]; then
-          echo "::warning:: $warncount warnings"
-        fi
-        errorcount=$(grep -e "[0-9]* errors" -o link-log.txt | sed 's/ errors//' )
-        if [ $errorcount -gt 0 ]; then
-          echo "::error:: Errors found: See the output of the Check links step for details"
-          exit 1
-        fi
-
-    # upload artifacts
-
-    - name: Save log
-      uses: actions/upload-artifact@v4
+      uses: filiph/linkcheck@f2c15a0be0d9c83def5df3edcc0f2d6582845f2d # 3.0.0
       with:
-        name: linklog
-        path: link-log.txt
-
-    # if errors, raise an issue in the repo and exit 1 to fail the workflow
-    # tbc...
-    # create an action. action needs authed token. attach log to issue. extract errors as issue text?
+        arguments: $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e

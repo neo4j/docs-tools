@@ -53,7 +53,7 @@ on:
       reporter:
         description: 'Where action messages are reported'
         type: string
-        default: 'github-pr-scheck'
+        default: 'github-pr-check'
       separator:
         description: 'Delimiter for input files or folders'
         type: string
@@ -68,13 +68,13 @@ jobs:
     steps:
 
       # Checkout the repo
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Fetch the default vale config and styles
       # Checkout to ./lint
       - name: download default rules
         if: ${{ inputs.use-default-rules }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: neo4j/docs-tools
           ref: dev
