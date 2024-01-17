@@ -1,0 +1,95 @@
+# Documentation Style Guide Lint
+# Uses Vale to lint documentation against the Documentation Style Guide
+# Current POC uses the Google style guide as a base set of rules
+# See .vale.ini for the current set of rules
+
+name: "Documentation Style Guide Check"
+
+on:
+  workflow_call:
+    inputs:
+      files:
+        description: 'The files to lint'
+        default: '.'
+        type: string
+      vale-config-file:
+        description: 'The vale ini file to use'
+        default: './lint/vale/.vale.ini'
+        type: string
+      use-default-rules:
+        description: 'Use default rules'
+        default: true
+        type: boolean
+      vale-fail-on-error:
+        description: 'Report vale errors as a failure'
+        default: false
+        type: boolean
+      reporter:
+        description: 'Where action messages are reported'
+        type: string
+        default: 'github-pr-check'
+      separator:
+        description: 'Delimiter for input files or folders'
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'The files to lint'
+        default: '.'
+        type: string
+      vale-config-file:
+        description: 'The vale ini file to use'
+        default: './lint/vale/.vale.ini'
+        type: string
+      use-default-rules:
+        description: 'Use default rules'
+        default: true
+        type: boolean
+      vale-fail-on-error:
+        description: 'Report vale errors as a failure'
+        default: false
+        type: boolean
+      reporter:
+        description: 'Where action messages are reported'
+        type: string
+        default: 'github-pr-check'
+      separator:
+        description: 'Delimiter for input files or folders'
+        type: string
+        default: ''
+
+jobs:
+
+  lint:
+    name: Lint with Vale
+    runs-on: ubuntu-latest
+    if: ${{ inputs.files != '[]' }}
+    steps:
+
+      # Checkout the repo
+      - uses: actions/checkout@v4
+
+      # Fetch the default vale config and styles
+      # Checkout to ./lint
+      - name: download default rules
+        if: ${{ inputs.use-default-rules }}
+        uses: actions/checkout@v4
+        with:
+          repository: neo4j/docs-tools
+          ref: dev
+          path: lint
+          sparse-checkout: |
+            vale
+          sparse-checkout-cone-mode: false
+
+      # Run Vale
+      - uses: errata-ai/vale-action@reviewdog
+        with:
+          files: ${{ inputs.files }}
+          reporter: ${{ inputs.reporter }}
+          fail_on_error: ${{ inputs.vale-fail-on-error }}
+          separator: ${{ inputs.separator }}
+          vale_flags: "--config=${{ inputs.vale-config-file }}"
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

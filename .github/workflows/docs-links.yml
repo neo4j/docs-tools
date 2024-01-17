@@ -1,0 +1,25 @@
+# This is an example of the docs-pr.yml workflow available from the recrwplay org
+name: "Check Docs Links"
+
+on:
+  push:
+    branches:
+    - dev
+  workflow_dispatch:
+  # schedule:
+    # - cron:  '00 16 * * *'
+
+
+jobs:
+
+  docs-build:
+    name: Generate HTML
+    uses: ./.github/workflows/reusable-docs-build.yml
+    with:
+      retain-artifacts: 14
+      deploy-id: 0
+
+  docs-links:
+    name: Check links
+    needs: docs-build
+    uses: ./.github/workflows/reusable-docs-links.yml
