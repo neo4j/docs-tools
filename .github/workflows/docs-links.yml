@@ -14,7 +14,7 @@ jobs:
 
   docs-build:
     name: Generate HTML
-    uses: neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@dev
+    uses: ./.github/workflows/reusable-docs-build.yml
     with:
       retain-artifacts: 14
       deploy-id: 0
@@ -22,4 +22,4 @@ jobs:
   docs-links:
     name: Check links
     needs: docs-build
-    uses: neo4j/docs-tools/.github/workflows/reusable-docs-links.yml@dev
+    uses: ./.github/workflows/reusable-docs-links.yml

@@ -70,7 +70,7 @@ jobs:
       CLI_OPTIONS: ${{ inputs.cli-options }}
 
     steps:    
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Checkout tools repo
       uses: actions/checkout@v4
@@ -82,7 +82,7 @@ jobs:
         path: .docs-tools
 
     - name: Use Node.js 16
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '16'
 
@@ -96,14 +96,14 @@ jobs:
       run: echo $DEPLOY_ID > ./build/deployid
 
     - name: Upload HTML artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docs
         path: build/
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: antora-log
         path: build/log
@@ -112,7 +112,7 @@ jobs:
     - name: Upload Page List artifact
       id: page-list-artifact
       if: ${{ inputs.pageList }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: page-list
         path: build/site/.meta/pageList

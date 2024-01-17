@@ -59,7 +59,7 @@ jobs:
         path: .docs-tools
 
     - name: Use Node.js 16
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '16'
 
@@ -67,6 +67,6 @@ jobs:
     #   run: npm install github:recrwplay/link-checker#v0.2.0
 
     - name: Run link checker
-      uses: filiph/linkcheck@3.0.0
+      uses: filiph/linkcheck@f2c15a0be0d9c83def5df3edcc0f2d6582845f2d # 3.0.0
       with:
         arguments: $DOCS_PATH/$DOCSET --skip-file $SKIPFILE -e

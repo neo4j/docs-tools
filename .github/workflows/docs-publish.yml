@@ -13,7 +13,7 @@ jobs:
 
   docs-build:
     name: Generate HTML
-    uses: neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@dev
+    uses: ./.github/workflows/reusable-docs-build.yml
     with:
       retain-artifacts: 14
       deploy-id: 0
@@ -23,7 +23,7 @@ jobs:
   docs-verify:
     name: Verify HTML
     needs: docs-build
-    uses: neo4j/docs-tools/.github/workflows/reusable-docs-verify.yml@dev
+    uses: ./.github/workflows/reusable-docs-verify.yml
     with:
       failOnWarnings: true
 
@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Trigger Publish
-        uses: peter-evans/repository-dispatch@main
+        uses: peter-evans/repository-dispatch@bf47d102fdb849e755b0b0023ea3e81a44b6f570 # v2.1.2
         with:
           token: ${{ secrets.DISPATCH_TOKEN }}
           repository: neo4j/docs-publish
