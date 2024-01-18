@@ -118,5 +118,5 @@ jobs:
         if: ${{ hashFiles('changelog') != '' }}
         uses: actions/upload-artifact@v3
         with:
-            name: changelog
+            name: docs
             path: changelog
