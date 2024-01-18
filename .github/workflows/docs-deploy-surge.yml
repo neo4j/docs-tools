@@ -6,7 +6,7 @@
 # This workflow expects the triggering workflow to generate an artifact called "docs"
 # - update the reference to "docs" and "docs.zip" in this workflow if your triggering workflow generates an artifact with a different name
 
-# change to test workflow with no changelog
+# change to force workflow with no changelog
 
 name: "Deploy docs preview"
 
