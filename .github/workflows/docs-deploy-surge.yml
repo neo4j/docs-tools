@@ -43,14 +43,16 @@ jobs:
             var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
               return artifact.name == "${{ matrix.required-artifacts }}}"
             })[0];
-            var download = await github.rest.actions.downloadArtifact({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               artifact_id: matchArtifact.id,
-               archive_format: 'zip',
-            });
-            var fs = require('fs');
-            fs.writeFileSync('${{ env.WORKSPACE }}/${{ matrix.required-artifacts }}.zip', Buffer.from(download.data));
+            if (matchArtifact != undefined) {
+              var download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: matchArtifact.id,
+                archive_format: 'zip',
+              });
+              var fs = require('fs');
+              fs.writeFileSync('${{ env.WORKSPACE }}/${{ matrix.required-artifacts }}.zip', Buffer.from(download.data));
+            }
       
       - run: unzip ${{ matrix.required-artifacts }}.zip
       
