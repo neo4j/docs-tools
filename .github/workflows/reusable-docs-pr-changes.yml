@@ -40,7 +40,7 @@ jobs:
 
             # tbc - checkout the script from a repo so all docs projects can reuse it
       - name: Generate PR changelog comment
-        if: inputs.pages-modified != '' || inputs.pages-added != ''
+        # if: inputs.pages-modified != '' || inputs.pages-added != ''
         uses: actions/github-script@v6.4.1
         env:
           WORKSPACE: ${{ github.workspace }}
