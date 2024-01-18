@@ -41,7 +41,7 @@ jobs:
                run_id: ${{ env.RUN_ID }},
             });
             var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
-              return artifact.name == "${{ matrix.required-artifacts }}}"
+              return artifact.name == "${{ matrix.required-artifacts }}"
             })[0];
             if (matchArtifact != undefined) {
               var download = await github.rest.actions.downloadArtifact({
@@ -53,8 +53,10 @@ jobs:
               var fs = require('fs');
               fs.writeFileSync('${{ env.WORKSPACE }}/${{ matrix.required-artifacts }}.zip', Buffer.from(download.data));
             }
-      
-      - run: unzip ${{ matrix.required-artifacts }}.zip
+
+      - id: unzip
+        if: ${{ hashFiles(${{ matrix.required-artifacts }}) != '' }}
+        run: unzip ${{ matrix.required-artifacts }}.zip
       
       - id: get-deploy-id
         run: |
