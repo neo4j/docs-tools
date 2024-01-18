@@ -114,9 +114,10 @@ jobs:
             
             writeFileSync(`${WORKSPACE}/changelog`, Buffer.from(comment));
 
+      # For upload-artifact v4 we need to provide a unique artifact name
       - name: Upload changelog
         if: ${{ hashFiles('changelog') != '' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
             name: changelog
             path: changelog
