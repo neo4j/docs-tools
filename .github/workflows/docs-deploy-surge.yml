@@ -37,22 +37,30 @@ jobs:
                run_id: ${{ env.RUN_ID }},
             });
 
-            var downloadList = ["docs", "changelog"];
+            var matchArtifactDocs = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "docs"
+            })[0];
+            var downloadDocs = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifactDocs.id,
+               archive_format: 'zip',
+            });
+            var fs = require('fs');
+            fs.writeFileSync('${{ env.WORKSPACE }}/docs.zip', Buffer.from(downloadDocs.data));
 
-            downloadList.forEach((artifact) => {
-              var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
-                return artifact.name == artifact;
-              })[0];
-              var download = await github.rest.actions.downloadArtifact({
+            var matchArtifactChangelog = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "changelog"
+            })[0];
+            if (matchArtifactChangelog != undefined) {
+              var downloadChangelog = await github.rest.actions.downloadArtifact({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                artifact_id: matchArtifact.id,
+                artifact_id: matchArtifactChangelog.id,
                 archive_format: 'zip',
-              });
-              var fs = require('fs');
-              const fileName = ${{ env.WORKSPACE }} + '/' + artifact + '.zip';
-              fs.writeFileSync(fileName, Buffer.from(download.data));
-            });
+             });
+             fs.writeFileSync('${{ env.WORKSPACE }}/changelog.zip', Buffer.from(downloadChangelog.data));
+            }
 
       - id: unzip-docs
         run: unzip docs.zip
