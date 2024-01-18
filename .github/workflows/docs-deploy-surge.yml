@@ -57,7 +57,7 @@ jobs:
             }
 
       - id: unzip
-        if: ${{ hashFiles(${{ matrix.required-artifacts }}) != '' }}
+        if: hashFiles(${{ matrix.required-artifacts }}) != ''
         run: unzip ${{ matrix.required-artifacts }}.zip
       
       - id: get-deploy-id
