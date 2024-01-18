@@ -96,14 +96,14 @@ jobs:
       run: echo $DEPLOY_ID > ./build/deployid
 
     - name: Upload HTML artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docs
         path: build/
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: antora-log
         path: build/log
@@ -111,8 +111,7 @@ jobs:
 
     - name: Upload Page List artifact
       id: page-list-artifact
-      if: ${{ inputs.pageList }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: page-list
         path: build/site/.meta/pageList
