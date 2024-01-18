@@ -54,10 +54,10 @@ jobs:
               fs.writeFileSync(fileName, Buffer.from(download.data));
             });
 
-      - id: unzip docs
+      - id: unzip-docs
         run: unzip docs.zip
 
-      - id: unzip changelog
+      - id: unzip-changelog
         if: ${{ hashFiles('changelog') != '' }}
         run: unzip changelog.zip
       
