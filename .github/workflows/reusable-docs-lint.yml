@@ -83,6 +83,13 @@ jobs:
             vale
           sparse-checkout-cone-mode: false
 
+      - id: move-vocab
+        if: ${{ inputs.use-default-rules }}
+        run: mv ./lint/vale/styles/config/vocabularies ./lint/vale/styles/Vocab
+
+      - id: list-files
+        run: ls -aR 
+
       # Run Vale
       - uses: errata-ai/vale-action@reviewdog
         with:
