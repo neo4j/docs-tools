@@ -12,6 +12,10 @@ on:
         required: false
         type: string
         default: ''
+      site-dir:
+        description: 'The built site root directory'
+        type: string
+        default: 'site'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
@@ -41,6 +45,10 @@ on:
         required: false
         type: string
         default: ''
+      site-dir:
+        description: 'The built site root directory'
+        type: string
+        default: 'site'
       deploy-id:
         description: 'A deploy ID'
         required: true
@@ -114,5 +122,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: page-list
-        path: build/site/.meta/pageList
+        path: build/${{ inputs.site-dir }}/.meta/pageList
         retention-days: ${{ inputs.retain-artifacts }}
