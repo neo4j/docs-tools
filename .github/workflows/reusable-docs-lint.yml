@@ -32,6 +32,10 @@ on:
         description: 'Delimiter for input files or folders'
         type: string
         default: ''
+      debug:
+        description: 'Show debug in log'
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       files:
@@ -58,6 +62,10 @@ on:
         description: 'Delimiter for input files or folders'
         type: string
         default: ''
+      debug:
+        description: 'Show debug in log'
+        default: false
+        type: boolean
 
 jobs:
 
@@ -98,5 +106,6 @@ jobs:
           fail_on_error: ${{ inputs.vale-fail-on-error }}
           separator: ${{ inputs.separator }}
           vale_flags: "--config=${{ inputs.vale-config-file }}"
+          debug:  ${{ inputs.debug }}
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
