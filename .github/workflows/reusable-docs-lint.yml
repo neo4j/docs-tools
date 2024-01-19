@@ -84,8 +84,8 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - id: list-files
-        run: ls -R 
-        
+        run: ls -aR 
+
       # Run Vale
       - uses: errata-ai/vale-action@reviewdog
         with:
