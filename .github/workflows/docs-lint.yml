@@ -11,9 +11,9 @@ on:
         description: 'The files to lint'
         default: '.'
         type: string
-      vale-config-file:
+      vale-flags:
         description: 'The vale ini file to use'
-        default: 'lint/vale/.vale.ini'
+        default: '--config=.vale.ini'
         type: string
       use-default-rules:
         description: 'Use default rules'
@@ -42,11 +42,12 @@ jobs:
 
   docs-lint:
     name: Lint docs
-    uses: neo4j/docs-tools/.github/workflows/reusable-docs-lint.yml@dev
+    uses: ./.github/workflows/reusable-docs-lint.yml
     with:
       files: ${{ inputs.files }}
-      reporter: ${{ inputs.reporter }}
+      vale-flags: ${{ inputs.vale-flags }}
+      use-default-rules: ${{ inputs.use-default-rules }}
       vale-fail-on-error: ${{ inputs.vale-fail-on-error }}
+      reporter: ${{ inputs.reporter }}
       separator: ${{ inputs.separator }}
-      vale-config-file: "${{ inputs.vale-config-file }}"
       debug:  ${{ inputs.debug }}

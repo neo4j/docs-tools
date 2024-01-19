@@ -12,9 +12,9 @@ on:
         description: 'The files to lint'
         default: '.'
         type: string
-      vale-config-file:
-        description: 'The vale ini file to use'
-        default: 'lint/vale/.vale.ini'
+      vale-flags:
+        description: 'The vale flags, eg ini file to use'
+        default: '--config=.vale.ini'
         type: string
       use-default-rules:
         description: 'Use default rules'
@@ -42,9 +42,9 @@ on:
         description: 'The files to lint'
         default: '.'
         type: string
-      vale-config-file:
-        description: 'The vale ini file to use'
-        default: 'lint/vale/.vale.ini'
+      vale-flags:
+        description: 'The vale flags, eg ini file to use'
+        default: '--config=.vale.ini'
         type: string
       use-default-rules:
         description: 'Use default rules'
@@ -91,13 +91,6 @@ jobs:
             vale
           sparse-checkout-cone-mode: false
 
-      # - id: move-vocab
-      #   if: ${{ inputs.use-default-rules }}
-      #   run: mv ./lint/vale/styles/config/vocabularies ./lint/vale/styles/Vocab
-
-      # - id: list-files
-      #   run: ls -aR 
-
       # Run Vale
       - uses: errata-ai/vale-action@reviewdog
         with:
@@ -105,7 +98,7 @@ jobs:
           reporter: ${{ inputs.reporter }}
           fail_on_error: ${{ inputs.vale-fail-on-error }}
           separator: ${{ inputs.separator }}
-          vale_flags: "--config=${{ inputs.vale-config-file }}"
+          vale_flags: ${{ inputs.vale-flags }}
           debug:  ${{ inputs.debug }}
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
