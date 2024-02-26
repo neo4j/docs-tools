@@ -60,7 +60,7 @@ surgeList().then((deploys) => {
     const deployDetails = deploy.replace(/[ \s\t]+/g,' ').trim().split(' ');
 
     // ge the deploy url
-    const deployUrl = deployDetails[0];
+    const deployUrl = (env.CI)? deployDetails[1]: deployDetails[0] ;
     if (!deployUrl) continue;
     
     // derive the pr details from the deploy url
@@ -79,7 +79,7 @@ surgeList().then((deploys) => {
       // if the pr is closed, teardown the deploy
       if (prStatus === 'closed') {
           console.log(`${deployUrl} - PR is closed, tearing down deploy`);
-          teardownDeploy(deployDetails[0]);
+          if (env.CI) teardownDeploy(deployDetails[0]);
       } else {
           // console.log(`${deployUrl} - PR is not closed`);
       }
