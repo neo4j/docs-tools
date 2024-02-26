@@ -16,7 +16,6 @@ async function teardownDeploy(deploy) {
   try {
     const { stdout, stderr } = await exec(`surge teardown ${deploy}`);
     console.log('stdout:', stdout);
-    console.log('stderr:', stderr);
   }catch (err) {
      console.error(err);
   };
@@ -74,12 +73,12 @@ surgeList().then((deploys) => {
     if (org === 'neo-technology' && SKIP_NEO_TECHNOLOGY) continue;
 
     const repo = prDetails.join('-').replace(org+'-','');
+    // console.log(deployUrl)
     // check the pr details to see if the pr is closed
     getPRStatus(org, repo, prNumber).then((prStatus) => {
       // if the pr is closed, teardown the deploy
       if (prStatus === 'closed') {
-          console.log(`${deployUrl} - PR is closed, tearing down deploy`);
-          if (env.CI) teardownDeploy(deployDetails[0]);
+          if (env.CI) teardownDeploy(deployUrl);
       } else {
           // console.log(`${deployUrl} - PR is not closed`);
       }
