@@ -3,18 +3,18 @@ const exec = util.promisify(require('child_process').exec);
 const fs = require('fs');
 const stripAnsi = require('strip-ansi');
 const { Octokit } = require("octokit");
+const { env } = require('process');
 
 require('dotenv').config()
-const { GH_TOKEN } = process.env;
+const { GH_TOKEN, SKIP_NEO_TECHNOLOGY } = process.env;
 
 const octokit = new Octokit({
   auth: GH_TOKEN
 })
 
-
 async function teardownDeploy(deploy) {
   try {
-    const { stdout, stderr } = await exec(`surge teardown ${deploy}`);
+    const { stdout, stderr } = await exec(`$(npm bin)/surge teardown ${deploy}`);
     console.log('stdout:', stdout);
     console.log('stderr:', stderr);
   }catch (err) {
@@ -24,8 +24,8 @@ async function teardownDeploy(deploy) {
 
 async function surgeList() {
   try {
-      const { stdout, stderr } = await exec('surge list');
-      // console.log('stdout:', stdout);
+      const { stdout, stderr } = await exec('$(npm bin)/surge list');
+      console.log('stdout:', stdout);
       // console.log('stderr:', stderr);
 
       const deploys = stripAnsi(stdout).split('\n');
@@ -60,7 +60,7 @@ surgeList().then((deploys) => {
     const deployDetails = deploy.replace(/[ \s\t]+/g,' ').trim().split(' ');
 
     // ge the deploy url
-    const deployUrl = deployDetails[0];
+    const deployUrl = deployDetails[1];
     if (!deployUrl) continue;
     
     // derive the pr details from the deploy url
@@ -69,17 +69,18 @@ surgeList().then((deploys) => {
     if (isNaN(prNumber)) continue;
 
     const org = prDetails[0] === 'neo4j' ? 'neo4j' : prDetails.slice(0,2).join('-');
+
     // neo-technology is protected by SAML
-    if (org === 'neo-technology') continue;
+    if (org === 'neo-technology' && SKIP_NEO_TECHNOLOGY) continue;
 
     const repo = prDetails.join('-').replace(org+'-','');
-
+    console.log(deployUrl)
     // check the pr details to see if the pr is closed
     getPRStatus(org, repo, prNumber).then((prStatus) => {
       // if the pr is closed, teardown the deploy
       if (prStatus === 'closed') {
           console.log(`${deployUrl} - PR is closed, tearing down deploy`);
-          teardownDeploy(deployDetails[0]);
+          // teardownDeploy(deployDetails[0]);
       } else {
           // console.log(`${deployUrl} - PR is not closed`);
       }
