@@ -14,7 +14,7 @@ const octokit = new Octokit({
 
 async function teardownDeploy(deploy) {
   try {
-    const { stdout, stderr } = await exec(`$(npm bin)/surge teardown ${deploy}`);
+    const { stdout, stderr } = await exec(`surge teardown ${deploy}`);
     console.log('stdout:', stdout);
     console.log('stderr:', stderr);
   }catch (err) {
@@ -24,7 +24,7 @@ async function teardownDeploy(deploy) {
 
 async function surgeList() {
   try {
-      const { stdout, stderr } = await exec('$(npm bin)/surge list');
+      const { stdout, stderr } = await exec('surge list');
       console.log('stdout:', stdout);
       // console.log('stderr:', stderr);
 
@@ -60,7 +60,7 @@ surgeList().then((deploys) => {
     const deployDetails = deploy.replace(/[ \s\t]+/g,' ').trim().split(' ');
 
     // ge the deploy url
-    const deployUrl = deployDetails[1];
+    const deployUrl = deployDetails[0];
     if (!deployUrl) continue;
     
     // derive the pr details from the deploy url
@@ -74,13 +74,12 @@ surgeList().then((deploys) => {
     if (org === 'neo-technology' && SKIP_NEO_TECHNOLOGY) continue;
 
     const repo = prDetails.join('-').replace(org+'-','');
-    console.log(deployUrl)
     // check the pr details to see if the pr is closed
     getPRStatus(org, repo, prNumber).then((prStatus) => {
       // if the pr is closed, teardown the deploy
       if (prStatus === 'closed') {
           console.log(`${deployUrl} - PR is closed, tearing down deploy`);
-          // teardownDeploy(deployDetails[0]);
+          teardownDeploy(deployDetails[0]);
       } else {
           // console.log(`${deployUrl} - PR is not closed`);
       }
