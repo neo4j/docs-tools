@@ -16,7 +16,7 @@ async function teardownDeploy(deploy) {
   try {
     const { stdout, stderr } = await exec(`surge teardown ${deploy}`);
     console.log('stdout:', stdout);
-    // console.log('stderr:', stderr);
+    console.log('stderr:', stderr);
   }catch (err) {
      console.error(err);
   };
