@@ -19,13 +19,13 @@ jobs:
     steps:
 
     - name: Download Antora log
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: antora-log
 
     - name: Analyze Antora log
       id: antora-log-check-test
-      uses: recrwplay/antora-log-analyzer@f42057f7215a68108a2863ceecab212470e90cae # 1.0.0
+      uses: neo4j/antora-log-analyzer@v1.0.0 # 1.0.0
       with:
         fail-on-errors: ${{ inputs.failOnErrors }}
         fail-on-warnings: ${{ inputs.failOnWarnings }}

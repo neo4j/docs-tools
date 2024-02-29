@@ -6,6 +6,8 @@
 # This workflow expects the triggering workflow to generate an artifact called "docs"
 # - update the reference to "docs" and "docs.zip" in this workflow if your triggering workflow generates an artifact with a different name
 
+# change to force workflow with no changelog
+
 name: "Deploy docs preview"
 
 on:
@@ -34,19 +36,41 @@ jobs:
                repo: context.repo.repo,
                run_id: ${{ env.RUN_ID }},
             });
-            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+
+            var matchArtifactDocs = artifacts.data.artifacts.filter((artifact) => {
               return artifact.name == "docs"
             })[0];
-            var download = await github.rest.actions.downloadArtifact({
+            var downloadDocs = await github.rest.actions.downloadArtifact({
                owner: context.repo.owner,
                repo: context.repo.repo,
-               artifact_id: matchArtifact.id,
+               artifact_id: matchArtifactDocs.id,
                archive_format: 'zip',
             });
             var fs = require('fs');
-            fs.writeFileSync('${{ env.WORKSPACE }}/docs.zip', Buffer.from(download.data));
-      
-      - run: unzip docs.zip
+            fs.writeFileSync('${{ env.WORKSPACE }}/docs.zip', Buffer.from(downloadDocs.data));
+
+            var matchArtifactChangelog = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "changelog"
+            })[0];
+            var downloadChangelog = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: matchArtifactChangelog.id,
+              archive_format: 'zip',
+            });
+            fs.writeFileSync('${{ env.WORKSPACE }}/changelog.zip', Buffer.from(downloadChangelog.data));
+
+      - id: unzip-docs
+        run: unzip docs.zip
+
+      - id: get-top-dir
+        run: |
+          root=$(ls -d */index.html | sed -r 's/(.*)\/index\.html/\1/')
+          echo "top-dir=$root" >> $GITHUB_OUTPUT
+
+      - id: unzip-changelog
+        if: ${{ hashFiles('changelog.zip') != '' }}
+        run: unzip changelog.zip
       
       - id: get-deploy-id
         run: |
@@ -72,9 +96,10 @@ jobs:
         env:
           DEPLOY_URL: ${{ steps.get-deploy-url.outputs.deploy-url }}
           SURGE_TOKEN: "${{ secrets.DOCS_SURGE_TOKEN }}"
+          SITE_DIR: ${{ steps.get-top-dir.outputs.top-dir }}
         run: |
           npm install -g surge
-          surge ./site $DEPLOY_URL --token "$SURGE_TOKEN"
+          surge ./$SITE_DIR $DEPLOY_URL --token "$SURGE_TOKEN"
 
       # If the PR artifacts include a changelog file, add it to the PR as a comment
       # The changelog contains links to new and changed files in the deployed docs
