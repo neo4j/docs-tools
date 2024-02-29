@@ -26,6 +26,9 @@ antora:
 urls:
   html_extension_style: indexify
 
+output:
+  dir: ./build/docs
+
 asciidoc:
   attributes:
     page-theme: docs
