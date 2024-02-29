@@ -1,0 +1,7 @@
+extends: substitution
+message: Did you mean to use '%s' instead of '%s'.
+ignorecase: true
+level: error
+swap:
+  - casual cluster: cluster
+

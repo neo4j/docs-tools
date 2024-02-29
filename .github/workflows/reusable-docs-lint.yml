@@ -12,9 +12,9 @@ on:
         description: 'The files to lint'
         default: '.'
         type: string
-      vale-config-file:
-        description: 'The vale ini file to use'
-        default: './lint/vale/.vale.ini'
+      vale-flags:
+        description: 'The vale flags, eg ini file to use'
+        default: '--config=.vale.ini'
         type: string
       use-default-rules:
         description: 'Use default rules'
@@ -32,15 +32,19 @@ on:
         description: 'Delimiter for input files or folders'
         type: string
         default: ''
+      debug:
+        description: 'Show debug in log'
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       files:
         description: 'The files to lint'
         default: '.'
         type: string
-      vale-config-file:
-        description: 'The vale ini file to use'
-        default: './lint/vale/.vale.ini'
+      vale-flags:
+        description: 'The vale flags, eg ini file to use'
+        default: '--config=.vale.ini'
         type: string
       use-default-rules:
         description: 'Use default rules'
@@ -53,11 +57,15 @@ on:
       reporter:
         description: 'Where action messages are reported'
         type: string
-        default: 'github-pr-check'
+        default: 'github-check'
       separator:
         description: 'Delimiter for input files or folders'
         type: string
         default: ''
+      debug:
+        description: 'Show debug in log'
+        default: false
+        type: boolean
 
 jobs:
 
@@ -90,6 +98,7 @@ jobs:
           reporter: ${{ inputs.reporter }}
           fail_on_error: ${{ inputs.vale-fail-on-error }}
           separator: ${{ inputs.separator }}
-          vale_flags: "--config=${{ inputs.vale-config-file }}"
+          vale_flags: ${{ inputs.vale-flags }}
+          debug:  ${{ inputs.debug }}
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

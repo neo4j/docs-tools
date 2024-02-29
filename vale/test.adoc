@@ -1,0 +1,39 @@
+= Test file
+
+== Spelling
+
+Use the Neo4j browser.
+Use the browser.
+Use neo4j.
+Run AuraDb.
+Open Neo4j AuraDb.
+Use AuraDB enterprise.
+Use Neo4j AuraDb enterprise.
+Read the cypher cheatsheet.
+
+== Headers
+
+Good headers:
+
+=== Connecting with Python
+=== Loading CSV files
+=== Authenticating API requests
+=== APOC support
+
+Bad headers:
+
+=== Backup and Export
+=== Use the Graph Catalog
+
+== Words
+
+We do not attempt to utilize fancy words.
+
+== AsciiDoc
+
+Test the ParaNewLine rule. Added for this reason.
+ParaNewLine should not interfere with lists:
+
+. First item. Always at the top.
+. Second item.
+. Third item.

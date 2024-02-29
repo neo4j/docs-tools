@@ -1,0 +1,44 @@
+# Vale
+
+## Prerequisites
+
+1. Install Vale according to the instructions on the link:https://vale.sh/docs/vale-cli/installation/[website].
+2. Make sure Vale is installed correctly by running `vale` in the command line.
+3. (Optional) Install the Vale plugin in VSCode.
+
+## Run Vale
+
+The basic way to run Vale is the following:
+
+```
+vale --config /path/to/vale/.vale.ini /path/to/doc/repo/modules/ROOT/pages/index.adoc
+```
+
+Here `/path/to/vale/` is the path to this repository, where the `.vale.ini` file can be found.
+The `/path/to/doc/repo/` instead is the path to the repository containing the docs you want to run Vale on.
+
+For example, run Vale with the included `.ini` file and the test Asciidoc file:
+
+```
+vale --config vale/.vale.ini vale/test.adoc
+```
+
+## Add a style
+
+To add a new style (for example the Google style guide) in the Vale configuration, do the following:
+
+1. Edit the `vale.ini` file to either add `Google` to the `BasedOnStyles` (to add all the style rules by default, and optionally disable some), or add single rules such as `Google.DateFormat = YES`.
+2. Run `vale --config vale/.vale.ini sync` to download the new style (if it has not been downloaded before).
+
+NOTE: Any external styles added to the `vale/styles` directory (except our custom ones) must be added to `.gitignore`.
+
+## Add terms to the vocabulary
+
+You can add terms with their accepted spelling in the `accept.txt` file(s) within the `vale/config/vocabularies` subdirectories.
+
+NOTE: Do not add entries where an entry fully contains another one, such as `Neo4j` and `Neo4j Aura`.
+Use the `Neo4j/Names.yml` rule for single words instead.
+
+## Run tests
+
+After any update, run the `test-script.sh` script and inspect any differences in the test results file.

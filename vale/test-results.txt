@@ -1,0 +1,13 @@
+test.adoc:5:9:Vale.Terms:Use 'Neo4j Browser' instead of 'Neo4j browser'.
+test.adoc:7:5:Vale.Terms:Use 'Neo4j' instead of 'neo4j'.
+test.adoc:8:5:Vale.Terms:Use 'AuraDB' instead of 'AuraDb'.
+test.adoc:9:6:Vale.Terms:Use 'Neo4j AuraDB' instead of 'Neo4j AuraDb'.
+test.adoc:10:5:Vale.Terms:Use 'AuraDB Enterprise' instead of 'AuraDB enterprise'.
+test.adoc:11:5:Vale.Terms:Use 'Neo4j AuraDB' instead of 'Neo4j AuraDb'.
+test.adoc:12:10:Vale.Terms:Use 'Cypher' instead of 'cypher'.
+test.adoc:25:5:Neo4j.Headings:'Backup and Export' should use sentence-style capitalization.
+test.adoc:26:5:Neo4j.Headings:'Use the Graph Catalog' should use sentence-style capitalization.
+test.adoc:30:11:Neo4j.SimpleWords:Use 'try' instead of 'attempt'
+test.adoc:30:22:Neo4j.SimpleWords:Use 'use' instead of 'utilize'
+test.adoc:34:26:Neo4j.ParaNewLine:Use a new line for each sentence in a paragraph of text.
+test.adoc:37:13:Neo4j.ParaNewLine:Use a new line for each sentence in a paragraph of text.

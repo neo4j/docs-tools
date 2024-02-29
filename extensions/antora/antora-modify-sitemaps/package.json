@@ -1,0 +1,14 @@
+{
+  "name": "@neo4j-antora/antora-modify-sitemaps",
+  "version": "0.4.4",
+  "description": "Override default Antora sitemap generator to include only pages for the current version, and optionally move sitemaps into the component folder for the current version",
+  "main": "modify-sitemaps.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "antora"
+  ],
+  "author": "Neo4j",
+  "license": "MIT"
+}

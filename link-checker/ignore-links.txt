@@ -1,0 +1,50 @@
+# header and navigation links
+/docs/$
+/docs/.*/current/$
+/docs/aura/?$
+/docs/aura/auradb/?$
+/docs/aura/aurads/?$
+/docs/driver-manual/1.7/$
+/docs/kafka
+/docs/spark/$
+
+/developer/
+/labs/
+/assets/
+/download/
+_/fonts/
+
+# footer links
+docs.google.com
+twitter.com
+
+# graph academy
+graphacademy.neo4j.com
+neo4j.com/graphacademy/
+
+# neo4j.com
+# neo4j.com/docs/
+neo4j.com/download-center/
+
+# fonts
+fonts.googleapis.com
+fonts.gstatic.com
+
+# github
+github.com
+
+docs.spring.io
+
+robots.txt
+file:
+# localhost
+# (?!localhost):\d{4}
+:7473
+:7474
+:7475
+:7476
+:7477
+20.237.50.207
+<external-ip>
+external_ip
+ingress_ip

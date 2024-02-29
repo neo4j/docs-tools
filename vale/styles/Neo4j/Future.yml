@@ -1,0 +1,10 @@
+extends: substitution
+message: Use the present tense '%s' to describe system operations.
+level: suggestion
+ignorecase: true
+swap:
+  will close: closes
+  will open: opens
+  will run: runs
+  will stop: stops
+  will be: is

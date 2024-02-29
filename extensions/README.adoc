@@ -1,0 +1,6 @@
+# Extensions
+
+The Neo4j docs team owns several packages that extend Asciidoctor and Antora.
+The packages are available from link:https://www.npmjs.com/org/neo4j-antora[NPM]
+
+To use one of these extensions in a documentation project, add the package as a dependency in the project `package.json` file and as an extension in the playbook.

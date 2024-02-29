@@ -1,0 +1,19 @@
+{
+    "name": "@neo4j-antora/mark-terms",
+    "version": "1.1.0",
+    "description": "Asciidoc extension to mark the first instance of a term on a page, typically with a copyright symbol",
+    "main": "mark-terms.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/neo4j/docs-asciidoc-extensions.git"
+    },
+    "author": "Neo4j Documentation <docs@neo4j,com>",
+    "license": "MIT",
+    "bugs": {
+      "url": "https://github.com/neo4j/docs-asciidoc-extensions/issues"
+    },
+    "homepage": "https://github.com/neo4j/docs-asciidoc-extensions#readme"
+  }
