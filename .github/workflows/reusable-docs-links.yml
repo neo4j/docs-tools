@@ -50,7 +50,7 @@ jobs:
         path: .docs-tools
 
     - name: Download HTML
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: docs
         path: build
@@ -79,7 +79,7 @@ jobs:
     # upload artifacts
 
     - name: Save log
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linklog
         path: link-log.txt

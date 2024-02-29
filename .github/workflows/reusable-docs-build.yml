@@ -12,6 +12,10 @@ on:
         required: false
         type: string
         default: ''
+      site-dir:
+        description: 'The built site root directory'
+        type: string
+        default: 'site'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
@@ -41,6 +45,10 @@ on:
         required: false
         type: string
         default: ''
+      site-dir:
+        description: 'The built site root directory'
+        type: string
+        default: 'site'
       deploy-id:
         description: 'A deploy ID'
         required: true
@@ -96,14 +104,14 @@ jobs:
       run: echo $DEPLOY_ID > ./build/deployid
 
     - name: Upload HTML artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docs
         path: build/
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: antora-log
         path: build/log
@@ -111,9 +119,8 @@ jobs:
 
     - name: Upload Page List artifact
       id: page-list-artifact
-      if: ${{ inputs.pageList }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: page-list
-        path: build/site/.meta/pageList
+        path: build/${{ inputs.site-dir }}/.meta/pageList
         retention-days: ${{ inputs.retain-artifacts }}
