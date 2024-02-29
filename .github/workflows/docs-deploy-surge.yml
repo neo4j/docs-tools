@@ -65,7 +65,7 @@ jobs:
 
       - id: get-top-dir
         run: |
-          root=$(ls -d build/*/index.html | sed -r 's/build\/(.*)\/index\.html/\1/')
+          root=$(ls -d */index.html | sed -r 's/(.*)\/index\.html/\1/')
           echo "top-dir=$root" >> $GITHUB_OUTPUT
 
       - id: unzip-changelog
