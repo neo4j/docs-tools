@@ -11,12 +11,12 @@ on:
           description: 'Default options (extensions) to pass to the build script'
           required: false
           type: string
-          default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
+          default: '--extension ./.docs-tools/extensions/antora/antora-page-list'
       cli-options:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: ''
+        default: '--extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
       site-dir:
         description: 'The built site root directory'
         type: string
