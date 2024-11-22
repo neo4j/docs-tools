@@ -5,9 +5,7 @@ on:
     inputs:
       deploy-branch:
         description: 'The branch to deploy'
-        required: false
         type: string
-        default: 'main'
       fetch-depth:
         description: 'Fetch all commits or the latest'
         required: false
@@ -58,7 +56,6 @@ on:
       deploy-branch:
         description: 'The branch to deploy'
         type: string
-        default: '${{ env.GITHUB_REF_NAME }}'
       fetch-depth:
         description: 'Fetch all commits or the latest'
         type: number
@@ -116,7 +113,7 @@ jobs:
       CLI_DEFAULT: ${{ inputs.cli-default }}
       CLI_OPTIONS: ${{ inputs.cli-options }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
-      DEPLOY_BRANCH: ${{ inputs.deploy-branch }}
+      DEPLOY_BRANCH: ${{ inputs.deploy-branch != '' inputs.deploy-branch || env.GITHUB_REF_NAME }}
 
     steps:    
     - uses: actions/checkout@v4
