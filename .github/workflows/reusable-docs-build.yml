@@ -58,7 +58,7 @@ on:
       deploy-branch:
         description: 'The branch to deploy'
         type: string
-        default: '${{ github.ref_name}}'
+        default: '${{ env.GITHUB_REF_NAME }}'
       fetch-depth:
         description: 'Fetch all commits or the latest'
         type: number
