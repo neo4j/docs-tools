@@ -141,7 +141,8 @@ jobs:
       run: npm install --omit=dev
 
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT -- $CLI_DEFAULT $CLI_OPTIONS $CLI_ATTRIBUTES
+      # run: npm run $PACKAGE_SCRIPT -- $CLI_DEFAULT $CLI_OPTIONS $CLI_ATTRIBUTES
+      run: npm run $PACKAGE_SCRIPT
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
