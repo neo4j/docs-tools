@@ -113,7 +113,7 @@ jobs:
       CLI_DEFAULT: ${{ inputs.cli-default }}
       CLI_OPTIONS: ${{ inputs.cli-options }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
-      DEPLOY_BRANCH: ${{ inputs.deploy-branch != '' && inputs.deploy-branch || env.GITHUB_REF_NAME }}
+      DEPLOY_BRANCH: ${{ inputs.deploy-branch != '' && inputs.deploy-branch || $GITHUB_REF_NAME }}
 
     steps:    
     - uses: actions/checkout@v4
