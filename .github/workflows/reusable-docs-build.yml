@@ -3,15 +3,30 @@ name: Generate HTML
 on:
   workflow_call:
     inputs:
+      deploy-branch:
+        description: 'The branch to deploy'
+        required: false
+        type: string
+        default: 'main'
+      fetch-depth:
+        description: 'Fetch all commits or the latest'
+        required: false
+        type: number
+        default: 1
       package-script:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'build-verify'
+      cli-attributes:
+        description: 'Asciidoc attribute values to pass for this build'
+        required: false
+        type: string
+        default: '--attribute page-chatbot="/docs/assets/chatbot"'
       cli-default:
-          description: 'Default options (extensions) to pass to the build script'
-          required: false
-          type: string
-          default: '--extension ./.docs-tools/extensions/antora/antora-page-list'
+        description: 'Default options (extensions) to pass to the build script'
+        required: false
+        type: string
+        default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./node_modules/@neo4j-antora/aliases-redirects'
       cli-options:
         description: 'Options to pass to the build script'
         required: false
@@ -40,21 +55,34 @@ on:
           value: ${{ jobs.build-docs.outputs.pages-listed }}
   workflow_dispatch:
     inputs:
+      deploy-branch:
+        description: 'The branch to deploy'
+        type: string
+        default: '${{ github.ref_name}}'
+      fetch-depth:
+        description: 'Fetch all commits or the latest'
+        type: number
+        default: 1
       package-script:
         description: 'The name of the script to run in package.json '
         required: true
         type: string
         default: 'build-verify'
+      cli-attributes:
+        description: 'Asciidoc attribute values to pass for this build'
+        required: false
+        type: string
+        default: '--attribute page-chatbot="/docs/assets/chatbot"'
       cli-default:
-          description: 'Default options (extensions) to pass to the build script'
-          required: false
-          type: string
-          default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
+        description: 'Default options (extensions) to pass to the build script'
+        required: false
+        type: string
+        default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./node_modules/@neo4j-antora/aliases-redirects'
       cli-options:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: ''
+        default: '--extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
       site-dir:
         description: 'The built site root directory'
         type: string
@@ -84,11 +112,17 @@ jobs:
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
+      CLI_ATTRIBUTES: ${{ inputs.cli-attributes }}
       CLI_DEFAULT: ${{ inputs.cli-default }}
       CLI_OPTIONS: ${{ inputs.cli-options }}
+      FETCH_DEPTH: ${{ inputs.fetch-depth }}
+      DEPLOY_BRANCH: ${{ inputs.deploy-branch }}
 
     steps:    
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: ${{ env.FETCH_DEPTH }}
+        ref: ${{ env.DEPLOY_BRANCH }}
 
     - name: Checkout tools repo
       uses: actions/checkout@v4
@@ -108,7 +142,7 @@ jobs:
       run: npm install --omit=dev
 
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT -- $CLI_DEFAULT $CLI_OPTIONS
+      run: npm run $PACKAGE_SCRIPT -- $CLI_DEFAULT $CLI_OPTIONS $CLI_ATTRIBUTES
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
