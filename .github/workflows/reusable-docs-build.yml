@@ -116,6 +116,7 @@ jobs:
       CLI_OPTIONS: ${{ inputs.cli-options }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DEPLOY_BRANCH: ${{ inputs.deploy-branch }}
+      PAGE_LIST: ${{ inputs.pageList }}
 
     steps:    
     - uses: actions/checkout@v4
@@ -162,6 +163,7 @@ jobs:
         retention-days: ${{ inputs.retain-artifacts }}
 
     - name: Upload Page List artifact
+      if: ${{ env.PAGE_LIST }}
       id: page-list-artifact
       uses: actions/upload-artifact@v4
       with:
