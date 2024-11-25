@@ -163,7 +163,7 @@ jobs:
         retention-days: ${{ inputs.retain-artifacts }}
 
     - name: Upload Page List artifact
-      if: ${{ env.PAGE_LIST }}
+      if: ${{ env.PAGE_LIST == 'true'}}
       id: page-list-artifact
       uses: actions/upload-artifact@v4
       with:
