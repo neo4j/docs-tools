@@ -1,0 +1,14 @@
+{
+  "name": "@neo4j-antora/antora-lts",
+  "version": "0.1.0",
+  "description": "Mark a component version as LTS",
+  "main": "antora-lts.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "antora"
+  ],
+  "author": "Neo4j",
+  "license": "MIT"
+}
