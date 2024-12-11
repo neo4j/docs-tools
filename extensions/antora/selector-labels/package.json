@@ -1,8 +1,8 @@
 {
-  "name": "@neo4j-antora/antora-lts",
+  "name": "@neo4j-antora/current-lts",
   "version": "0.1.0",
-  "description": "Mark a component version as LTS",
-  "main": "antora-lts.js",
+  "description": "Add text to component versions in a version selector",
+  "main": "selector-labels.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
