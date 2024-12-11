@@ -7,21 +7,29 @@ module.exports.register = function ({ config }) {
   this.on('navigationBuilt', ({ contentCatalog }) => {
 
     const defaultConfig = [
-      [ 'current', { selectorText: '(Current)', unique: true } ],
+      [ 'current', { selectorText: '(Current)', unique: true, useSemantic: true } ],
       [ 'lts', { selectorText: '(LTS)' } ]
     ]
 
     const data = Object.entries(config).length > 0 ? Object.entries(config) : defaultConfig
     const files = contentCatalog.findBy({ family: 'nav' })
-
     var selectorLabels = []
+
     data.forEach(([attr, properties]) => {
 
       const componentVersions = files.reduce((v, file) => {
-        if ('origin' in file.src && file.src.origin.descriptor[attr]) {
-          const key = file.src.version + '@' + file.src.component
+
+        // we can use semantic versioning to determine the latest (current) version
+        if (attr === 'current' && properties.useSemantic && file.src.component) {
+          const latestComponentVersion = contentCatalog.getComponent(file.src.component).latest.version
+          const key = latestComponentVersion + '@' + file.src.component
           v.indexOf(key) === -1 ? v.push(key) : null
-        } 
+        } else {
+          if ('origin' in file.src && file.src.origin.descriptor[attr]) {
+            const key = file.src.version + '@' + file.src.component
+            v.indexOf(key) === -1 ? v.push(key) : null
+          }
+        }
         return v;
       }, []);
 
@@ -30,7 +38,6 @@ module.exports.register = function ({ config }) {
         properties: properties,
         componentVersions: componentVersions
       })
-
 
     })
 
