@@ -1,5 +1,5 @@
 {
-  "name": "@neo4j-antora/current-lts",
+  "name": "@neo4j-antora/selector-labels",
   "version": "0.1.0",
   "description": "Add text to component versions in a version selector",
   "main": "selector-labels.js",
