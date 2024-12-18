@@ -26,7 +26,9 @@ Optional.
 
 Specifies a version that will be used for the sitemap for all components in the site catalog. If you do not provide a value, by default the version that Antora considers to be the latest version for a given component is used. For details on how Antora determines the 'latest' version, see [Antora version ordering rules](https://docs.antora.org/antora/latest/how-component-versions-are-sorted/#determine-version-order).
 
-You can override this value for specific components by using the `data` property.
+You might want to override this value if, for example, you publish prerelease or preview documentation of a component but you do not mark it as `prerelease: true` in the component descriptor (`antora.yml`).
+
+If you are generating output for a single component you can use `sitemap_version` to specify the version of that component that you want to generate a sitemap for. If you are generating output for multiple components, you need to override this value for specific components by using the `data` property.
 
 ### sitemap_loc_version
 
