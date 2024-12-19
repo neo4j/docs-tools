@@ -42,7 +42,7 @@ module.exports.register = function ({ config }) {
       mapSite (playbook, pages) {
         const mappablePages = pages.reduce((mappable, file) => {
 
-            const mappableVersion = data.components[file.src.component] ? data.components[file.src.component] : sitemapVersion || ''
+            const mappableVersion = sitemapVersion || data.components[file.src.component] || ''
             const mappableFile = ( file.src.version == mappableVersion || ( !file.src.version && !mappableVersion ) )
 
             if (mappableFile) {
@@ -127,7 +127,7 @@ module.exports.register = function ({ config }) {
     // components without sitemaps
     for (const component in excludeVersions) {
       if (!Object.keys(mappableComponentVersions).includes(component)) {
-        const mappableVersion = data.components[component] ? data.components[component] : sitemapVersion 
+        const mappableVersion = sitemapVersion || data.components[component]
         logger.warn({  }, 'Could not create sitemap for \'%s\' version \'%s\'. Available versions are \'%s\'', component, mappableVersion, excludeVersions[component].join(', ') )
       }
     }
