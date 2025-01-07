@@ -1,4 +1,5 @@
 const { posix: path } = require('path')
+const semver = require('semver')
 
 module.exports.register = function ({ config }) {
 
@@ -14,58 +15,98 @@ module.exports.register = function ({ config }) {
   const SITEMAP_EXT = '.xml'
 
   const logger = this.getLogger('modify-sitemaps')
-  let componentVersions, mappableComponentVersions = {}
-  let excludeVersions = {}
-
-  let latestVersions
+  let componentVersions, mappedComponentVersions = {}
+  let mappedVersions = {}
+  let unMappableComponents = []
   
   this
-  .on('navigationBuilt', ({ contentCatalog }) => {
+  .on('navigationBuilt', ({ playbook, contentCatalog }) => {
+
     const files = contentCatalog.findBy({ family: 'nav' })
+
+    const defaultComponent = contentCatalog.resolvePage(playbook.site.startPage).src.origin.descriptor.name
+
     componentVersions = files.reduce((v, file) => {
-      const latestComponentVersion = contentCatalog.getComponent(file.src.component).latest.version
-      v[file.src.component] = latestComponentVersion
+      v.hasOwnProperty(file.src.component) ? null : v[file.src.component] = { latest: '', versions: [] }
+      v[file.src.component].versions.indexOf(file.src.version) === -1 ? v[file.src.component].versions.push(file.src.version) : null
+      file.src.component === defaultComponent ? v[file.src.component].defaultComponent = 'true' : null
       return v;
     }, {});
 
-    defaultSiteMapVersion = contentCatalog.getComponent(files[0].src.component).latest.version
+    // check latest is not a prerelease and revert to latest actual release if it is
+    for (const component of Object.keys(componentVersions)) {
+      const latest = contentCatalog.getComponent(component).latest.version
+      if (latest === '') {
+        componentVersions[component].latest = '~'
+        continue
+      }
+      const latestCheck = latest === ('current' || '') ? latest : semver.coerce(latest, { loose: true, includePrerelease: true })
+      if (latestCheck && semver.prerelease(latestCheck)) {
+        const semverList = componentVersions[component].versions.filter( (v) => v !== latest)
+        componentVersions[component].latest = semverList.slice(-1)[0]
+        logger.info({  }, '%s version %s is a prerelease. Version %s will be used to generate the sitemap if no version is specified in the playbook', component, latest, componentVersions[component].latest)
+      } else {
+        componentVersions[component].latest = latest
+      }
+    }
 
-    const { sitemapVersion, data = { components: componentVersions }, sitemapLocVersion = 'current' } = config
+    const defaultSiteMapVersion = componentVersions[defaultComponent].latest
+
+    const { sitemapVersion, data = { components: {}}, sitemapLocVersion = 'current' } = config
 
     if (!sitemapVersion && data.components.length == 0) {
       logger.error({  }, 'sitemap_version is required but has not been specified in the playbook. Default sitemap generation will be used')
       return
     }
 
+    // check for each component if we can make a sitemap for the version specified
+    for (const c of Object.keys(componentVersions)) {
+      if (data.components[c]) logger.info({  }, 'Sitemap version %s for \'%s\' specified by playbook data', data.components[c], c )
+      else if (sitemapVersion) logger.info({  }, 'Sitemap version %s for \'%s\' specified by playbook', sitemapVersion, c )
+      else if (componentVersions[c].latest) logger.info({  }, 'Sitemap version %s for \'%s\' determined from semantic latest', componentVersions[c].latest, c )
+
+      const versionToMap = data.components[c] || sitemapVersion || componentVersions[c].latest || defaultSiteMapVersion || ''
+      if (versionToMap && versionToMap != '~' && !componentVersions[c].versions.includes(versionToMap)) {
+        logger.warn({  }, 'Component \'%s\' does not include version \'%s\'. Available versions are \'%s\'', c, versionToMap, componentVersions[c].versions.join(', ') )
+        unMappableComponents.push(c)
+      }
+    }
+
     const delegate = this.getFunctions().mapSite
     this.replaceFunctions({
       mapSite (playbook, pages) {
-        const mappablePages = pages.reduce((mappable, file) => {
+        const publishablePages = contentCatalog.getPages((page) => page.out)
+        const mappablePages = publishablePages.reduce((mappable, file) => {
 
-            const mappableVersion = sitemapVersion || data.components[file.src.component] || ''
-            const mappableFile = ( file.src.version == mappableVersion || ( !file.src.version && !mappableVersion ) )
+          // is this component mappable?
+          // const mappableComponent = !unMappableComponents.includes(file.src.component)
+          // what version of this file's component are we trying to add to the sitemap?
+          let mappableVersion = data.components[file.src.component] || sitemapVersion || componentVersions[file.src.component].latest || defaultSiteMapVersion || ''
+          if (mappableVersion === '~') mappableVersion = ''
+          // is this file in that version of the component?
+          const mappableFile = ( file.src.version == mappableVersion || ( !file.src.version && !mappableVersion ) )
 
-            if (mappableFile) {
-              logger.debug({ file: file.src }, 'Adding file in %s %s to sitemap', file.src.component, file.src.version || '(versionless)')
-            } else {
-              logger.debug({ file: file.src }, 'NOT adding file in %s %s to sitemap', file.src.component, file.src.version || '(versionlesscontent)')
-            }
-
-            excludeVersions[file.src.component] = ( typeof excludeVersions[file.src.component] != 'undefined' && excludeVersions[file.src.component] instanceof Array ) ? excludeVersions[file.src.component] : []
-
-            if ( mappableVersion ) file.pub.url = file.pub.url.replace(mappableVersion,sitemapLocVersion)
-            if ( mappableFile) {
-              
-              mappable.push(file);
-              mappableComponentVersions[file.src.component] = mappableVersion;
+          if (mappableFile) {
+            logger.debug({ file: file.src }, 'Adding file in %s %s to sitemap', file.src.component, file.src.version || '(versionless)')
           } else {
-              if (!excludeVersions[file.src.component].includes(file.src.version)) excludeVersions[file.src.component].push(file.src.version)
+            logger.debug({ file: file.src }, 'NOT adding file in %s %s to sitemap', file.src.component, file.src.version || '(versionlesscontent)')
+          }
+
+          mappedVersions[file.src.component] = ( typeof mappedVersions[file.src.component] != 'undefined' && mappedVersions[file.src.component] instanceof Array ) ? mappedVersions[file.src.component] : []
+
+          if ( mappableVersion ) file.pub.url = file.pub.url.replace(mappableVersion,sitemapLocVersion)
+          if ( mappableFile) {
+            mappable.push(file);
+            mappedComponentVersions[file.src.component] = mappableVersion;
+          } else {
+            if (!mappedVersions[file.src.component].includes(file.src.version)) mappedVersions[file.src.component].push(file.src.version)
+          
           }
           return mappable;
         }, []);
-        logger.info({  }, 'Adding %d %s to the %s', mappablePages.length, pluralize(mappablePages.length, 'page'), pluralize(mappableComponentVersions.length, 'sitemap'))
+
+        logger.info({  }, 'Adding %d %s to the %s', mappablePages.length, pluralize(mappablePages.length, 'page'), pluralize(mappedComponentVersions.length, 'sitemap'))
         return delegate.call(this, playbook, mappablePages)
-        
       }
     })
   })
@@ -84,7 +125,7 @@ module.exports.register = function ({ config }) {
       return
     }
 
-    logger.info({  }, '%s generated', pluralize(mappableComponentVersions.length, 'Sitemap'))
+    logger.info({  }, '%d %s generated', Object.keys(mappedComponentVersions).length, pluralize(Object.keys(mappedComponentVersions).length, 'Sitemap'))
   
     const siteFiles = siteCatalog.getFiles((page) => page.out)
 
@@ -97,8 +138,8 @@ module.exports.register = function ({ config }) {
       let dirname, versionDir, path_
       
       if (file.out.path.startsWith(SITEMAP_STEM) && sitemapFiles.length == 1) {
-        dirname = Object.keys(mappableComponentVersions)[0]
-        versionDir = mappableComponentVersions[dirname] != '' ? mappableComponentVersions[dirname] : '' ;
+        dirname = Object.keys(mappedComponentVersions)[0]
+        versionDir = mappedComponentVersions[dirname] != '' ? mappedComponentVersions[dirname] : '' ;
         path_ = path.join(dirname, versionDir, SITEMAP_STEM+SITEMAP_EXT)
       }
 
@@ -112,7 +153,7 @@ module.exports.register = function ({ config }) {
 
       if (file.out.path.startsWith(SITEMAP_PREFIX)) {
         dirname = file.out.path.replace(SITEMAP_PREFIX,'').replace(SITEMAP_EXT,'')
-        versionDir = mappableComponentVersions[dirname] != '' ? mappableComponentVersions[dirname] : '' ;
+        versionDir = mappedComponentVersions[dirname] != '' ? mappedComponentVersions[dirname] : '' ;
         path_ = path.join(dirname, versionDir, SITEMAP_STEM+SITEMAP_EXT)  
       }
 
@@ -125,16 +166,16 @@ module.exports.register = function ({ config }) {
     })
 
     // components without sitemaps
-    for (const component in excludeVersions) {
-      if (!Object.keys(mappableComponentVersions).includes(component)) {
-        const mappableVersion = sitemapVersion || data.components[component]
-        logger.warn({  }, 'Could not create sitemap for \'%s\' version \'%s\'. Available versions are \'%s\'', component, mappableVersion, excludeVersions[component].join(', ') )
+    for (const component in mappedVersions) {
+      if (!Object.keys(mappedComponentVersions).includes(component)) {
+        const mappableVersion = sitemapVersion || componentVersions[file.src.component].latest || defaultSiteMapVersion
+        logger.warn({  }, 'Could not create sitemap for \'%s\' version \'%s\'. Available versions are \'%s\'', component, mappableVersion, componentVersions[component].versions.join(', ') )
       }
     }
 
     // components without sitemaps
     for (const component in data.components) {
-      if (!Object.keys(excludeVersions).includes(component)) {
+      if (!Object.keys(mappedVersions).includes(component)) {
         logger.warn({  }, 'Sitemap generation for \'%s\' version \'%s\' specified, but no files for this component were found in the site catalog', component, data.components[component] )
       }
     }
