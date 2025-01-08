@@ -42,9 +42,30 @@ module.exports.register = function ({ config }) {
       }
       const latestCheck = latest === ('current' || '') ? latest : semver.coerce(latest, { loose: true, includePrerelease: true })
       if (latestCheck && semver.prerelease(latestCheck)) {
-        const semverList = componentVersions[component].versions.filter( (v) => v !== latest)
-        componentVersions[component].latest = semverList.slice(-1)[0]
-        logger.info({  }, '%s version %s is a prerelease. Version %s will be used to generate the sitemap if no version is specified in the playbook', component, latest, componentVersions[component].latest)
+        const releases = componentVersions[component].versions
+
+        // turn releases into semver objects
+        const semverList = []
+        const semverObj = {}
+        for (const r of releases) {
+          const s = r === 'current' ? 'current' : semver.valid(semver.coerce(r, { loose: true, includePrerelease: true }))
+          if (s) {
+            semverList.push(s)
+            semverObj[s] = r
+          }
+        }
+
+        // ignore prereleases
+        for (s of semver.rsort(semverList)) {
+          if (!semver.prerelease(s)) {
+            componentVersions[component].latest = semverObj[s]
+            logger.info({  }, '%s version %s is the latest version according to semantic versioning rules', component, semverObj[s])
+            break
+          } else {
+            logger.info({  }, '%s version %s is a prerelease', component, semverObj[s])
+          }
+        }
+
       } else {
         componentVersions[component].latest = latest
       }
@@ -61,9 +82,9 @@ module.exports.register = function ({ config }) {
 
     // check for each component if we can make a sitemap for the version specified
     for (const c of Object.keys(componentVersions)) {
-      if (data.components[c]) logger.info({  }, 'Sitemap version %s for \'%s\' specified by playbook data', data.components[c], c )
-      else if (sitemapVersion) logger.info({  }, 'Sitemap version %s for \'%s\' specified by playbook', sitemapVersion, c )
-      else if (componentVersions[c].latest) logger.info({  }, 'Sitemap version %s for \'%s\' determined from semantic latest', componentVersions[c].latest, c )
+      if (data.components[c]) logger.info({  }, '%s sitemap will be generated from version %s (specified by playbook data)', c, data.components[c])
+      else if (sitemapVersion) logger.info({  }, '%s sitemap will be generated from version %s (specified by playbook)', c, sitemapVersion)
+      else if (componentVersions[c].latest) logger.info({  }, '%s sitemap will be generated from version %s (specified by semantic versioning rules)', c, componentVersions[c].latest)
 
       const versionToMap = data.components[c] || sitemapVersion || componentVersions[c].latest || defaultSiteMapVersion || ''
       if (versionToMap && versionToMap != '~' && !componentVersions[c].versions.includes(versionToMap)) {
