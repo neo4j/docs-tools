@@ -24,14 +24,14 @@ module.exports.register = function ({ config }) {
 
     const files = contentCatalog.findBy({ family: 'nav' })
 
-    const defaultComponent = contentCatalog.resolvePage(playbook.site.startPage).src.origin.descriptor.name
-
     componentVersions = files.reduce((v, file) => {
       v.hasOwnProperty(file.src.component) ? null : v[file.src.component] = { latest: '', versions: [] }
       v[file.src.component].versions.indexOf(file.src.version) === -1 ? v[file.src.component].versions.push(file.src.version) : null
-      file.src.component === defaultComponent ? v[file.src.component].defaultComponent = 'true' : null
       return v;
     }, {});
+
+    // derive a default component from site startPage if possible
+    const defaultComponent = playbook.site.startPage ? contentCatalog.resolvePage(playbook.site.startPage).src.origin.descriptor.name : Object.keys(componentVersions)[0] ;
 
     // check latest is not a prerelease and revert to latest actual release if it is
     for (const component of Object.keys(componentVersions)) {
