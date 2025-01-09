@@ -60,9 +60,9 @@ surgeList().then((deploys) => {
     const deployDetails = deploy.replace(/[ \s\t]+/g,' ').trim().split(' ');
 
     // ge the deploy url
-    const deployUrl = (env.CI)? deployDetails[1]: deployDetails[0] ;
+    const deployUrl = deployDetails[0]
     if (!deployUrl) continue;
-    
+    console.log('checking PR:', deployUrl)
     // derive the pr details from the deploy url
     const prDetails = deployUrl.replace('.surge.sh','').split(/[.-]/);
     const prNumber = prDetails.pop();
@@ -79,6 +79,7 @@ surgeList().then((deploys) => {
     getPRStatus(org, repo, prNumber).then((prStatus) => {
       // if the pr is closed, teardown the deploy
       if (prStatus === 'closed') {
+          console.log(`${deployUrl} - PR is closed`);
           if (env.CI) teardownDeploy(deployUrl);
       } else {
           // console.log(`${deployUrl} - PR is not closed`);
