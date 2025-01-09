@@ -22,9 +22,13 @@ antora:
     sitemap_version: 'dev'
     sitemap_loc_version: 'current'
     move_sitemaps_to_components: true
+  - require: "./extensions/antora/antora-page-list/page-list.js"
 
 urls:
   html_extension_style: indexify
+
+output:
+  dir: ./build/docs
 
 asciidoc:
   attributes:

@@ -7,11 +7,16 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'build-verify'
+      cli-default:
+          description: 'Default options (extensions) to pass to the build script'
+          required: false
+          type: string
+          default: '--extension ./.docs-tools/extensions/antora/antora-page-list'
       cli-options:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: ''
+        default: '--extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
       site-dir:
         description: 'The built site root directory'
         type: string
@@ -40,6 +45,11 @@ on:
         required: true
         type: string
         default: 'build-verify'
+      cli-default:
+          description: 'Default options (extensions) to pass to the build script'
+          required: false
+          type: string
+          default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
       cli-options:
         description: 'Options to pass to the build script'
         required: false
@@ -74,7 +84,7 @@ jobs:
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
-      CLI_DEFAULT: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
+      CLI_DEFAULT: ${{ inputs.cli-default }}
       CLI_OPTIONS: ${{ inputs.cli-options }}
 
     steps:    

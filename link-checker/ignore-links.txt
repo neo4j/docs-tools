@@ -5,8 +5,14 @@
 /docs/aura/auradb/?$
 /docs/aura/aurads/?$
 /docs/driver-manual/1.7/$
-/docs/kafka
-/docs/spark/$
+/docs/kafka/?$
+/docs/spark/?$
+/docs/genai/tutorials/embeddings-vector-indexes/?$
+/docs/cypher-manual/current/genai-integrations/?$
+/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/?$
+/docs/cdc/?$
+/docs/dataflow-bigquery/?$
+/docs/dataflow-google-cloud/?$
 
 /developer/
 /labs/
