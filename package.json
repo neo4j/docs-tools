@@ -1,6 +1,6 @@
 {
   "name": "antora-actions",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Test Antora log reporting in github actions",
   "main": "server.js",
   "scripts": {
