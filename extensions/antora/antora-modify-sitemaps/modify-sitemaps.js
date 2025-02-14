@@ -78,7 +78,7 @@ module.exports.register = function ({ config }) {
     // update file.pub.url for the latest version of every file for canonical URLs
     contentCatalog.getPages((page) => page.out).forEach( (file) => {
       const { component, version } = file.src
-      if (version === componentVersions[component].latest) {
+      if (version === componentVersions[component].latest && latestVersionPath !== '') {
         file.pub.url = file.pub.url.replace(version,latestVersionPath)
         logger.debug({ file: file.src }, 'Updating url to %s for canonical URLs', file.pub.url)
       }
