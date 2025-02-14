@@ -31,7 +31,8 @@ module.exports.register = function ({ config }) {
     }, {});
 
     // derive a default component from site startPage if possible
-    const defaultComponent = playbook.site.startPage ? contentCatalog.resolvePage(playbook.site.startPage).src.origin.descriptor.name : Object.keys(componentVersions)[0] ;
+    const defaultComponent = playbook.site.startPage ? (resolved = contentCatalog.resolvePage(playbook.site.startPage)) ? resolved.src.origin.descriptor.name : Object.keys(componentVersions)[0] : Object.keys(componentVersions)[0] ;
+    logger.debug({  }, 'Default component: %s', defaultComponent)
 
     // check latest is not a prerelease and revert to latest actual release if it is
     for (const component of Object.keys(componentVersions)) {
