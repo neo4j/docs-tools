@@ -108,7 +108,11 @@ module.exports.register = function ({ config }) {
     this.replaceFunctions({
       mapSite (playbook, pages) {
 
-        const { sitemapAllVersions = true } = config
+        // NOTE: Change this default to true once we are comfortable including all versions in the sitemap
+        // That can happen when we are ok to allow all supported docs to be indexed, allowed by robots.txt
+        const { sitemapAllVersions = false } = config
+
+        logger.debug({  }, 'sitemapAllVersions: %s', sitemapAllVersions)
 
         const publishablePages = contentCatalog.getPages((page) => page.out)
         const sitemapPages = publishablePages.reduce((mappable, file) => {
