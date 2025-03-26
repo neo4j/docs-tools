@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/antora-modify-sitemaps",
-  "version": "0.6.1",
+  "version": "0.7.1",
   "description": "Override default Antora sitemap generator to include only pages for the current versions of components, and optionally move sitemaps into the component folders for the current versions",
   "main": "modify-sitemaps.js",
   "scripts": {
