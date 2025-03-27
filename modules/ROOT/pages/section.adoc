@@ -1,0 +1,11 @@
+= A section
+
+This section describes a new feature.
+
+== A title
+
+The title was created.
+
+== An old feature
+
+We don't have causal clusters any more.
