@@ -58,10 +58,10 @@ jobs:
           link-checker
         path: .docs-tools
 
-    - name: Use Node.js 16
+    - name: Use Node.js lts
       uses: actions/setup-node@v4
       with:
-        node-version: '16'
+        node-version: lts/*
 
     # - name: Install link checker
     #   run: npm install github:recrwplay/link-checker#v0.2.0

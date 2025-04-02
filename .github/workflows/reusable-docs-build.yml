@@ -7,11 +7,20 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'build-verify'
+      cli-default:
+          description: 'Default options (extensions) to pass to the build script'
+          required: false
+          type: string
+          default: '--extension ./.docs-tools/extensions/antora/antora-page-list'
       cli-options:
         description: 'Options to pass to the build script'
         required: false
         type: string
-        default: ''
+        default: '--extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
+      site-dir:
+        description: 'The built site root directory'
+        type: string
+        default: 'site'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
@@ -36,11 +45,20 @@ on:
         required: true
         type: string
         default: 'build-verify'
+      cli-default:
+          description: 'Default options (extensions) to pass to the build script'
+          required: false
+          type: string
+          default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
       cli-options:
         description: 'Options to pass to the build script'
         required: false
         type: string
         default: ''
+      site-dir:
+        description: 'The built site root directory'
+        type: string
+        default: 'site'
       deploy-id:
         description: 'A deploy ID'
         required: true
@@ -66,7 +84,7 @@ jobs:
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
-      CLI_DEFAULT: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
+      CLI_DEFAULT: ${{ inputs.cli-default }}
       CLI_OPTIONS: ${{ inputs.cli-options }}
 
     steps:    
@@ -81,10 +99,10 @@ jobs:
           extensions/antora
         path: .docs-tools
 
-    - name: Use Node.js 16
+    - name: Use Node.js 18
       uses: actions/setup-node@v4
       with:
-        node-version: '16'
+        node-version: '18'
 
     - name: Install dependencies
       run: npm install --omit=dev
@@ -114,5 +132,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: page-list
-        path: build/site/.meta/pageList
+        path: build/${{ inputs.site-dir }}/.meta/pageList
         retention-days: ${{ inputs.retain-artifacts }}

@@ -14,7 +14,8 @@ module.exports.register = function ({ config }) {
     const myFiles = contentCatalog.getFiles()
     myFiles.forEach( (file) => {
       if (!file.out || !file.asciidoc) return
-      pageList[file.src.path] = {
+      let repoPath = file.src.origin.startPath != '' ? file.src.origin.startPath + '/' + file.src.path : file.src.path
+      pageList[repoPath] = {
         title: file.asciidoc.doctitle,
         url: file.out.path,
       }

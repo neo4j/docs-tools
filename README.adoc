@@ -2,44 +2,14 @@
 
 The `docs-tools` repository contains tools owned and maintained by the Neo4j documentation team, including Github workflows, Antora and AsciiDoctor extensions.
 
-## Adding workflows from this repository
-
-### Copy the workflow files
-
-Copy the `docs-*.yml` files from this repository to your `.github/workflows` directory.
 
 ### Authorize the GitHub Actions
 
 Make sure the following workflows are allowed in your repository under `Settings -> Actions -> General`:
 
 ```
-neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@dev,
-neo4j/docs-tools/.github/workflows/reusable-docs-pr-changes.yml@dev,
-neo4j/docs-tools/.github/workflows/reusable-docs-vale.yml@dev,
-neo4j/docs-tools/.github/workflows/reusable-docs-verify.yml@dev,
-tj-actions/changed-files@v41,
-errata-ai/vale-action@reviewdog
-```
-
-### Add the `antora-page-list` extension (optional)
-
-If you do **not** want to use the link:https://www.npmjs.com/package/@neo4j-antora/antora-page-list[antora-page-list] extension, set `pageList: false` in the `docs-build-pr` job within `docs-pr-checks.yml`.
-
-Otherwise, you need to install it in your repository (if it is not already).
-
-. Add the following to `package.json`:
-+
-```
-"@neo4j-antora/antora-page-list": "^0.1.1",
-```
-
-. Run `npm install`.
-. Add the following to `preview.yml` and/or `publish.yml`:
-+
-```
-antora:
-  extensions:
-  - require: "@neo4j-antora/antora-page-list"
+marocchino/sticky-pull-request-comment@*,
+tj-actions/changed-files@*
 ```
 
 ## Using Vale
