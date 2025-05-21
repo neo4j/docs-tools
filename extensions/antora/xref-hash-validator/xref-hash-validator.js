@@ -79,7 +79,7 @@ module.exports.register = function ({ config }) {
                 // if there's no hash the xref is already checked by Antora
                 if (!searchForThisURL.hash) return
                 
-                // Find the file in the contentcatalog that has file.pub,url matching the pathname of the link target
+                // Find the file in the contentcatalog that has a file.pub.url value that matches the pathname of the link target
                 const targetFile = contentCatalog
                 .findBy({ family: 'page' })
                 .filter((page) => page.pub)
