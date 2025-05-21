@@ -5,11 +5,18 @@ const http = require("http");
 
 module.exports.register = function ({ config }) {
     
-    const {logLevel = 'warn'} = config
     const logger = this.getLogger('xref-hash-validator')
-  
+
+    // set a default log level for the log message when an xref is not valid
+    // this an be overridden when the extension is specified in the playbook.yml file
+    const {logLevel = 'warn'} = config
+    
     this
     .on('contentClassified', ({ }) => {
+
+        // add a file.xrefChecker property to each file in the contentCatalog
+        // we can add this now, before the contentCatalog object is locked
+        // we can modify its values after the documentsConverted event
         const { contentCatalog } = this.getVariables()
         const files = contentCatalog.getFiles().filter((f) => f.src && f.src.mediaType === 'text/asciidoc')
         files.forEach( (file) => {
@@ -18,9 +25,9 @@ module.exports.register = function ({ config }) {
     })
     .on('documentsConverted', ({ }) => {
 
-        // after the documents have been converted, we can go back into the contentCatalog and check the xref data we added
-        // for every file in the contentCatalog, check if the xrefChecker.internalLinks are valid
-        // by verifying that every hash that a page links to does actually exist in the target page
+        // after the asciidoc has been converted to HTML we can parse the HTML for link targets
+        // and internal links that target sections of other pages
+        // for each file, we can add this information to file.xrefChecker, which is now part of the contentCatalog
         const { playbook, contentCatalog } = this.getVariables()
         const files = contentCatalog.getFiles()
 
@@ -58,6 +65,9 @@ module.exports.register = function ({ config }) {
 
         })
         
+        // we can go back into the contentCatalog and check the xref data we just added
+        // for every file in the contentCatalog, check if the xrefChecker.internalLinks are valid
+        // by verifying that for an internal link to a section, the hash does actually exist in the target page
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
     
