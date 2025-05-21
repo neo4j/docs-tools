@@ -96,11 +96,20 @@ module.exports.register = function ({ config }) {
 
                 // if the anchor doesn't exist anywhere...
                 if (!linkTargets[hashTarget]) {
-                    if (linkTargets[hashTarget.toLowerCase()]) {
-                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - try lowercase %s instead', searchForThisURL.hash, targetFile.src.path, searchForThisURL.hash.toLowerCase())
-                    } else {
-                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s', searchForThisURL.hash, targetFile.src.path)                        
+                    
+                    // default generated id exists?
+                    if (linkTargets[`_${hashTarget.replace('-', '_')}`]) {
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - the default generated ID %s exists on the page', searchForThisURL.hash, targetFile.src.path, `_${hashTarget.replace('-', '_')}`)
+                        return
                     }
+                    
+                    // lower case?
+                    if (linkTargets[hashTarget.toLowerCase()]) {
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - use %s', searchForThisURL.hash, targetFile.src.path, searchForThisURL.hash.toLowerCase())
+                        return
+                    }
+                    
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s', searchForThisURL.hash, targetFile.src.path)                        
                     return
                 }
 
