@@ -1,0 +1,17 @@
+{
+  "name": "@neo4j-antora/roles-labels",
+  "version": "0.1.0",
+  "description": "Convert roles on a block to a labels div, add dataset info to the block based on the roles",
+  "main": "selector-labels.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "antora"
+  ],
+  "author": "Neo4j",
+  "license": "MIT",
+    "dependencies": {
+    "node-html-parser": "^7.0.0"
+  }
+}
