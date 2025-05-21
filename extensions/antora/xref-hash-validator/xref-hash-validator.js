@@ -4,6 +4,8 @@ const url = require('url');
 const http = require("http");
 
 module.exports.register = function ({ config }) {
+
+    let linkTargets = {}
     
     const logger = this.getLogger('xref-hash-validator')
 
@@ -30,7 +32,6 @@ module.exports.register = function ({ config }) {
         // for each file, we can add this information to file.xrefChecker, which is now part of the contentCatalog
         const { playbook, contentCatalog } = this.getVariables()
         const files = contentCatalog.getFiles()
-
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
 
@@ -41,7 +42,9 @@ module.exports.register = function ({ config }) {
             file.xrefChecker.linkTargets = elements.flatMap((e) => {
                 const id = e.getAttribute('id')
                 if (id) {
+                    (linkTargets[id] = linkTargets[id] || []).push({"out": file.pub.url, "src": file.src.path});
                     return [id]
+                    
                 }
                 return []
             })
@@ -53,6 +56,8 @@ module.exports.register = function ({ config }) {
                 if (a.classList.contains('unresolved')) return []
 
                 const href = a.getAttribute('href')
+
+                if (!href) return []
 
                 // if an id on this page matches this href, we can ignore it - it is essentially self-verifying
                 if (file.xrefChecker.linkTargets.includes(href.replace(/^#/, ''))) return []
@@ -87,9 +92,35 @@ module.exports.register = function ({ config }) {
                     return f.pub.url === searchForThisURL.pathname
                 })[0]
 
-                // check the file's xrefChecker.linkTargets to see if the hash is valid
-                if (!targetFile.xrefChecker.linkTargets.includes(searchForThisURL.hash.replace('#', ''))) {
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s', searchForThisURL.hash, targetFile.src.path)
+                const hashTarget = searchForThisURL.hash.replace('#', '')
+
+                // if the anchor doesn't exist anywhere...
+                if (!linkTargets[hashTarget]) {
+                    if (linkTargets[hashTarget.toLowerCase()]) {
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - try lowercase %s instead', searchForThisURL.hash, targetFile.src.path, searchForThisURL.hash.toLowerCase())
+                    } else {
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s', searchForThisURL.hash, targetFile.src.path)                        
+                    }
+                    return
+                }
+
+                if (linkTargets[hashTarget].includes(targetFile.pub.url)) {
+                    console.log('linkTargets[hashTarget]', linkTargets[hashTarget])
+                    return
+                }
+
+                // maybe the anchor is found in another page, possibly because the section has moved
+                if (!linkTargets[hashTarget]
+                    .map( (file) => {
+                        return file.out
+                    })
+                    .includes(targetFile.pub.url)) {
+
+                    const possibleSources = linkTargets[hashTarget].map( (file) => {
+                        return file.src
+                    }).join(', ')
+
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - anchor found in %s', searchForThisURL.hash, targetFile.src.path, possibleSources)      
                 }
             })
         })
