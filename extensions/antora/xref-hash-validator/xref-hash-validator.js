@@ -104,11 +104,6 @@ module.exports.register = function ({ config }) {
                     return
                 }
 
-                if (linkTargets[hashTarget].includes(targetFile.pub.url)) {
-                    console.log('linkTargets[hashTarget]', linkTargets[hashTarget])
-                    return
-                }
-
                 // maybe the anchor is found in another page, possibly because the section has moved
                 if (!linkTargets[hashTarget]
                     .map( (file) => {
