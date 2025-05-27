@@ -8,7 +8,7 @@ module.exports.register = function ({ config }) {
     const logger = this.getLogger('add-labels')
   
     this
-    .on('documentsConverted', ({ config }) => {
+    .on('pagesComposed', ({ config }) => {
 
         const { contentCatalog } = this.getVariables()
 
@@ -95,7 +95,7 @@ module.exports.register = function ({ config }) {
 
             const parsed = parseHTML(file.contents.toString())
             const headings = ['H2', 'H3', 'H4', 'H5', 'H6', 'CAPTION']
-            const roleDivs = parsed.querySelectorAll('[class*="label--"]')
+            const roleDivs = parsed.querySelector('article.doc').parentNode.querySelectorAll('[class*="label--"]')
 
             roleDivs.forEach(function (roleDiv) {
                 var rolesClassList = roleDiv.classList
@@ -112,6 +112,9 @@ module.exports.register = function ({ config }) {
                 if (roles.length === 0) return
 
                 const labels = []
+
+                // decide which node to add the dataset to
+                datasetDiv = (roleDiv.tagName === 'H1') ? parsed.querySelector('article.doc') : roleDiv
 
                 roles.forEach(function (role) {
                     const labelDetails = getLabelDetails(role, file.asciidoc.attributes)
@@ -130,11 +133,11 @@ module.exports.register = function ({ config }) {
 
                     // add dataset to the label
                     for (var d in labelDetails.data.events) {
-                        roleDiv.setAttribute(`data-${d}`, labelDetails.data.events[d])
+                        datasetDiv.setAttribute(`data-${d}`, labelDetails.data.events[d] || '')
                     }
 
                     if (labelDetails.data.product) {
-                        roleDiv.setAttribute('data-product', labelDetails.data.product)
+                        datasetDiv.setAttribute('data-product', labelDetails.data.product)
                     }
 
                     labels.push(labelSpan)
