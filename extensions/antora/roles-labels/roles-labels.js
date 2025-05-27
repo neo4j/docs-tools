@@ -95,7 +95,7 @@ module.exports.register = function ({ config }) {
 
             const parsed = parseHTML(file.contents.toString())
             const headings = ['H2', 'H3', 'H4', 'H5', 'H6', 'CAPTION']
-            const roleDivs = parsed.querySelector('article.doc').parentNode.querySelectorAll('[class*="label--"]')
+            const roleDivs = parsed.querySelectorAll('[class*="label--"]')
 
             roleDivs.forEach(function (roleDiv) {
                 var rolesClassList = roleDiv.classList
@@ -131,13 +131,19 @@ module.exports.register = function ({ config }) {
 
                     labelSpan.firstChild.data = {}
 
-                    // add dataset to the label
-                    for (var d in labelDetails.data.events) {
-                        datasetDiv.setAttribute(`data-${d}`, labelDetails.data.events[d] || '')
-                    }
+                    // detect possibly badly formed HTML if there is no datasetDiv
+                    if (!datasetDiv) {
+                        logger[logLevel]({ file: file.src }, 'Unable to set dataset attributes for <%s> element "%s" - HTML might be malformed as a result of an error in the asciidoc source', roleDiv.tagName, roleDiv.textContent)
+                    } else {
+                                            // add dataset to parent divs
+                        for (var d in labelDetails.data.events) {
+                            datasetDiv.setAttribute(`data-${d}`, labelDetails.data.events[d] || '')
+                        }
 
-                    if (labelDetails.data.product) {
-                        datasetDiv.setAttribute('data-product', labelDetails.data.product)
+                        if (labelDetails.data.product) {
+                            datasetDiv.setAttribute('data-product', labelDetails.data.product)
+                        }
+
                     }
 
                     labels.push(labelSpan)
