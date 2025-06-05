@@ -43,8 +43,14 @@ module.exports.register = function ({ config }) {
             file.xrefChecker.linkTargets = elements.flatMap((e) => {
                 const id = e.getAttribute('id')
                 if (id) {
-                    (linkTargets[id] = linkTargets[id] || []).push({"out": file.pub.url, "src": file.src.path, "component": file.src.component, "version": file.src.version, "branch": file.src.origin.branch});
-                    return [id]
+                    (linkTargets[id] = linkTargets[id] || []).push({
+                        "out": file.pub.url, 
+                        "src": file.src.path, 
+                        "component": file.src.component, 
+                        "version": file.src.version, 
+                        "branch": file.src.origin.branch
+                    });
+                    return id
                 }
                 return []
             })
@@ -63,7 +69,7 @@ module.exports.register = function ({ config }) {
                 if (file.xrefChecker.linkTargets.includes(href.replace(/^#/, ''))) return []
 
                 if (href && !href.startsWith('http') && !href.startsWith('/docs')) {
-                    return [href]
+                    return href
                 }
                 return []
             })
@@ -76,9 +82,10 @@ module.exports.register = function ({ config }) {
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
     
-            // what is the full url of each target?
+            // check the internal links in the file
             file.xrefChecker.internalLinks.forEach((link) => {
 
+                // what is the full url of each link?
                 searchForThisURL = new URL(path.join(file.pub.url, link), playbook.site.url)
 
                 // if there's no hash the xref is already checked by Antora
@@ -96,31 +103,35 @@ module.exports.register = function ({ config }) {
 
                 const hashTarget = decodeURI(searchForThisURL.hash.replace('#', ''))
 
-                // if the anchor doesn't exist anywhere...
+                // if the anchor (hashTarget) doesn't exist anywhere...
+                // try some simple checks for common mistakes
+                // if none of these checks match, log a warning and return
                 if (!linkTargets[hashTarget]) {
 
                     if (linkTargets[hashTarget.replace(' ', '-')]) {
-                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - did you mean %s ?', decodeURI(searchForThisURL.hash), targetFile.src.path, hashTarget.replace(' ', '-'))
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'section %s not found in target page %s - did you mean %s ?', decodeURI(searchForThisURL.hash), targetFile.src.path, hashTarget.replace(' ', '-'))
                         return
                     }
                     
                     // default generated id exists?
                     if (linkTargets[`_${hashTarget.replace('-', '_')}`]) {
-                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - did you mean the default generated ID %s ?', decodeURI(searchForThisURL.hash), targetFile.src.path, `_${hashTarget.replace('-', '_')}`)
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'section %s not found in target page %s - did you mean the default generated ID %s ?', decodeURI(searchForThisURL.hash), targetFile.src.path, `_${hashTarget.replace('-', '_')}`)
                         return
                     }
                     
                     // lower case?
                     if (linkTargets[hashTarget.toLowerCase()]) {
-                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - use %s', decodeURI(searchForThisURL.hash), targetFile.src.path, searchForThisURL.hash.toLowerCase())
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'section %s not found in target page %s - did you mean lowercase %s ?', decodeURI(searchForThisURL.hash), targetFile.src.path, searchForThisURL.hash.toLowerCase())
                         return
                     }
                     
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s', decodeURI(searchForThisURL.hash), targetFile.src.path)                        
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'section %s not found in target page %s', decodeURI(searchForThisURL.hash), targetFile.src.path)                        
                     return
                 }
 
-                // maybe the anchor is found in another page, possibly because the section has moved
+                // if the anchor (hashTarget) does exist, but not in the target page...
+                // maybe the anchor (hashTarget) is not found in the page the xref points to (targetFile), but it is found in another page
+                // this could happen if the section has moved to a different page between versions
                 if (!linkTargets[hashTarget]
                     // .filter( (file) => {
                     //     return file.src.version === targetFile.src.version && file.src.component === targetFile.src.component
@@ -129,12 +140,14 @@ module.exports.register = function ({ config }) {
                         return file.out
                     })
                     .includes(targetFile.pub.url)) {
-
+                    
+                    // the pages you could link to (possibleSources) instead are the files that do contain this anchor (hashTarget)
+                    // we can log each of these
                     const possibleSources = linkTargets[hashTarget].map( (f) => {
                         return `${f.src} (branch: ${f.branch})`
                     }).join(', ')
 
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s (branch: %s) - anchor found in %s', decodeURI(searchForThisURL.hash), targetFile.src.path, targetFile.src.origin.branch, possibleSources)      
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'section %s not found in target page %s (branch: %s) - anchor found in %s', decodeURI(searchForThisURL.hash), targetFile.src.path, targetFile.src.origin.branch, possibleSources)      
                 }
             })
         })
