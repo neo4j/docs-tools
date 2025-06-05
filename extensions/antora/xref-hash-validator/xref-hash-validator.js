@@ -68,7 +68,7 @@ module.exports.register = function ({ config }) {
                 // if an id on this page matches this href, we can ignore it - it is essentially self-verifying
                 if (file.xrefChecker.linkTargets.includes(href.replace(/^#/, ''))) return []
 
-                if (href && !href.startsWith('http') && !href.startsWith('/docs')) {
+                if (!href.startsWith('http') && !href.startsWith('/docs')) {
                     return href
                 }
                 return []
