@@ -45,7 +45,6 @@ module.exports.register = function ({ config }) {
                 if (id) {
                     (linkTargets[id] = linkTargets[id] || []).push({"out": file.pub.url, "src": file.src.path, "component": file.src.component, "version": file.src.version, "branch": file.src.origin.branch});
                     return [id]
-                    
                 }
                 return []
             })
