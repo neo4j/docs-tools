@@ -11,7 +11,7 @@ module.exports.register = function ({ config }) {
     const logger = this.getLogger('xref-hash-validator')
 
     // set a default log level for the log message when an xref is not valid
-    // this an be overridden when the extension is specified in the playbook.yml file
+    // this can be overridden when the extension is specified in the playbook.yml file
     const {logLevel = 'warn'} = config
     
     this
