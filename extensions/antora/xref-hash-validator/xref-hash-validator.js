@@ -106,7 +106,7 @@ module.exports.register = function ({ config }) {
                     
                     // default generated id exists?
                     if (linkTargets[`_${hashTarget.replace('-', '_')}`]) {
-                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - did you mean the default generated ID %s?', decodeURI(searchForThisURL.hash), targetFile.src.path, `_${hashTarget.replace('-', '_')}`)
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - did you mean the default generated ID %s ?', decodeURI(searchForThisURL.hash), targetFile.src.path, `_${hashTarget.replace('-', '_')}`)
                         return
                     }
                     
