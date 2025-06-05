@@ -100,7 +100,7 @@ module.exports.register = function ({ config }) {
                 if (!linkTargets[hashTarget]) {
 
                     if (linkTargets[hashTarget.replace(' ', '-')]) {
-                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - did you mean %s?', decodeURI(searchForThisURL.hash), targetFile.src.path, hashTarget.replace(' ', '-'))
+                        logger[logLevel]({ file: file.src, source: file.src.origin }, 'anchor %s not found in target page %s - did you mean %s ?', decodeURI(searchForThisURL.hash), targetFile.src.path, hashTarget.replace(' ', '-'))
                         return
                     }
                     
