@@ -5,6 +5,7 @@ const http = require("http");
 
 module.exports.register = function ({ config }) {
 
+    // holds link target objects for whole docset (all versions, all pages)
     let linkTargets = {}
     
     const logger = this.getLogger('xref-hash-validator')
