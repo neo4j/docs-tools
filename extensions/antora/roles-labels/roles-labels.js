@@ -19,9 +19,17 @@ module.exports.register = function ({ config }) {
             return output
         }
 
-        var getLabelDetails = function (role, attributes) {
-            var label = role.replace('label--', '')
-            var labelParts = label.split('-')
+        var camelCased = function (str) {
+            return str.split(/-|\./)
+                .map((text) => text.substr(0, 1).toUpperCase() + text.substr(1))
+                .join('')
+            }
+
+        var getLabelDetails = function (src, el, role, attributes) {
+
+            let label, labelParts
+            label = role.replace('label--', '')
+            labelParts = label.toLowerCase().split('-')
 
             // roles can be single word ie beta - use beta as label class and text from rolesDatee.beta
             // roles can be single word + version ie new-5.20 - use new as label class and text from rolesData.new + version number
@@ -38,7 +46,7 @@ module.exports.register = function ({ config }) {
             // }
 
             let dataLabel, dataProduct, dataVersion
-            const dataExtras = []
+            let dataExtras = []
 
             // what about roles like new-bolt-5.20 if we want to use a product name in the label?
             while (!dataLabel && labelParts.length > 0) {
@@ -52,7 +60,15 @@ module.exports.register = function ({ config }) {
 
             // ignore labels that are not defined in rolesData
             if (!dataLabel) {
+                logger[logLevel]({ file: src }, 'Label "%s" is not defined', label)
                 return
+            }
+
+            // make some dataExtras from a span
+            if (el.tagName === 'SPAN') {
+                dataExtras = el.textContent.toLowerCase().split(' ').filter(function (t) {
+                    return (t.match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)/)) 
+                })
             }
 
             if (dataExtras.length > 0) {
@@ -90,6 +106,16 @@ module.exports.register = function ({ config }) {
             return labelDetails
         }
 
+        var addDataset = function (el, labelDetails) {
+            for (var d in labelDetails.data.events) {
+                el.setAttribute(`data-${d}`, labelDetails.data.events[d] || '')
+            }
+
+            if (labelDetails.data.product) {
+                el.setAttribute('data-product', labelDetails.data.product)
+            }
+        }
+
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
 
@@ -101,9 +127,8 @@ module.exports.register = function ({ config }) {
                 var rolesClassList = roleDiv.classList
 
                 // ignore:
-                // - spans because they're inline and we only care about labels on block elements DIV or TABLE
                 // - discrete headers
-                if (roleDiv.tagName === 'SPAN' || rolesClassList.contains('discrete')) return
+                if (rolesClassList.contains('discrete')) return
 
                 roles = rolesClassList.value.sort().filter(function (c) {
                     return (c.startsWith('label--'))
@@ -117,10 +142,23 @@ module.exports.register = function ({ config }) {
                 datasetDiv = (roleDiv.tagName === 'H1') ? parsed.querySelector('article.doc') : roleDiv
 
                 roles.forEach(function (role) {
-                    const labelDetails = getLabelDetails(role, file.asciidoc.attributes)
+                    const labelDetails = getLabelDetails(file.src, roleDiv, role, file.asciidoc.attributes)
 
                     // remove the role from the parent div
                     roleDiv.classList.remove(role)
+
+                    if (roleDiv.tagName === 'SPAN') {
+                        
+                        if (labelDetails) {
+                            // console.log(labelDetails)
+                            roleDiv.textContent = labelDetails.text
+                            roleDiv.classList.add(`label--${labelDetails.class}`)
+                            addDataset(datasetDiv.parentNode, labelDetails)
+                        } else {
+                            console.log(roleDiv.textContent)
+                        }
+                        return
+                    }
 
                     if (typeof labelDetails === 'undefined') {
                         return
@@ -135,15 +173,7 @@ module.exports.register = function ({ config }) {
                     if (!datasetDiv) {
                         logger[logLevel]({ file: file.src }, 'Unable to set dataset attributes for <%s> element "%s" - HTML might be malformed as a result of an error in the asciidoc source', roleDiv.tagName, roleDiv.textContent)
                     } else {
-                                            // add dataset to parent divs
-                        for (var d in labelDetails.data.events) {
-                            datasetDiv.setAttribute(`data-${d}`, labelDetails.data.events[d] || '')
-                        }
-
-                        if (labelDetails.data.product) {
-                            datasetDiv.setAttribute('data-product', labelDetails.data.product)
-                        }
-
+                        addDataset(datasetDiv, labelDetails)
                     }
 
                     labels.push(labelSpan)
