@@ -64,6 +64,15 @@ module.exports.register = function ({ config }) {
                 return
             }
 
+            // log labels if label-log-level is set
+            if (rolesData[dataLabel].log && attributes['label-log-level']) {
+                logger[attributes['label-log-level']]({ file: src }, 'Label "%s" found', label)
+            }
+
+            if (attributes['roles-labels-flag'].split(' ').includes(dataLabel)) {
+                logger[logLevel]({ file: src }, 'Label "%s" found', label)
+            }
+
             // make some dataExtras from a span
             if (el.tagName === 'SPAN') {
                 dataExtras = el.textContent.toLowerCase().split(' ').filter(function (t) {
@@ -82,6 +91,7 @@ module.exports.register = function ({ config }) {
             var labelDetails = {
                 class: dataLabel,
                 role: dataLabel,
+                eventOrder: rolesData[dataLabel].eventOrder || -1,
                 text: rolesData[dataLabel].displayText || '',
                 joinText: dataVersion ? rolesData[dataLabel].joinText || 'in' : '',
                 data: {
@@ -90,6 +100,7 @@ module.exports.register = function ({ config }) {
                     function: rolesData[dataLabel].function || '',
                     events: {}
                 },
+                log: rolesData[dataLabel].log || false
             }
 
             if (rolesData[dataLabel].labelCategory === 'version') {
@@ -176,7 +187,12 @@ module.exports.register = function ({ config }) {
                         addDataset(datasetDiv, labelDetails)
                     }
 
-                    labels.push(labelSpan)
+                    labels.push(
+                        {
+                        html: labelSpan,
+                        eventOrder: labelDetails.eventOrder,
+                        }
+                    )
                 })
 
                 // we only generate labels from defined roles
@@ -186,14 +202,14 @@ module.exports.register = function ({ config }) {
                 let labelsLocation = (roleDiv.firstElementChild && headings.includes(roleDiv.firstElementChild.tagName)) ? roleDiv.firstElementChild : roleDiv
                 let labelsDiv = createElement('div', 'labels')
 
-                for (const label of labels) {
+                for (const label of labels.sort((a, b) => a.eventOrder - b.eventOrder)) {
                     if (roleDiv.tagName === 'H1' || headings.includes(roleDiv.firstElementChild.tagName)) {
-                        label.classList.add('header-label')
+                        label.html.classList.add('header-label')
                     }
-                    labelsDiv.firstChild.appendChild(label)
+                    labelsDiv.firstChild.appendChild(label.html)
 
-                    for (var d in label.dataset) {
-                        roleDiv.dataset[d] = label.dataset[d]
+                    for (var d in label.html.dataset) {
+                        roleDiv.dataset[d] = label.html.dataset[d]
                     }
                 }
 
