@@ -42,12 +42,6 @@
             "product": "Cypher 25",
             "displayText": "Cypher 25"
         },
-        "enterprise":{
-            "description": "Function available in Enterprise Edition only",
-            "labelCategory": "product",
-            "product": "Enterprise Edition",
-            "displayText": "Enterprise Edition"
-        },
         "enterprise-edition":{
             "description": "Function available in Enterprise Edition only",
             "labelCategory": "product",
