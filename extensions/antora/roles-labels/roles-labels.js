@@ -61,19 +61,17 @@ module.exports.register = function ({ config }) {
                 }
             }
 
+            // ignore labels that are not defined in rolesData.labels
+            if (!dataLabel) {
+                logger[logLevel]({ file: src }, 'Label "%s" is not allowed', label)
+                return
+            }
+
             // console.log('dataExtras before', dataExtras)
 
             dataExtras = dataExtras.filter(function (t) {
-                    return (!(t === (rolesData.labels[dataLabel].joinText || 'in' ) || t === rolesData.labels[dataLabel].displayText))
-                    })
-
-            // console.log('dataExtras after', dataExtras)
-
-            // ignore labels that are not defined in rolesData.labels
-            if (!dataLabel) {
-                logger[logLevel]({ file: src }, 'Label "%s" is not defined', label)
-                return
-            }
+                return (!(t === (rolesData.labels[dataLabel].joinText || 'in' ) || t === rolesData.labels[dataLabel].displayText))
+                })
 
             // log labels if label-log-level is set and the label is configured to be logged
             if (rolesData.labels[dataLabel].log && attributes['label-log-level']) {
@@ -108,14 +106,18 @@ module.exports.register = function ({ config }) {
                 log: rolesData.labels[dataLabel].log || false
             }
 
+
+
             // tell the user what the label: macro should look like based on the role, product, and version
-            if (el.tagName === 'SPAN') {
+            if (el.tagName === 'SPAN' && rolesData.labels[dataLabel].labelCategory === 'version') {
                 if (labelDetails.data.product) {
-                    inlineLabel += `--${labelDetails.data.product}`
+                    inlineLabel += `-${labelDetails.data.product}`
                 }
                 if (labelDetails.data.version) {
                     inlineLabel += `-${labelDetails.data.version}`
                 }
+                // console.log('dataExtras after', dataExtras)
+                // inlineLabel += '--' + dataExtras.reverse().join('-')
             }
 
             if (rolesData.labels[dataLabel].labelCategory === 'version') {
@@ -130,7 +132,7 @@ module.exports.register = function ({ config }) {
             }
 
             if (el.tagName === 'SPAN' && labelDetails.text !== el.textContent) {
-                logger[logLevel]({ file: src, fix: `label:${inlineLabel}[]` }, 'Text "%s" on label "%s" will be replaced by default formatted text "%s"', el.textContent, label, labelDetails.text)
+                logger[logLevel]({ file: src, "possible fix": `label:${inlineLabel}[]` }, 'Text "%s" on label "%s" will be replaced by default formatted text "%s"', el.textContent, label, labelDetails.text)
             }
 
             return labelDetails
@@ -185,7 +187,7 @@ module.exports.register = function ({ config }) {
                             roleDiv.classList.add(`label--${labelDetails.class}`)
                             addDataset(datasetDiv.parentNode, labelDetails)
                         } else {
-                            console.log(roleDiv.textContent)
+                            // console.log(roleDiv.textContent)
                         }
                         return
                     }
