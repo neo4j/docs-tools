@@ -27,9 +27,12 @@ module.exports.register = function ({ config }) {
 
         var getLabelDetails = function (src, el, role, attributes) {
 
-            let label, labelParts
-            label = role.replace('label--', '')
+            let label, inlineLabel, labelParts
+            label = inlineLabel = role.replace('label--', '')
             labelParts = label.toLowerCase().split('-')
+
+            // if it's an inline label, add the label text to the labelParts
+            if (el.tagName === 'SPAN') labelParts = labelParts.concat(el.textContent.split(' '))
 
             // roles can be single word ie beta - use beta as label class and text from rolesDatee.beta
             // roles can be single word + version ie new-5.20 - use new as label class and text from rolesData.new + version number
@@ -51,33 +54,35 @@ module.exports.register = function ({ config }) {
             // what about roles like new-bolt-5.20 if we want to use a product name in the label?
             while (!dataLabel && labelParts.length > 0) {
                 const labelCandidate = labelParts.join('-')
-                if (rolesData[labelCandidate]) {
+                if (rolesData.labels[labelCandidate]) {
                     dataLabel = labelCandidate
                 } else {
                     dataExtras.push(labelParts.pop())
                 }
             }
 
-            // ignore labels that are not defined in rolesData
+            // console.log('dataExtras before', dataExtras)
+
+            dataExtras = dataExtras.filter(function (t) {
+                    return (!(t === (rolesData.labels[dataLabel].joinText || 'in' ) || t === rolesData.labels[dataLabel].displayText))
+                    })
+
+            // console.log('dataExtras after', dataExtras)
+
+            // ignore labels that are not defined in rolesData.labels
             if (!dataLabel) {
                 logger[logLevel]({ file: src }, 'Label "%s" is not defined', label)
                 return
             }
 
-            // log labels if label-log-level is set
-            if (rolesData[dataLabel].log && attributes['label-log-level']) {
+            // log labels if label-log-level is set and the label is configured to be logged
+            if (rolesData.labels[dataLabel].log && attributes['label-log-level']) {
                 logger[attributes['label-log-level']]({ file: src }, 'Label "%s" found', label)
             }
 
-            if (attributes['roles-labels-flag'].split(' ').includes(dataLabel)) {
+            // flag labels if roles-labels-flag is set
+            if (attributes['roles-labels-flag'] && attributes['roles-labels-flag'].split(' ').includes(dataLabel)) {
                 logger[logLevel]({ file: src }, 'Label "%s" found', label)
-            }
-
-            // make some dataExtras from a span
-            if (el.tagName === 'SPAN') {
-                dataExtras = el.textContent.toLowerCase().split(' ').filter(function (t) {
-                    return (t.match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)/)) 
-                })
             }
 
             if (dataExtras.length > 0) {
@@ -85,33 +90,47 @@ module.exports.register = function ({ config }) {
             }
 
             if (dataExtras.length > 0) {
-                dataProduct = camelCased(dataExtras.join(' '))
+                dataProduct = rolesData.products.indexOf(camelCased(dataExtras.join(' '))) !== -1 ? camelCased(dataExtras.join(' ')) : ''
             }
 
             var labelDetails = {
                 class: dataLabel,
                 role: dataLabel,
-                eventOrder: rolesData[dataLabel].eventOrder || -1,
-                text: rolesData[dataLabel].displayText || '',
-                joinText: dataVersion ? rolesData[dataLabel].joinText || 'in' : '',
+                eventOrder: rolesData.labels[dataLabel].eventOrder || -1,
+                text: rolesData.labels[dataLabel].displayText || '',
+                joinText: dataVersion ? rolesData.labels[dataLabel].joinText || 'in' : '',
                 data: {
-                    product: dataProduct || rolesData[dataLabel].product || attributes['page-product'] || '',
+                    product: dataProduct || rolesData.labels[dataLabel].product || attributes['page-product'] || '',
                     version: dataVersion || '',
-                    function: rolesData[dataLabel].function || '',
+                    function: rolesData.labels[dataLabel].function || '',
                     events: {}
                 },
-                log: rolesData[dataLabel].log || false
+                log: rolesData.labels[dataLabel].log || false
             }
 
-            if (rolesData[dataLabel].labelCategory === 'version') {
+            // tell the user what the label: macro should look like based on the role, product, and version
+            if (el.tagName === 'SPAN') {
+                if (labelDetails.data.product) {
+                    inlineLabel += `--${labelDetails.data.product}`
+                }
+                if (labelDetails.data.version) {
+                    inlineLabel += `-${labelDetails.data.version}`
+                }
+            }
+
+            if (rolesData.labels[dataLabel].labelCategory === 'version') {
                 labelDetails.data.events[dataLabel] = dataVersion
             }
 
             // update label text for versioned labels
-            if ((rolesData[dataLabel].labelCategory === 'version' || (rolesData[dataLabel].joinText && dataVersion))) {
+            if ((rolesData.labels[dataLabel].labelCategory === 'version' || (rolesData.labels[dataLabel].joinText && dataVersion))) {
                 labelDetails.text = [labelDetails.text, labelDetails.joinText, labelDetails.data.product, labelDetails.data.version].filter(function(t) {
                     return t;
                 }).join(' ')
+            }
+
+            if (el.tagName === 'SPAN' && labelDetails.text !== el.textContent) {
+                logger[logLevel]({ file: src, fix: `label:${inlineLabel}[]` }, 'Text "%s" on label "%s" will be replaced by default formatted text "%s"', el.textContent, label, labelDetails.text)
             }
 
             return labelDetails
@@ -202,6 +221,9 @@ module.exports.register = function ({ config }) {
                 let labelsLocation = (roleDiv.firstElementChild && headings.includes(roleDiv.firstElementChild.tagName)) ? roleDiv.firstElementChild : roleDiv
                 let labelsDiv = createElement('div', 'labels')
 
+                // add the labels, in the following order:
+                // 1. information labels (all non-event labels are given a negative eventOrder)
+                // 2. event labels, ordered by eventOrder ascending
                 for (const label of labels.sort((a, b) => a.eventOrder - b.eventOrder)) {
                     if (roleDiv.tagName === 'H1' || headings.includes(roleDiv.firstElementChild.tagName)) {
                         label.html.classList.add('header-label')
