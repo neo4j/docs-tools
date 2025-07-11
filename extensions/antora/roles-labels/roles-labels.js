@@ -1,9 +1,12 @@
-const { parse: parseHTML } = require('node-html-parser')
+const { parse: parseHTML, valid } = require('node-html-parser')
+const semver = require('semver')
 const rolesData = require('./data/roles.json')
+
+const lowercaseProducts = rolesData.products.map((p) => p.toLowerCase())
 
 module.exports.register = function ({ config }) {
 
-    const {logLevel = 'warn'} = config
+    const {logLevel = 'warn', replaceInlineLabelText = false } = config
 
     const logger = this.getLogger('add-labels')
   
@@ -27,12 +30,9 @@ module.exports.register = function ({ config }) {
 
         var getLabelDetails = function (src, el, role, attributes) {
 
-            let label, inlineLabel, labelParts
-            label = inlineLabel = role.replace('label--', '')
-            labelParts = label.toLowerCase().split('-')
-
-            // if it's an inline label, add the label text to the labelParts
-            if (el.tagName === 'SPAN') labelParts = labelParts.concat(el.textContent.split(' '))
+            let labelClass, inlineLabel, labelParts
+            labelClass = inlineLabel = role.replace('label--', '')
+            labelParts = labelClass.toLowerCase().split('-')
 
             // roles can be single word ie beta - use beta as label class and text from rolesDatee.beta
             // roles can be single word + version ie new-5.20 - use new as label class and text from rolesData.new + version number
@@ -51,6 +51,16 @@ module.exports.register = function ({ config }) {
             let dataLabel, dataProduct, dataVersion
             let dataExtras = []
 
+            // if it's an inline label, and the class matches a valid label
+            // add the label text to the labelParts
+            // so we can use it to extract version and product information
+            if (el.tagName === 'SPAN') {
+                if (rolesData.labels[labelClass]) {
+                    dataLabel = labelClass
+                    dataExtras = el.textContent.split(' ').reverse()
+                }
+            }
+
             // what about roles like new-bolt-5.20 if we want to use a product name in the label?
             while (!dataLabel && labelParts.length > 0) {
                 const labelCandidate = labelParts.join('-')
@@ -63,40 +73,44 @@ module.exports.register = function ({ config }) {
 
             // ignore labels that are not defined in rolesData.labels
             if (!dataLabel) {
-                logger[logLevel]({ file: src }, 'Label "%s" is not allowed', label)
+                logger[logLevel]({ file: src }, 'Label "%s" is not allowed', labelClass)
                 return
             }
-
-            // console.log('dataExtras before', dataExtras)
 
             dataExtras = dataExtras.filter(function (t) {
                 return (!(t === (rolesData.labels[dataLabel].joinText || 'in' ) || t === rolesData.labels[dataLabel].displayText))
                 })
 
-            // log labels if label-log-level is set and the label is configured to be logged
-            if (rolesData.labels[dataLabel].log && attributes['label-log-level']) {
-                logger[attributes['label-log-level']]({ file: src }, 'Label "%s" found', label)
-            }
-
             // flag labels if roles-labels-flag is set
             if (attributes['roles-labels-flag'] && attributes['roles-labels-flag'].split(' ').includes(dataLabel)) {
-                logger[logLevel]({ file: src }, 'Label "%s" found', label)
+                logger[logLevel]({ file: src }, 'Label "%s" found', labelClass)
             }
 
+            // the last item in a label might be a version number
             if (dataExtras.length > 0) {
-                dataVersion = dataExtras.shift()
+                const versionCandidate = dataExtras.shift()
+                dataVersion = semver.valid(semver.coerce(versionCandidate, { loose: true, includePrerelease: true })) ? versionCandidate : ''
             }
 
-            if (dataExtras.length > 0) {
-                dataProduct = rolesData.products.indexOf(camelCased(dataExtras.join(' '))) !== -1 ? camelCased(dataExtras.join(' ')) : ''
+            while (dataExtras.length > 0) {
+                dataProduct = lowercaseProducts.indexOf(dataExtras.join(' ').toLowerCase()) !== -1 ? camelCased(dataExtras.join(' ')) : ''
+                if (!dataProduct) dataExtras.pop()
+                else break
             }
 
             var labelDetails = {
-                class: dataLabel,
-                role: dataLabel,
-                eventOrder: rolesData.labels[dataLabel].eventOrder || -1,
-                text: rolesData.labels[dataLabel].displayText || '',
-                joinText: dataVersion ? rolesData.labels[dataLabel].joinText || 'in' : '',
+                src: {
+                    validLabel: true,
+                    inline: el.tagName === 'SPAN' ? true : false,
+                    class: labelClass,
+                    text: el.tagName === 'SPAN' ? el.textContent : '',
+                },
+                out: {
+                    class: dataLabel,
+                    eventOrder: rolesData.labels[dataLabel].eventOrder || -1,
+                    joinText: dataVersion ? rolesData.labels[dataLabel].joinText || 'in' : '',
+                    text: rolesData.labels[dataLabel].displayText || ''
+                },
                 data: {
                     product: dataProduct || rolesData.labels[dataLabel].product || attributes['page-product'] || '',
                     version: dataVersion || '',
@@ -109,15 +123,17 @@ module.exports.register = function ({ config }) {
 
 
             // tell the user what the label: macro should look like based on the role, product, and version
-            if (el.tagName === 'SPAN' && rolesData.labels[dataLabel].labelCategory === 'version') {
+            // if the label is for an event, log a message if the label does not include a version number
+            if (labelDetails.src.inline && rolesData.labels[dataLabel].labelCategory === 'version') {
                 if (labelDetails.data.product) {
                     inlineLabel += `-${labelDetails.data.product}`
                 }
                 if (labelDetails.data.version) {
                     inlineLabel += `-${labelDetails.data.version}`
+                } else {
+                    labelDetails.src.validLabel = false
+                    logger['info']({ file: src, "possible fixes": `label:${inlineLabel}-VERSION[] or label:${labelClass}\[${labelDetails.out.text} ${rolesData.labels[labelClass].joinText || 'in'} VERSION\]` }, 'Label "%s" should include a version number', labelClass)
                 }
-                // console.log('dataExtras after', dataExtras)
-                // inlineLabel += '--' + dataExtras.reverse().join('-')
             }
 
             if (rolesData.labels[dataLabel].labelCategory === 'version') {
@@ -125,14 +141,25 @@ module.exports.register = function ({ config }) {
             }
 
             // update label text for versioned labels
-            if ((rolesData.labels[dataLabel].labelCategory === 'version' || (rolesData.labels[dataLabel].joinText && dataVersion))) {
-                labelDetails.text = [labelDetails.text, labelDetails.joinText, labelDetails.data.product, labelDetails.data.version].filter(function(t) {
+            if (rolesData.labels[dataLabel].labelCategory === 'version' || (rolesData.labels[dataLabel].joinText && dataVersion)) {
+                labelDetails.out.text = [labelDetails.out.text, labelDetails.out.joinText, labelDetails.data.product, labelDetails.data.version].filter(function(t) {
                     return t;
                 }).join(' ')
             }
 
-            if (el.tagName === 'SPAN' && labelDetails.text !== el.textContent) {
-                logger[logLevel]({ file: src, "possible fix": `label:${inlineLabel}[]` }, 'Text "%s" on label "%s" will be replaced by default formatted text "%s"', el.textContent, label, labelDetails.text)
+            // if an inline label has custom text, log a message
+            // we should always use the default generated text for inline labels
+            if (labelDetails.src.inline && labelDetails.src.text !== '' && labelDetails.src.text !== labelDetails.out.text && rolesData.labels[labelClass] && labelDetails.src.validLabel) {
+                if (replaceInlineLabelText) {
+                    logger['info']({ file: src }, 'Text "%s" on label "%s" will be updated to the default text output: "%s"', el.textContent, labelClass, labelDetails.out.text)
+                } else {
+                    logger['info']({ file: src, "possible fixes": `label:${inlineLabel}[] or label:${labelClass}\[${labelDetails.out.text}\]` }, 'Label text "%s" on inline label "%s" should be removed or replaced with the default text "%s"', el.textContent, labelClass, labelDetails.out.text)
+                }
+            }
+
+            // log an info message if the label is deprecated
+            if (rolesData.labels[dataLabel].deprecated) {
+                logger['info']({ file: src }, 'Label "%s" is deprecated', labelClass)
             }
 
             return labelDetails
@@ -182,13 +209,11 @@ module.exports.register = function ({ config }) {
                     if (roleDiv.tagName === 'SPAN') {
                         
                         if (labelDetails) {
-                            // console.log(labelDetails)
-                            roleDiv.textContent = labelDetails.text
-                            roleDiv.classList.add(`label--${labelDetails.class}`)
+                            roleDiv.textContent = (labelDetails.src.validLabel && replaceInlineLabelText) ? labelDetails.out.text : labelDetails.src.text
+                            roleDiv.classList.add(`label--${labelDetails.out.class}`)
                             addDataset(datasetDiv.parentNode, labelDetails)
-                        } else {
-                            // console.log(roleDiv.textContent)
                         }
+
                         return
                     }
 
@@ -197,7 +222,7 @@ module.exports.register = function ({ config }) {
                     }
 
                     // create a span element for the label
-                    const labelSpan = createElement('span', `label content-label label--${labelDetails.class}`, labelDetails.text)
+                    const labelSpan = createElement('span', `label content-label label--${labelDetails.out.class}`, labelDetails.out.text)
 
                     labelSpan.firstChild.data = {}
 
@@ -211,7 +236,7 @@ module.exports.register = function ({ config }) {
                     labels.push(
                         {
                         html: labelSpan,
-                        eventOrder: labelDetails.eventOrder,
+                        eventOrder: labelDetails.out.eventOrder,
                         }
                     )
                 })
