@@ -252,10 +252,25 @@
             "labelCategory": "function",
             "displayText": "Admin Only"
         },
+        "eager":{
+            "labelCategory": "function",
+            "displayText": "Eager",
+            "deprecated": true
+        },        
         "function":{
             "labelCategory": "function",
             "displayText": "Function"
         },
+        "functionality":{
+            "labelCategory": "function",
+            "displayText": "Functionality",
+            "deprecated": true
+        },
+        "required":{
+            "labelCategory": "function",
+            "displayText": "Required",
+            "deprecated": true
+        },        
         "procedure":{
             "labelCategory": "procedure",
             "displayText": "Procedure"
