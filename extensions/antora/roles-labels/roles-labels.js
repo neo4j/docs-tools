@@ -6,9 +6,9 @@ const lowercaseProducts = rolesData.products.map((p) => p.toLowerCase())
 
 module.exports.register = function ({ config }) {
 
-    const {logLevel = 'warn', replaceInlineLabelText = false } = config
+    const {defaultLogLevel = 'info', replaceInlineLabelText = false } = config
 
-    const logger = this.getLogger('add-labels')
+    const logger = this.getLogger('neo4j-roles-labels')
   
     this
     .on('pagesComposed', ({ config }) => {
@@ -29,6 +29,8 @@ module.exports.register = function ({ config }) {
             }
 
         var getLabelDetails = function (src, el, role, attributes) {
+
+            const logLevel = attributes['roles-labels-custom-log-level'] || defaultLogLevel
 
             let labelClass, inlineLabel, labelParts
             labelClass = inlineLabel = role.replace('label--', '')
@@ -54,6 +56,7 @@ module.exports.register = function ({ config }) {
             // if it's an inline label, and the class matches a valid label
             // add the label text to the labelParts
             // so we can use it to extract version and product information
+            // inline labels are output as <span class="label label--labelClass">label text</span> so we can search for SPAN elements
             if (el.tagName === 'SPAN') {
                 if (rolesData.labels[labelClass]) {
                     dataLabel = labelClass
@@ -61,19 +64,35 @@ module.exports.register = function ({ config }) {
                 }
             }
 
-            // what about roles like new-bolt-5.20 if we want to use a product name in the label?
-            while (!dataLabel && labelParts.length > 0) {
+            // start by assuming we haven't found a valid label
+            let labelFound = false
+            let synonymFound = false
+
+            // start with the full label class and reduce it by removing the last part until we find a valid label
+            // any parts that we removed become part of the dataExtras array
+            // the dataExtras array can then be used to derive a version number (and optionally a product name) for event labels
+            while (!labelFound && labelParts.length > 0) {
                 const labelCandidate = labelParts.join('-')
+                
+
                 if (rolesData.labels[labelCandidate]) {
                     dataLabel = labelCandidate
-                } else {
+                    labelFound = true
+                }
+
+                if (rolesData.synonyms[labelCandidate]) {
+                    dataLabel = rolesData.synonyms[labelCandidate]
+                    labelFound = synonymFound = true
+                }
+
+                if (!labelFound) {
                     dataExtras.push(labelParts.pop())
                 }
             }
 
-            // ignore labels that are not defined in rolesData.labels
-            if (!dataLabel) {
-                logger[logLevel]({ file: src }, 'Label "%s" is not allowed', labelClass)
+            // if we haven't found a label, the label being used is not an official, valid label, defined in rolesData.labels
+            if (!labelFound) {
+                logger[logLevel]({ file: src }, 'Label "%s" is not defined', labelClass)
                 return
             }
 
@@ -92,17 +111,20 @@ module.exports.register = function ({ config }) {
                 dataVersion = semver.valid(semver.coerce(versionCandidate, { loose: true, includePrerelease: true })) ? versionCandidate : ''
             }
 
+            // if anything is left it might be a product name
             while (dataExtras.length > 0) {
                 dataProduct = lowercaseProducts.indexOf(dataExtras.join(' ').toLowerCase()) !== -1 ? camelCased(dataExtras.join(' ')) : ''
                 if (!dataProduct) dataExtras.pop()
                 else break
             }
 
+            // put all the label details into an object
             var labelDetails = {
                 src: {
                     validLabel: true,
                     inline: el.tagName === 'SPAN' ? true : false,
                     class: labelClass,
+                    synonym: synonymFound ? dataLabel : '',
                     text: el.tagName === 'SPAN' ? el.textContent : '',
                 },
                 out: {
@@ -117,10 +139,19 @@ module.exports.register = function ({ config }) {
                     function: rolesData.labels[dataLabel].function || '',
                     events: {}
                 },
-                log: rolesData.labels[dataLabel].log || false
+                log: rolesData.labels[dataLabel].log || false,
+                logLevel: logLevel
             }
 
-
+            // if it's an inline label, check whether it should be a role instead
+            // if the parent contains only labels, then the parent text will be the same as the aggregated text of the labels in the parent.
+            // In this case a role should be used on the parent element
+            // the exception to this rule is where the label is used in a table cell
+            if (el.tagName === 'SPAN' && el.parentNode.tagName === 'P' && !el.closest("td")) {
+                const parentText = el.parentNode.textContent.replace(/\n/g, ' ').trim()
+                const labelsText = el.parentNode.querySelectorAll('span.label').map((s) => s.textContent.trim()).join(' ').trim()
+                if (parentText === labelsText) logger[logLevel]({ file: src, "suggested fix": `Add [role=label--${labelDetails.src.synonym || labelDetails.src.class}] to heading or block level element` }, 'Inline label:%s macro used in place of role', labelClass)
+            }
 
             // tell the user what the label: macro should look like based on the role, product, and version
             // if the label is for an event, log a message if the label does not include a version number
@@ -132,7 +163,7 @@ module.exports.register = function ({ config }) {
                     inlineLabel += `-${labelDetails.data.version}`
                 } else {
                     labelDetails.src.validLabel = false
-                    logger['info']({ file: src, "possible fixes": `label:${inlineLabel}-VERSION[] or label:${labelClass}\[${labelDetails.out.text} ${rolesData.labels[labelClass].joinText || 'in'} VERSION\]` }, 'Label "%s" should include a version number', labelClass)
+                    logger[labelDetails.logLevel]({ file: src, "suggested fix": `label:${inlineLabel}-VERSION[] or label:${labelClass}\[${labelDetails.out.text} ${rolesData.labels[labelClass].joinText || 'in'} VERSION\]` }, 'Label "%s" should include a version number', labelClass)
                 }
             }
 
@@ -151,15 +182,15 @@ module.exports.register = function ({ config }) {
             // we should always use the default generated text for inline labels
             if (labelDetails.src.inline && labelDetails.src.text !== '' && labelDetails.src.text !== labelDetails.out.text && rolesData.labels[labelClass] && labelDetails.src.validLabel) {
                 if (replaceInlineLabelText) {
-                    logger['info']({ file: src }, 'Text "%s" on label "%s" will be updated to the default text output: "%s"', el.textContent, labelClass, labelDetails.out.text)
+                    logger[labelDetails.logLevel]({ file: src }, 'Text "%s" on label "%s" will be updated to the default text output: "%s"', el.textContent, labelClass, labelDetails.out.text)
                 } else {
-                    logger['info']({ file: src, "possible fixes": `label:${inlineLabel}[] or label:${labelClass}\[${labelDetails.out.text}\]` }, 'Label text "%s" on inline label "%s" should be removed or replaced with the default text "%s"', el.textContent, labelClass, labelDetails.out.text)
+                    logger[labelDetails.logLevel]({ file: src, "suggested fix": `label:${inlineLabel}[] or label:${labelClass}\[${labelDetails.out.text}\]` }, 'Label text "%s" on inline label "%s" should be removed or replaced with the default text "%s"', el.textContent, labelClass, labelDetails.out.text)
                 }
             }
 
             // log an info message if the label is deprecated
             if (rolesData.labels[dataLabel].deprecated) {
-                logger['info']({ file: src }, 'Label "%s" is deprecated', labelClass)
+                logger[labelDetails.logLevel]({ file: src }, 'Label "%s" is deprecated', labelClass)
             }
 
             return labelDetails
@@ -228,7 +259,7 @@ module.exports.register = function ({ config }) {
 
                     // detect possibly badly formed HTML if there is no datasetDiv
                     if (!datasetDiv) {
-                        logger[logLevel]({ file: file.src }, 'Unable to set dataset attributes for <%s> element "%s" - HTML might be malformed as a result of an error in the asciidoc source', roleDiv.tagName, roleDiv.textContent)
+                        logger[labelDetails.logLevel]({ file: file.src }, 'Unable to set dataset attributes for <%s> element "%s" - HTML might be malformed as a result of an error in the asciidoc source', roleDiv.tagName, roleDiv.textContent)
                     } else {
                         addDataset(datasetDiv, labelDetails)
                     }
