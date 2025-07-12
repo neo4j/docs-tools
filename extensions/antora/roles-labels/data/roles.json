@@ -143,10 +143,16 @@
         },
         "new":{
             "description": "The feature or function was added in the version stated",
+            "suggestedAlternative": "new-versionless",
             "labelCategory": "version",
             "displayText": "Introduced",
             "altDisplayText": "Added",
             "eventOrder": 1
+        },
+        "new-versionless": {
+            "description": "A new feature of function, where the version is not specified",
+            "labelCategory": "function",
+            "displayText": "New"
         },
         "added":{
             "description": "The feature or function was added in the version stated",
@@ -200,9 +206,16 @@
             "eventOrder": 0
         },
         "deprecated":{
+            "description": "The feature or function was deprecated in the version stated",
+            "suggestedAlternative": "deprecated-versionless",
             "labelCategory": "version",
             "displayText": "Deprecated",
             "eventOrder": 3
+        },
+        "deprecated-versionless": {
+            "description": "A deprecated feature of function, where the version is not specified",
+            "labelCategory": "function",
+            "displayText": "Deprecated"
         },
         "removed":{
             "labelCategory": "version",
