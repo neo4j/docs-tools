@@ -6,6 +6,15 @@
         "GDS",
         "Graph Data Science"        
     ],
+    "synonyms": {
+        "auradb-free": "aura-db-free",
+        "auradb-enterprise": "aura-db-enterprise",
+        "auradb-business-critical": "aura-db-business-critical",
+        "auradb-virtual-dedicated-cloud": "aura-db-dedicated",
+        "auradb-professional": "aura-db-professional",
+        "aurads-enterprise": "aura-ds-enterprise",
+        "aurads-professional": "aura-ds-professional"        
+    },
     "labels": {
         "featured": {
             "description": "Featured cards",
