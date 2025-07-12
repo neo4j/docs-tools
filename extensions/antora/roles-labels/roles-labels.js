@@ -159,11 +159,16 @@ module.exports.register = function ({ config }) {
                 if (labelDetails.data.product) {
                     inlineLabel += `-${labelDetails.data.product}`
                 }
+
+                // if there is a version on an event label, add it to the class, else log a message
+                // the message dependson whether the label has a suggested alternative, eg new-versionless instead of new
                 if (labelDetails.data.version) {
                     inlineLabel += `-${labelDetails.data.version}`
                 } else {
                     labelDetails.src.validLabel = false
-                    logger[labelDetails.logLevel]({ file: src, "suggested fix": `label:${inlineLabel}-VERSION[] or label:${labelClass}\[${labelDetails.out.text} ${rolesData.labels[labelClass].joinText || 'in'} VERSION\]` }, 'Label "%s" should include a version number', labelClass)
+                    let suggestedFix = `label:${inlineLabel}-VERSION[] or label:${labelClass}\[${labelDetails.out.text} ${rolesData.labels[labelClass].joinText || 'in'} VERSION\]`
+                    if (rolesData.labels[labelClass].suggestedAlternative) suggestedFix = `Use label:${rolesData.labels[labelClass].suggestedAlternative}[], or ` + suggestedFix
+                    logger[labelDetails.logLevel]({ file: src, "suggested fix": suggestedFix }, 'Label "%s" should include a version number', labelClass)
                 }
             }
 
