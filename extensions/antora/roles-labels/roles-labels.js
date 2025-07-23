@@ -129,6 +129,7 @@ module.exports.register = function ({ config }) {
                 },
                 out: {
                     class: dataLabel,
+                    id: `_${dataLabel.replace('-', '_')}`,
                     eventOrder: rolesData.labels[dataLabel].eventOrder || -1,
                     joinText: dataVersion ? rolesData.labels[dataLabel].joinText || 'in' : '',
                     text: rolesData.labels[dataLabel].displayText || ''
@@ -137,6 +138,7 @@ module.exports.register = function ({ config }) {
                     product: dataProduct || rolesData.labels[dataLabel].product || attributes['page-product'] || '',
                     version: dataVersion || '',
                     function: rolesData.labels[dataLabel].function || '',
+                    labelClass: labelClass,
                     events: {}
                 },
                 log: rolesData.labels[dataLabel].log || false,
@@ -205,10 +207,20 @@ module.exports.register = function ({ config }) {
             for (var d in labelDetails.data.events) {
                 el.setAttribute(`data-${d}`, labelDetails.data.events[d] || '')
             }
-
-            if (labelDetails.data.product) {
+            // add the product if it is not already set
+            if (labelDetails.data.product && !el.hasAttribute('data-product')) {
                 el.setAttribute('data-product', labelDetails.data.product)
             }
+
+            // add the actual label classes as attributes
+            if (labelDetails.data.labelClass) {
+                if (!el.hasAttribute('data-label')) {
+                    el.setAttribute('data-label', labelDetails.data.labelClass)
+                } else {
+                    el.setAttribute('data-label', el.getAttribute('data-label') + ' ' + labelDetails.data.labelClass)
+                }
+            }
+
         }
 
         files.forEach( (file) => {
@@ -217,8 +229,10 @@ module.exports.register = function ({ config }) {
             const parsed = parseHTML(file.contents.toString())
             const headings = ['H2', 'H3', 'H4', 'H5', 'H6', 'CAPTION']
             const roleDivs = parsed.querySelectorAll('[class*="label--"]')
-
+            var labelCount = 0
             roleDivs.forEach(function (roleDiv) {
+
+                
                 var rolesClassList = roleDiv.classList
 
                 // ignore:
@@ -247,7 +261,7 @@ module.exports.register = function ({ config }) {
                         if (labelDetails) {
                             roleDiv.textContent = (labelDetails.src.validLabel && replaceInlineLabelText) ? labelDetails.out.text : labelDetails.src.text
                             roleDiv.classList.add(`label--${labelDetails.out.class}`)
-                            addDataset(datasetDiv.parentNode, labelDetails)
+                            // addDataset(datasetDiv.parentNode, labelDetails)
                         }
 
                         return
@@ -273,8 +287,10 @@ module.exports.register = function ({ config }) {
                         {
                         html: labelSpan,
                         eventOrder: labelDetails.out.eventOrder,
+                        id: `_label_${labelCount++}_${labelDetails.out.id}`,
                         }
                     )
+
                 })
 
                 // we only generate labels from defined roles
@@ -296,18 +312,30 @@ module.exports.register = function ({ config }) {
                     for (var d in label.html.dataset) {
                         roleDiv.dataset[d] = label.html.dataset[d]
                     }
+
+                    // add id attribtue to rolediv if it doesn't already have one
+                    if (!roleDiv.hasAttribute('id')) {
+                        roleDiv.setAttribute('id', label.id)
+                    }
+                    
                 }
 
                 if (roleDiv.classList.contains('admonitionblock')) {
                     labelsLocation = roleDiv.querySelector('td.content')
                 }
 
+                
+
                 if (roleDiv.tagName === 'H1' || headings.includes(roleDiv.firstElementChild.tagName)) {
                     labelsLocation.append(labelsDiv)
                     labelsLocation.classList.add('header-label-container')
                 } else {
+                    
+
                     labelsLocation.append(labelsDiv)
                     roleDiv.classList.add('has-label')
+                    // add an id to the roldDiv
+                    
                 }
             })
 

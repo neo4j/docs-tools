@@ -126,7 +126,6 @@
         "not-on-aura":{
             "description": "Function or feature is not available on Aura",
             "labelCategory": "product",
-            "product": "Aura",
             "displayText": "Not available on Aura"
         },
         "aura":{
