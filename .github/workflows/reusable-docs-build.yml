@@ -138,8 +138,8 @@ jobs:
     - name: Update packages
       run: npm update
 
-    - name: Update antora-modify-sitemaps
-      run: npm install neo4j-antora/antora-modify-sitemaps@0.7.1
+    - name: Ensure correct version of antora-modify-sitemaps
+      run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.1
 
     - name: List packages
       run: npm list
