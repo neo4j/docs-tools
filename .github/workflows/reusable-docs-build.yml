@@ -7,16 +7,28 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'build-verify'
-      cli-default:
-          description: 'Default options (extensions) to pass to the build script'
-          required: false
-          type: string
-          default: '--extension ./.docs-tools/extensions/antora/antora-page-list'
-      cli-options:
-        description: 'Options to pass to the build script'
+      antora-attributes:
+        description: 'Antora attributes to pass to the build script'
         required: false
         type: string
-        default: '--extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
+        default: ''
+      antora-cli-options:
+        description: 'Antora CLI options to pass to the build script'
+        required: false
+        type: string
+        default: '--ui-bundle-url=https://static-content.neo4j.com/build/ui-bundle-latest.zip'
+      antora-extensions:
+        description: 'Antora extensions to pass to the build script'
+        required: false
+        type: string
+        default: '
+          neo4j-antora/aliases-redirects
+          neo4j-antora/antora-modify-sitemaps
+          neo4j-antora/antora-page-list
+          neo4j-antora/antora-unlisted-pages
+          neo4j-antora/selector-labels
+          neo4j-antora/xref-hash-validator
+          '
       site-dir:
         description: 'The built site root directory'
         type: string
@@ -29,7 +41,7 @@ on:
       retain-artifacts:
         description: 'The number of days to retain artifacts'
         type: number
-        default: 7
+        default: 28
       pageList:
         description: 'Upload page list artifact'
         type: boolean
@@ -45,16 +57,28 @@ on:
         required: true
         type: string
         default: 'build-verify'
-      cli-default:
-          description: 'Default options (extensions) to pass to the build script'
-          required: false
-          type: string
-          default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
-      cli-options:
-        description: 'Options to pass to the build script'
+      antora-attributes:
+        description: 'Antora attributes to pass to the build script'
         required: false
         type: string
         default: ''
+      antora-cli-options:
+        description: 'Antora CLI options to pass to the build script'
+        required: false
+        type: string
+        default: '--ui-bundle-url=https://static-content.neo4j.com/build/ui-bundle-latest.zip'
+      antora-extensions:
+        description: 'Antora extensions to pass to the build script'
+        required: false
+        type: string
+        default: '
+          neo4j-antora/aliases-redirects
+          neo4j-antora/antora-modify-sitemaps
+          neo4j-antora/antora-page-list
+          neo4j-antora/antora-unlisted-pages
+          neo4j-antora/selector-labels
+          neo4j-antora/xref-hash-validator
+          '
       site-dir:
         description: 'The built site root directory'
         type: string
@@ -82,22 +106,23 @@ jobs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
     env:
+      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'publish-verify' && '--attribute page-chatbot=''https://neo4j.com/docs/assets/chatbot''' || '' }}"
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
-      CLI_DEFAULT: ${{ inputs.cli-default }}
-      CLI_OPTIONS: ${{ inputs.cli-options }}
+      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
+      ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
+      ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
 
-    steps:    
+    steps:
+
     - uses: actions/checkout@v4
 
-    - name: Checkout tools repo
-      uses: actions/checkout@v4
-      with:
-        repository: neo4j/docs-tools
-        ref: dev
-        sparse-checkout: |
-          extensions/antora
-        path: .docs-tools
+    - name: Create list of extensions for the Antora CLI
+      run: |
+        for extension in $ANTORA_EXTENSIONS; do
+          antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
+        done
+        echo "ANTORA_EXTENSIONS_CLI=${antora_cli_extensions}" >> $GITHUB_ENV
 
     - name: Use Node.js 18
       uses: actions/setup-node@v4
@@ -107,8 +132,20 @@ jobs:
     - name: Install dependencies
       run: npm install --omit=dev
 
+    - name: Install extensions
+      run: npm install $ANTORA_EXTENSIONS
+
+    - name: Update packages
+      run: npm update
+
+    - name: Update antora-modify-sitemaps
+      run: npm install neo4j-antora/antora-modify-sitemaps@0.7.1
+
+    - name: List packages
+      run: npm list
+
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT -- $CLI_DEFAULT $CLI_OPTIONS
+      run: npm run $PACKAGE_SCRIPT -- $ANTORA_EXTENSIONS_CLI $ANTORA_CLI_OPTIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
