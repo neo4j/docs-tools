@@ -1,6 +1,7 @@
 site:
   title: Docs Tools
   start_page: docs-tools:ROOT:index.adoc
+  url: https://neo4j.com/docs/
 
 content:
   sources:
