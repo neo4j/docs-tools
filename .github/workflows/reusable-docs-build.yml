@@ -22,12 +22,12 @@ on:
         required: false
         type: string
         default: '
-          neo4j-antora/aliases-redirects
-          neo4j-antora/antora-modify-sitemaps
-          neo4j-antora/antora-page-list
-          neo4j-antora/antora-unlisted-pages
-          neo4j-antora/selector-labels
-          neo4j-antora/xref-hash-validator
+          @neo4j-antora/aliases-redirects
+          @neo4j-antora/antora-modify-sitemaps
+          @neo4j-antora/antora-page-list
+          @neo4j-antora/antora-unlisted-pages
+          @neo4j-antora/selector-labels
+          @neo4j-antora/xref-hash-validator
           '
       site-dir:
         description: 'The built site root directory'
@@ -72,12 +72,12 @@ on:
         required: false
         type: string
         default: '
-          neo4j-antora/aliases-redirects
-          neo4j-antora/antora-modify-sitemaps
-          neo4j-antora/antora-page-list
-          neo4j-antora/antora-unlisted-pages
-          neo4j-antora/selector-labels
-          neo4j-antora/xref-hash-validator
+          @neo4j-antora/aliases-redirects
+          @neo4j-antora/antora-modify-sitemaps
+          @neo4j-antora/antora-page-list
+          @neo4j-antora/antora-unlisted-pages
+          @neo4j-antora/selector-labels
+          @neo4j-antora/xref-hash-validator
           '
       site-dir:
         description: 'The built site root directory'
