@@ -13,8 +13,8 @@ jobs:
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       deploy-id: ${{ github.event.number }}
-      retain-artifacts: 14
       site-dir: 'docs'
+      package-script: 'publish-verify'
 
   # Parse the json log output from the HTML build, and output warnings and errors as annotations
   # Optionally, fail the build if there are warnings or errors
