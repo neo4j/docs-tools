@@ -106,7 +106,7 @@ jobs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
     env:
-      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'publish-verify' && '--attribute page-chatbot=''https://neo4j.com/docs/assets/chatbot''' || '' }}"
+      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'publish-verify' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
