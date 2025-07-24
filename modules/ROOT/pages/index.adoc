@@ -1,9 +1,20 @@
-# Docs tools
+= Docs tools
 :page-aliases: old-docs-tools.adoc
 
 Use these docs to test workflows and extensions.
 
-## Include test
+
+== Include test
 
 include::partial$include-target.adoc[]
 
+
+For more information, see <<section-with-id>>.
+
+You won't get any information from this next link because the hash does not exist: <<section-that-does-not-exist>>.
+
+
+[[section-with-id]]
+== Section with ID to test xref validator
+
+Lorem ipsum.
