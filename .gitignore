@@ -111,3 +111,8 @@ vale/styles/Google
 
 # IDE
 .vscode
+
+# node modules
+package-lock.json
+node_modules/
+.env
