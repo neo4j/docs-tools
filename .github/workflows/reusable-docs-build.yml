@@ -33,7 +33,7 @@ on:
         description: 'Antora extensions to NOT pass to the build script'
         required: false
         type: string
-        default: ''
+        default: 'na'
       site-dir:
         description: 'The built site root directory'
         type: string
@@ -78,9 +78,10 @@ jobs:
     - name: Create list of extensions for the Antora CLI
       run: |
         for extension in $ANTORA_EXTENSIONS; do
-          if ! [[ ${extension} in $ANTORA_EXTENSIONS_EXCLUDE ]]; then
-            antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
+          if [[ $extension in $ANTORA_EXTENSIONS_EXCLUDE ]]; then
+            continue
           fi
+          antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
         done
         echo "ANTORA_EXTENSIONS_CLI=${antora_cli_extensions}" >> $GITHUB_ENV
 
