@@ -15,6 +15,7 @@ jobs:
       deploy-id: ${{ github.event.number }}
       site-dir: 'docs'
       package-script: 'publish-verify'
+      antora-extensions-exclude: '@neo4j-antora/selector-labels'
 
   # Parse the json log output from the HTML build, and output warnings and errors as annotations
   # Optionally, fail the build if there are warnings or errors
