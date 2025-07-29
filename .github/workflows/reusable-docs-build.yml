@@ -78,7 +78,7 @@ jobs:
     - name: Create list of extensions for the Antora CLI
       run: |
         for extension in $ANTORA_EXTENSIONS; do
-          if ! [[ $extension in $ANTORA_EXTENSIONS_EXCLUDE ]]; then
+          if ! [[ ${extension} in $ANTORA_EXTENSIONS_EXCLUDE ]]; then
             antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
           fi
         done
