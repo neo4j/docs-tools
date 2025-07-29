@@ -29,6 +29,11 @@ on:
           @neo4j-antora/selector-labels
           @neo4j-antora/xref-hash-validator
           '
+      antora-extensions-exclude:
+        description: 'Antora extensions to NOT pass to the build script'
+        required: false
+        type: string
+        default: ''
       site-dir:
         description: 'The built site root directory'
         type: string
@@ -50,54 +55,6 @@ on:
         pages-listed:
           description: "Page list artifact was uploaded"
           value: ${{ jobs.build-docs.outputs.pages-listed }}
-  workflow_dispatch:
-    inputs:
-      package-script:
-        description: 'The name of the script to run in package.json '
-        required: true
-        type: string
-        default: 'build-verify'
-      antora-attributes:
-        description: 'Antora attributes to pass to the build script'
-        required: false
-        type: string
-        default: ''
-      antora-cli-options:
-        description: 'Antora CLI options to pass to the build script'
-        required: false
-        type: string
-        default: '--ui-bundle-url=https://static-content.neo4j.com/build/ui-bundle-latest.zip'
-      antora-extensions:
-        description: 'Antora extensions to pass to the build script'
-        required: false
-        type: string
-        default: '
-          @neo4j-antora/aliases-redirects
-          @neo4j-antora/antora-modify-sitemaps
-          @neo4j-antora/antora-page-list
-          @neo4j-antora/antora-unlisted-pages
-          @neo4j-antora/selector-labels
-          @neo4j-antora/xref-hash-validator
-          '
-      site-dir:
-        description: 'The built site root directory'
-        type: string
-        default: 'site'
-      deploy-id:
-        description: 'A deploy ID'
-        required: true
-        type: number
-        default: 0
-      retain-artifacts:
-        description: 'The number of days to retain artifacts'
-        type: number
-        default: 7
-      pageList:
-        description: 'Upload page list artifact'
-        required: false
-        type: boolean
-        default: true
-
 
 jobs:
   build-docs:
@@ -112,6 +69,7 @@ jobs:
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
       ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
+      ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
 
     steps:
 
@@ -120,7 +78,9 @@ jobs:
     - name: Create list of extensions for the Antora CLI
       run: |
         for extension in $ANTORA_EXTENSIONS; do
-          antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
+          if ! [[ $extension in $ANTORA_EXTENSIONS_EXCLUDE ]]; then
+            antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
+          fi
         done
         echo "ANTORA_EXTENSIONS_CLI=${antora_cli_extensions}" >> $GITHUB_ENV
 
