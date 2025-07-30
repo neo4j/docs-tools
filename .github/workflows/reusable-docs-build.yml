@@ -117,6 +117,7 @@ jobs:
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
 
+    # we could set include-hidden-files to true to include the .etc and .meta dirs
     - name: Upload HTML artifact
       uses: actions/upload-artifact@v4
       with:
@@ -137,4 +138,14 @@ jobs:
       with:
         name: page-list
         path: build/${{ inputs.site-dir }}/.meta/pageList
+        retention-days: ${{ inputs.retain-artifacts }}
+
+    # upload an artifact for the redirects file is the aliases redirects extension is not excluded
+    - name: Upload Generated redirects
+      id: redirects-artifact
+      if: ${{ !contains(inputs.antora-extensions-exclude, '@neo4j-antora/aliases-redirects') }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: redirects
+        path: build/${{ inputs.site-dir }}/.etc/
         retention-days: ${{ inputs.retain-artifacts }}
