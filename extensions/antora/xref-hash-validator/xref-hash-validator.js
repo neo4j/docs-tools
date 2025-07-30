@@ -34,6 +34,7 @@ module.exports.register = function ({ config }) {
         const { playbook, contentCatalog } = this.getVariables()
 
         // if there's no site url in the playbooks, we can't resolve links
+        // but we can use any domain instead
         if (!playbook.site.url) {
             logger.info('No site URL defined in playbook %s - a dummy url will be used to validate links', playbook.file)
         }
