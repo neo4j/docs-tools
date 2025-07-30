@@ -147,5 +147,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: redirects
-        path: build/${{ inputs.site-dir }}/.etc/
+        path: build/${{ inputs.site-dir }}/.etc/*
         retention-days: ${{ inputs.retain-artifacts }}
