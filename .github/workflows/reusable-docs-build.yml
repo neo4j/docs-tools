@@ -52,12 +52,18 @@ on:
         description: 'Upload page list artifact'
         type: boolean
         default: true
+      site-dir:
+        description: '(Deprecated) The built site root directory'
+        type: string
+        default: 'site'
+
     outputs:
         pages-listed:
           description: "Page list artifact was uploaded"
           value: ${{ jobs.build-docs.outputs.pages-listed }}
 
 jobs:
+
   build-docs:
     runs-on: ubuntu-latest
     outputs:
@@ -115,6 +121,10 @@ jobs:
       run: |
         root=$(ls -d build/**/sitemap.xml | sed -r 's/build\/([^\/]*).*/\1/')
         echo "site-dir=$root" >> $GITHUB_OUTPUT
+
+    - name: site-dir deprecation notice
+      if: ${{ inputs.site-dir }}
+      run: echo "::notice The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow. ::"
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
