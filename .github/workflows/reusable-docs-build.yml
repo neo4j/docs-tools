@@ -115,7 +115,7 @@ jobs:
 
     - name: Run package script
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
-      
+
     - name: Get the dir that contains the HTML
       id: get-site-dir
       run: |
@@ -125,7 +125,7 @@ jobs:
 
     - name: site-dir deprecation notice
       if: ${{ inputs.site-dir }}
-      run: echo "::notice The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow. ::"
+      run: echo "::notice::The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow."
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
