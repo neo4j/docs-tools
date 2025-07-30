@@ -118,7 +118,7 @@ jobs:
 
     - name: ls
       id: ls
-      run: ls -R build/**/docs-tools
+      run: ls -R build/**/sitemap.xml
 
     - name: Get the dir that contains the HTML
       id: get-site-dir
