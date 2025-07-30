@@ -118,9 +118,8 @@ jobs:
 
     - name: Get the dir that contains the HTML
       id: get-site-dir
-      working-directory: build
       run: |
-        root=$(ls -d **/sitemap.xml | sed -r 's/([^\/]*).*/\1/')
+        root=$(ls -d **/sitemap.xml | sed -r 's/build\/([^\/]*).*/\1/')
         echo "site-dir=$root" >> $GITHUB_OUTPUT
 
     - name: site-dir deprecation notice
