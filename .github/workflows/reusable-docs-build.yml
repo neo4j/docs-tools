@@ -123,6 +123,7 @@ jobs:
       with:
         name: docs
         path: build/
+        include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
