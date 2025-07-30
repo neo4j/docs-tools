@@ -19,3 +19,4 @@ You won't get any information from this next link because the hash does not exis
 
 Lorem ipsum.
 
+xref:nonsense.adoc[]
