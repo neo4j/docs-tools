@@ -116,6 +116,10 @@ jobs:
     - name: Run package script
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
+    - name: ls
+      id: ls
+      run: ls -R build
+
     - name: Get the dir that contains the HTML
       id: get-site-dir
       run: |
