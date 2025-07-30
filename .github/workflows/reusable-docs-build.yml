@@ -12,11 +12,16 @@ on:
         required: false
         type: string
         default: ''
+      antora-ui-bundle-url:
+        description: 'Antora UI bundle URL'
+        required: false
+        type: string
+        default: 'https://static-content.neo4j.com/build/ui-bundle-latest.zip'
       antora-cli-options:
         description: 'Antora CLI options to pass to the build script'
         required: false
         type: string
-        default: '--ui-bundle-url=https://static-content.neo4j.com/build/ui-bundle-latest.zip'
+        default: ''
       antora-extensions:
         description: 'Antora extensions to pass to the build script'
         required: false
@@ -63,13 +68,14 @@ jobs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
     env:
-      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'publish-verify' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
+      ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
       ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
+      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'publish-verify' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
 
     steps:
 
@@ -83,7 +89,7 @@ jobs:
           fi
           antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
         done
-        echo "ANTORA_EXTENSIONS_CLI=${antora_cli_extensions}" >> $GITHUB_ENV
+        echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
 
     - name: Use Node.js 18
       uses: actions/setup-node@v4
@@ -93,10 +99,10 @@ jobs:
     - name: Install dependencies
       run: npm install --omit=dev
 
-    - name: Install extensions
+    - name: Install default publish extensions
       run: npm install $ANTORA_EXTENSIONS
 
-    - name: Update packages
+    - name: Update all packages
       run: npm update
 
     - name: Ensure correct version of antora-modify-sitemaps
@@ -106,7 +112,7 @@ jobs:
       run: npm list
 
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT -- $ANTORA_EXTENSIONS_CLI $ANTORA_CLI_OPTIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
