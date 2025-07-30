@@ -115,56 +115,11 @@ jobs:
 
     - name: Run package script
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
-
-
-    - name: Debug - Pre-ls diagnostics
-      run: |
-        echo "--- Debugging ls -R build/**/sitemap.xml ---"
-
-        echo "1. Current Working Directory:"
-        pwd
-
-        echo "2. Check shell globstar option (for Bash):"
-        shopt | grep globstar
-
-        echo "3. List contents of 'build/' directory (non-recursive):"
-        ls -la build/
-
-        echo "4. List contents of 'build/docs/' directory (non-recursive):"
-        ls -la build/docs/
-
-        echo "5. List contents of 'build/docs/docs-tools/' directory (non-recursive):"
-        ls -la build/docs/docs-tools/
-
-        echo "6. List contents of 'build/docs/docs-tools/dev/' directory (non-recursive):"
-        ls -la build/docs/docs-tools/dev/
-
-        echo "7. Attempt to 'ls' the exact expected file path:"
-        ls -la build/docs/docs-tools/dev/sitemap.xml
-
-        echo "8. Test recursive glob expansion with 'echo' (before explicit shopt):"
-        echo build/**/sitemap.xml
-
-        # Explicitly enable globstar just for this diagnostic
-        shopt -s globstar
-        echo "9. Test recursive glob expansion with 'echo' (after explicit shopt):"
-        echo build/**/sitemap.xml
-        shopt -u globstar # Turn off globstar for the next test to avoid interference
-
-        echo "--- End Debugging ---"
-
-    - name: Your original problematic ls -R command (with explicit globstar now)
-      run: |
-        shopt -s globstar # Ensure globstar is enabled for this particular step
-        ls -R build/**/sitemap.xml
-
-    - name: ls
-      id: ls
-      run: ls -R build/**/sitemap.xml
-
+      
     - name: Get the dir that contains the HTML
       id: get-site-dir
       run: |
+        shopt -s globstar
         root=$(ls -R build/**/sitemap.xml | sed -r 's/build\/([^\/]*).*/\1/')
         echo "site-dir=$root" >> $GITHUB_OUTPUT
 
