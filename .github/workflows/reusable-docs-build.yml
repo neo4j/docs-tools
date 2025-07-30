@@ -39,10 +39,6 @@ on:
         required: false
         type: string
         default: 'na'
-      site-dir:
-        description: 'The built site root directory'
-        type: string
-        default: 'site'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: true
@@ -114,6 +110,12 @@ jobs:
     - name: Run package script
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
+    - name: Get the dir that contains the HTML
+      id: get-site-dir
+      run: |
+        root=$(ls -d build/**/sitemap.xml | sed -r 's/build\/([^\/]*).*/\1/')
+        echo "site-dir=$root" >> $GITHUB_OUTPUT
+
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
 
@@ -138,7 +140,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: page-list
-        path: build/${{ inputs.site-dir }}/.meta/pageList
+        path: build/${{ steps.get-site-dir.outputs.site-dir }}/.meta/pageList
         retention-days: ${{ inputs.retain-artifacts }}
 
     # upload an artifact for the redirects file is the aliases redirects extension is not excluded
@@ -148,5 +150,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: redirects
-        path: build/${{ inputs.site-dir }}/.etc/**
+        path: build/${{ steps.get-site-dir.outputs.site-dir }}/.etc/**
+        include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}
