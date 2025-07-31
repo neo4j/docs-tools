@@ -53,9 +53,10 @@ on:
         type: boolean
         default: true
       site-dir:
-        description: '(Deprecated) The built site root directory'
+        description: '(Deprecated) The root directory of the generated HTML inside the build directory, defined in an Antora playbook.'
         type: string
         default: ''
+        required: false
 
     outputs:
         pages-listed:
