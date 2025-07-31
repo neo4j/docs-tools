@@ -55,7 +55,7 @@ on:
       site-dir:
         description: '(Deprecated) The built site root directory'
         type: string
-        default: 'site'
+        default: ''
 
     outputs:
         pages-listed:
@@ -124,7 +124,7 @@ jobs:
         echo "site-dir=$root" >> $GITHUB_OUTPUT
 
     - name: site-dir deprecation notice
-      if: ${{ inputs.site-dir }}
+      if: "${{ github.event.inputs.site-dir != '' }}"
       run: echo "::notice::The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow."
 
     - name: Save event-id
