@@ -41,7 +41,7 @@ on:
         default: 'na'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
-        required: true
+        required: false
         type: number
         default: 0
       retain-artifacts:
@@ -156,7 +156,7 @@ jobs:
 
     - name: Upload Page List artifact
       id: page-list-artifact
-      if: ${{ inputs.page-list == 'true' }}
+      if: ${{ inputs.page-list }}
       uses: actions/upload-artifact@v4
       with:
         name: page-list
