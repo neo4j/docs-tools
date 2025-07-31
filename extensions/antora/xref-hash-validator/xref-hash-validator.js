@@ -32,6 +32,13 @@ module.exports.register = function ({ config }) {
         // and internal links that target sections of other pages
         // for each file, we can add this information to file.xrefChecker, which is now part of the contentCatalog
         const { playbook, contentCatalog } = this.getVariables()
+
+        // if there's no site url in the playbooks, we can't resolve links
+        // but we can use any domain instead
+        if (!playbook.site.url) {
+            logger.info('No site URL defined in playbook %s - a dummy url will be used to validate links', playbook.file)
+        }
+
         const files = contentCatalog.getFiles()
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
@@ -86,7 +93,7 @@ module.exports.register = function ({ config }) {
             file.xrefChecker.internalLinks.forEach((link) => {
 
                 // what is the full url of each link?
-                searchForThisURL = new URL(path.join(file.pub.url, link), playbook.site.url)
+                searchForThisURL = new URL(path.join(file.pub.url, link), (playbook.site && playbook.site.url) ? playbook.site.url : 'https://example.com')
 
                 // if there's no hash the xref is already checked by Antora
                 // this check shouldn't ever match anyway because we should have already filtered out links without hashes
