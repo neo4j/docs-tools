@@ -48,7 +48,7 @@ on:
         description: 'The number of days to retain artifacts'
         type: number
         default: 28
-      pageList:
+      page-list:
         description: 'Upload page list artifact'
         type: boolean
         default: true
@@ -84,12 +84,19 @@ jobs:
 
     - uses: actions/checkout@v4
 
-    - name: Create list of extensions for the Antora CLI
+    - name: Remove excluded extensions
       run: |
         for extension in $ANTORA_EXTENSIONS; do
           if [[ $ANTORA_EXTENSIONS_EXCLUDE =~ "$extension" ]]; then
             continue
           fi
+          filtered_extensions=" ${extension} ${filtered_extensions}"
+        done
+        echo "ANTORA_FILTERED_EXTENSIONS=${filtered_extensions}" >> $GITHUB_ENV
+
+    - name: Create list of extensions for the Antora CLI
+      run: |
+        for extension in $ANTORA_FILTERED_EXTENSIONS; do
           antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
         done
         echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
@@ -102,8 +109,8 @@ jobs:
     - name: Install dependencies
       run: npm install --omit=dev
 
-    - name: Install default publish extensions
-      run: npm install $ANTORA_EXTENSIONS
+    - name: Install default publish extensions - except any excluded by the workflow input
+      run: npm install $ANTORA_FILTERED_EXTENSIONS
 
     - name: Update all packages
       run: npm update
@@ -125,7 +132,7 @@ jobs:
         echo "site-dir=$root" >> $GITHUB_OUTPUT
 
     - name: site-dir deprecation notice
-      if: "${{ github.event.inputs.site-dir != '' }}"
+      if: "${{ inputs.site-dir != '' }}"
       run: echo "::notice::The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow."
 
     - name: Save event-id
@@ -149,6 +156,7 @@ jobs:
 
     - name: Upload Page List artifact
       id: page-list-artifact
+      if: ${{ inputs.page-list == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: page-list
