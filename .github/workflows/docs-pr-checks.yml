@@ -14,7 +14,7 @@ jobs:
     with:
       deploy-id: ${{ github.event.number }}
       package-script: 'publish-verify'
-      antora-extensions-exclude: '@neo4j-antora/selector-labels'
+      antora-extensions-exclude: '@neo4j-antora/aliases-redirects'
 
   # Parse the json log output from the HTML build, and output warnings and errors as annotations
   # Optionally, fail the build if there are warnings or errors
