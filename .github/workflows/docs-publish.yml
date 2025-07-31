@@ -15,7 +15,6 @@ jobs:
     name: Generate HTML
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
-      deploy-id: 0
       package-script: 'publish-verify'
       site-dir: 'incorrect'
 
@@ -26,7 +25,7 @@ jobs:
     with:
       failOnWarnings: true
 
-  trigger-publish:
+  publish-html:
     name: Publish HTML
     needs: docs-verify
     runs-on: ubuntu-latest

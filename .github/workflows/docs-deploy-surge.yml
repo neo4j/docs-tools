@@ -17,7 +17,7 @@ on:
       - completed
 
 jobs:
-  publish-docs:
+  deploy-docs:
     # Uncomment this if statement to deploy only when the PR builds cleanly
     # if: github.event.workflow_run.conclusion == 'success'
 
