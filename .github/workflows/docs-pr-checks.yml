@@ -13,7 +13,6 @@ jobs:
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       deploy-id: ${{ github.event.number }}
-      site-dir: 'docs'
       package-script: 'publish-verify'
       antora-extensions-exclude: '@neo4j-antora/selector-labels'
 
