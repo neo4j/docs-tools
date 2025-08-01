@@ -152,7 +152,12 @@ module.exports.register = function ({ config }) {
             if (el.tagName === 'SPAN' && el.parentNode.tagName === 'P' && !el.closest("td")) {
                 const parentText = el.parentNode.textContent.replace(/\n/g, ' ').trim()
                 const labelsText = el.parentNode.querySelectorAll('span.label').map((s) => s.textContent.trim()).join(' ').trim()
-                if (parentText === labelsText) logger[logLevel]({ file: src, "suggested fix": `Add [role=label--${labelDetails.src.synonym || labelDetails.src.class}] to heading or block level element` }, 'Inline label:%s macro used in place of role', labelClass)
+                // the suggested fix depends on whether we are in the main section of the page below the h1, or in a subsection
+                let suggestedFix = `Add [role=label--${labelDetails.src.synonym || labelDetails.src.class}] to heading or block level element`
+                if (el.closest('div#preamble')) {
+                    suggestedFix = `Add :page-role: ${labelDetails.src.synonym || labelDetails.src.class} to the document header`
+                }
+                if (parentText === labelsText) logger[logLevel]({ file: src, "suggested fix": suggestedFix }, 'Inline label:%s macro used in place of role', labelClass)
             }
 
             // tell the user what the label: macro should look like based on the role, product, and version
@@ -208,8 +213,12 @@ module.exports.register = function ({ config }) {
                 el.setAttribute(`data-${d}`, labelDetails.data.events[d] || '')
             }
             // add the product if it is not already set
-            if (labelDetails.data.product && !el.hasAttribute('data-product')) {
-                el.setAttribute('data-product', labelDetails.data.product)
+            if (labelDetails.data.product) {
+                if (!el.hasAttribute('data-product')) {
+                    el.setAttribute('data-product', labelDetails.data.product)
+                } else {
+                    el.setAttribute('data-product', el.getAttribute('data-product') + ', ' + labelDetails.data.product)
+                }
             }
 
             // add the actual label classes as attributes
