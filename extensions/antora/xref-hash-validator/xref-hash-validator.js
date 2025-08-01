@@ -92,6 +92,15 @@ module.exports.register = function ({ config }) {
             // check the internal links in the file
             file.xrefChecker.internalLinks.forEach((link) => {
 
+                // if the link starts with an inline macro, log a warning for bad asciidoc syntax
+                // this can happen if eg the source is link:link:...[]
+                // but mailto: is valid 
+                const macroCheck = new RegExp('^(\\w+):', 'i');
+                if (macroCheck.test(link) && !link.startsWith('mailto:')) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'syntax error detected while validating xref target \'%s\'', link)
+                    return
+                }
+
                 // what is the full url of each link?
                 searchForThisURL = new URL(path.join(file.pub.url, link), (playbook.site && playbook.site.url) ? playbook.site.url : 'https://example.com')
 
@@ -107,6 +116,12 @@ module.exports.register = function ({ config }) {
                 .filter((f) => {
                     return f.pub.url === searchForThisURL.pathname
                 })[0]
+
+                // we shouldn't generate this log message, but just in case...
+                if (!targetFile) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'target file %s not found for link %s', searchForThisURL.pathname, link)
+                    return
+                }
 
                 const hashTarget = decodeURI(searchForThisURL.hash.replace('#', ''))
 
