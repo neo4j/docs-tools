@@ -75,10 +75,24 @@ module.exports.register = function ({ config }) {
                 // if an id on this page matches this href, we can ignore it - it is essentially self-verifying
                 if (file.xrefChecker.linkTargets.includes(href.replace(/^#/, ''))) return []
 
-                if (!href.startsWith('http') && !href.startsWith('/docs')) {
-                    return href
+                // if the href starts with http it is an external link from a link: macro
+                // if the href starts with /docs, it is a link to another docset from a link: macro
+                // both of these are beyong the scope of this validator
+                if (href.startsWith('http') || href.startsWith('/docs')) {
+                    return []
                 }
-                return []
+
+                // if the href starts with an inline macro, log a warning for bad asciidoc syntax
+                // this can happen if eg the source contains link:link:...[]
+                // but mailto: is valid here
+                const macroCheck = new RegExp('^(\\w+):', 'i');
+                if (macroCheck.test(href) && !href.startsWith('mailto:')) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'syntax error detected while validating href target \'%s\'', href)
+                    return []
+                }
+
+                // if we're here the target is an internal link that we want to check
+                return href
             })
 
         })
@@ -91,15 +105,6 @@ module.exports.register = function ({ config }) {
     
             // check the internal links in the file
             file.xrefChecker.internalLinks.forEach((link) => {
-
-                // if the link starts with an inline macro, log a warning for bad asciidoc syntax
-                // this can happen if eg the source is link:link:...[]
-                // but mailto: is valid 
-                const macroCheck = new RegExp('^(\\w+):', 'i');
-                if (macroCheck.test(link) && !link.startsWith('mailto:')) {
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'syntax error detected while validating xref target \'%s\'', link)
-                    return
-                }
 
                 // what is the full url of each link?
                 searchForThisURL = new URL(path.join(file.pub.url, link), (playbook.site && playbook.site.url) ? playbook.site.url : 'https://example.com')
