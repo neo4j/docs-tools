@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/antora-add-notes",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Add asciidoc blocks into the top of pages based on page attributes",
   "main": "add-notes.js",
   "scripts": {
