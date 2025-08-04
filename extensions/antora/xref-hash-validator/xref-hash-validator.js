@@ -66,19 +66,36 @@ module.exports.register = function ({ config }) {
             const anchors = parseHTML(file.contents.toString()).querySelectorAll('a')
             file.xrefChecker.internalLinks = anchors.flatMap((a) => {
                 // ignore unresolved links that Antora has already logged
-                if (a.classList.contains('unresolved')) return []
+                if (a.classList.contains('unresolved')) return
 
                 const href = a.getAttribute('href')
 
-                if (!href) return []
+                if (!href) return
 
                 // if an id on this page matches this href, we can ignore it - it is essentially self-verifying
-                if (file.xrefChecker.linkTargets.includes(href.replace(/^#/, ''))) return []
+                if (file.xrefChecker.linkTargets.includes(href.replace(/^#/, ''))) return
 
-                if (!href.startsWith('http') && !href.startsWith('/docs')) {
-                    return href
+                // if the href starts with http it is an external link from a link: macro
+                // if the href starts with /docs, it is a link to another docset from a link: macro
+                // both of these are beyong the scope of this validator
+                if (href.startsWith('http') || href.startsWith('/docs')) {
+                    return
                 }
-                return []
+
+                // if the href starts with an inline macro, log a warning for bad asciidoc syntax
+                // this can happen if eg the source contains link:link:...[]
+                // but mailto: is valid here
+                const macroCheck = new RegExp('^(\\w+):', 'i');
+                if (macroCheck.test(href) && !href.startsWith('mailto:')) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'syntax error detected while validating <a href="%s">...</a>', href)
+                    return
+                }
+
+                // if we're here the target is an internal link that we want to check
+                return href
+            })
+            .filter(function( link ) {
+                return link !== undefined
             })
 
         })
@@ -107,6 +124,12 @@ module.exports.register = function ({ config }) {
                 .filter((f) => {
                     return f.pub.url === searchForThisURL.pathname
                 })[0]
+
+                // we shouldn't generate this log message, but just in case...
+                if (!targetFile) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'target file %s not found for link %s', searchForThisURL.pathname, link)
+                    return
+                }
 
                 const hashTarget = decodeURI(searchForThisURL.hash.replace('#', ''))
 
