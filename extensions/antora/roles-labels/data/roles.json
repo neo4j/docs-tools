@@ -142,10 +142,10 @@
         },
         "new":{
             "description": "The feature or function was added in the version stated",
-            "suggestedAlternative": "new-versionless",
             "labelCategory": "version",
+            "canBeVersionless": true,
             "displayText": "Introduced",
-            "altDisplayText": "Added",
+            "altDisplayText": "New, Added",
             "eventOrder": 1
         },
         "new-versionless": {
@@ -157,7 +157,9 @@
             "description": "The feature or function was added in the version stated",
             "labelCategory": "version",
             "displayText": "Introduced",
-            "altDisplayText": "Added",
+            "altDisplayText": "New, Added",
+            "deprecated": true,
+            "suggestedAlternative": "new",
             "eventOrder": 1
         },
         "changed":{
@@ -194,6 +196,7 @@
         },
         "beta":{
             "labelCategory": "version",
+            "canBeVersionless": true,
             "displayText": "Beta",
             "eventOrder": 0        
         },
@@ -206,29 +209,27 @@
         },
         "deprecated":{
             "description": "The feature or function was deprecated in the version stated",
-            "suggestedAlternative": "deprecated-versionless",
             "labelCategory": "version",
+            "canBeVersionless": true,
             "displayText": "Deprecated",
             "eventOrder": 3
         },
-        "deprecated-versionless": {
-            "description": "A deprecated feature of function, where the version is not specified",
-            "labelCategory": "function",
-            "displayText": "Deprecated"
-        },
         "removed":{
             "labelCategory": "version",
+            "canBeVersionless": true,
             "displayText": "Removed",
             "eventOrder": 4
         },
         "renamed":{
             "labelCategory": "version",
+            "canBeVersionless": true,
             "displayText": "Renamed",
             "eventOrder": 2        
         },
         "updated":{
             "description": "The feature or function was updated in the version stated",
             "labelCategory": "version",
+            "canBeVersionless": true,
             "displayText": "Updated",
             "eventOrder": 2        
         },
@@ -276,7 +277,7 @@
         "eager":{
             "labelCategory": "function",
             "displayText": "Eager",
-            "deprecated": true
+            "deprecated": false
         },        
         "function":{
             "labelCategory": "function",
@@ -285,12 +286,12 @@
         "functionality":{
             "labelCategory": "function",
             "displayText": "Functionality",
-            "deprecated": true
+            "deprecated": false
         },
         "required":{
             "labelCategory": "function",
             "displayText": "Required",
-            "deprecated": true
+            "deprecated": false
         },        
         "procedure":{
             "labelCategory": "procedure",

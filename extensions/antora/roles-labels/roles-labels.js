@@ -30,7 +30,7 @@ module.exports.register = function ({ config }) {
 
         var getLabelDetails = function (src, el, role, attributes) {
 
-            const logLevel = attributes['roles-labels-custom-log-level'] || defaultLogLevel
+            const logLevel = attributes['suppress-label-messages'] ? 'debug' : (attributes['roles-labels-custom-log-level'] || defaultLogLevel)
 
             let labelClass, inlineLabel, labelParts
             labelClass = inlineLabel = role.replace('label--', '')
@@ -92,7 +92,7 @@ module.exports.register = function ({ config }) {
 
             // if we haven't found a label, the label being used is not an official, valid label, defined in rolesData.labels
             if (!labelFound) {
-                logger[logLevel]({ file: src }, 'Label "%s" is not defined', labelClass)
+                logger[logLevel]({ file: src, source: src.origin }, 'Label "%s" is not defined', labelClass)
                 return
             }
 
@@ -102,7 +102,7 @@ module.exports.register = function ({ config }) {
 
             // flag labels if roles-labels-flag is set
             if (attributes['roles-labels-flag'] && attributes['roles-labels-flag'].split(' ').includes(dataLabel)) {
-                logger[logLevel]({ file: src }, 'Label "%s" found', labelClass)
+                logger[logLevel]({ file: src, source: src.origin }, 'Label "%s" found', labelClass)
             }
 
             // the last item in a label might be a version number
@@ -132,7 +132,8 @@ module.exports.register = function ({ config }) {
                     id: `_${dataLabel.replace('-', '_')}`,
                     eventOrder: rolesData.labels[dataLabel].eventOrder || -1,
                     joinText: dataVersion ? rolesData.labels[dataLabel].joinText || 'in' : '',
-                    text: rolesData.labels[dataLabel].displayText || ''
+                    text: rolesData.labels[dataLabel].displayText || '',
+                    altText: rolesData.labels[dataLabel].altDisplayText || '',
                 },
                 data: {
                     product: dataProduct || rolesData.labels[dataLabel].product || attributes['page-product'] || '',
@@ -157,7 +158,7 @@ module.exports.register = function ({ config }) {
                 if (el.closest('div#preamble')) {
                     suggestedFix = `Add :page-role: ${labelDetails.src.synonym || labelDetails.src.class} to the document header`
                 }
-                if (parentText === labelsText) logger[logLevel]({ file: src, "suggested fix": suggestedFix }, 'Inline label:%s macro used in place of role', labelClass)
+                if (parentText === labelsText) logger[logLevel]({ "suggested fix": suggestedFix, file: src, source: src.origin }, 'Inline label:%s macro used in place of role', labelClass)
             }
 
             // tell the user what the label: macro should look like based on the role, product, and version
@@ -171,11 +172,16 @@ module.exports.register = function ({ config }) {
                 // the message dependson whether the label has a suggested alternative, eg new-versionless instead of new
                 if (labelDetails.data.version) {
                     inlineLabel += `-${labelDetails.data.version}`
-                } else {
+                }
+                
+                // labels that would normally include a version can sometimes be displayed without a version
+                // if the label supports versionless, it doesn't need a version number
+                // if the labeld does not support versionless, log a message
+                if (!rolesData.labels[dataLabel].canBeVersionless && !labelDetails.data.version) {
                     labelDetails.src.validLabel = false
                     let suggestedFix = `label:${inlineLabel}-VERSION[] or label:${labelClass}\[${labelDetails.out.text} ${rolesData.labels[labelClass].joinText || 'in'} VERSION\]`
                     if (rolesData.labels[labelClass].suggestedAlternative) suggestedFix = `Use label:${rolesData.labels[labelClass].suggestedAlternative}[], or ` + suggestedFix
-                    logger[labelDetails.logLevel]({ file: src, "suggested fix": suggestedFix }, 'Label "%s" should include a version number', labelClass)
+                    logger[labelDetails.logLevel]({ "suggested fix": suggestedFix, file: src, source: src.origin }, 'Label "%s" should include a version number', labelClass)
                 }
             }
 
@@ -192,17 +198,17 @@ module.exports.register = function ({ config }) {
 
             // if an inline label has custom text, log a message
             // we should always use the default generated text for inline labels
-            if (labelDetails.src.inline && labelDetails.src.text !== '' && labelDetails.src.text !== labelDetails.out.text && rolesData.labels[labelClass] && labelDetails.src.validLabel) {
+            if (labelDetails.src.inline && labelDetails.src.text !== '' && labelDetails.src.text !== labelDetails.out.text && !labelDetails.out.altText.split(',').map((text) => text.trim()).includes(labelDetails.src.text) && rolesData.labels[labelClass] && labelDetails.src.validLabel) {
                 if (replaceInlineLabelText) {
-                    logger[labelDetails.logLevel]({ file: src }, 'Text "%s" on label "%s" will be updated to the default text output: "%s"', el.textContent, labelClass, labelDetails.out.text)
+                    logger[labelDetails.logLevel]({ file: src, source: src.origin }, 'Text "%s" on label "%s" will be updated to the default text output: "%s"', el.textContent, labelClass, labelDetails.out.text)
                 } else {
-                    logger[labelDetails.logLevel]({ file: src, "suggested fix": `label:${inlineLabel}[] or label:${labelClass}\[${labelDetails.out.text}\]` }, 'Label text "%s" on inline label "%s" should be removed or replaced with the default text "%s"', el.textContent, labelClass, labelDetails.out.text)
+                    logger[labelDetails.logLevel]({ "suggested fix": `label:${inlineLabel}[] or label:${labelClass}\[${labelDetails.out.text}\]`, file: src, source: src.origin }, 'Label text "%s" on inline label "%s" should be removed or replaced with the default text "%s"', el.textContent, labelClass, labelDetails.out.text)
                 }
             }
 
             // log an info message if the label is deprecated
             if (rolesData.labels[dataLabel].deprecated) {
-                logger[labelDetails.logLevel]({ file: src }, 'Label "%s" is deprecated', labelClass)
+                logger[labelDetails.logLevel]({ file: src, source: src.origin }, 'Label "%s" is deprecated', labelClass)
             }
 
             return labelDetails
@@ -287,7 +293,7 @@ module.exports.register = function ({ config }) {
 
                     // detect possibly badly formed HTML if there is no datasetDiv
                     if (!datasetDiv) {
-                        logger[labelDetails.logLevel]({ file: file.src }, 'Unable to set dataset attributes for <%s> element "%s" - HTML might be malformed as a result of an error in the asciidoc source', roleDiv.tagName, roleDiv.textContent)
+                        logger[labelDetails.logLevel]({ file: file.src, source: file.src.origin }, 'Unable to set dataset attributes for <%s> element "%s" - HTML might be malformed as a result of an error in the asciidoc source', roleDiv.tagName, roleDiv.textContent)
                     } else {
                         addDataset(datasetDiv, labelDetails)
                     }
