@@ -16,7 +16,6 @@ jobs:
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       package-script: 'publish-verify'
-      site-dir: 'incorrect'
 
   docs-verify:
     name: Verify HTML

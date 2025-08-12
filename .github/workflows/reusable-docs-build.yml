@@ -113,11 +113,11 @@ jobs:
     - name: Install default publish extensions - except any excluded by the workflow input
       run: npm install $ANTORA_FILTERED_EXTENSIONS
 
-    - name: Update all packages
-      run: npm update
-
     - name: Ensure correct version of antora-modify-sitemaps
       run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.1
+
+    - name: Update all packages
+      run: npm update
 
     - name: List packages
       run: npm list
