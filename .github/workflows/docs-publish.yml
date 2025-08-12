@@ -1,5 +1,5 @@
 
-name: "Publish Branch"
+name: "Publish HTML"
 
 on:
   # push:
@@ -15,10 +15,7 @@ jobs:
     name: Generate HTML
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
-      retain-artifacts: 14
-      deploy-id: 0
       package-script: 'publish-verify'
-      cli-options: '--extension ./.docs-tools/extensions/antora/aliases-redirects'
 
   docs-verify:
     name: Verify HTML
@@ -27,7 +24,8 @@ jobs:
     with:
       failOnWarnings: true
 
-  trigger-publish:
+  publish-html:
+    name: Publish HTML
     needs: docs-verify
     runs-on: ubuntu-latest
 

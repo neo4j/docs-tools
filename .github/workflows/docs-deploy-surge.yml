@@ -17,7 +17,7 @@ on:
       - completed
 
 jobs:
-  publish-docs:
+  deploy-docs:
     # Uncomment this if statement to deploy only when the PR builds cleanly
     # if: github.event.workflow_run.conclusion == 'success'
 
@@ -65,7 +65,7 @@ jobs:
 
       - id: get-top-dir
         run: |
-          root=$(ls -d */index.html | sed -r 's/(.*)\/index\.html/\1/')
+          root=$(ls -d **/sitemap.xml | sed -r 's/([^\/]*).*/\1/')
           echo "top-dir=$root" >> $GITHUB_OUTPUT
 
       - id: unzip-changelog

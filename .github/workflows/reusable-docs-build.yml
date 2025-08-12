@@ -7,75 +7,65 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'build-verify'
-      cli-default:
-          description: 'Default options (extensions) to pass to the build script'
-          required: false
-          type: string
-          default: '--extension ./.docs-tools/extensions/antora/antora-page-list'
-      cli-options:
-        description: 'Options to pass to the build script'
+      antora-attributes:
+        description: 'Antora attributes to pass to the build script'
         required: false
         type: string
-        default: '--extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
-      site-dir:
-        description: 'The built site root directory'
+        default: ''
+      antora-ui-bundle-url:
+        description: 'Antora UI bundle URL'
+        required: false
         type: string
-        default: 'site'
+        default: 'https://static-content.neo4j.com/build/ui-bundle-latest.zip'
+      antora-cli-options:
+        description: 'Antora CLI options to pass to the build script'
+        required: false
+        type: string
+        default: ''
+      antora-extensions:
+        description: 'Antora extensions to pass to the build script'
+        required: false
+        type: string
+        default: '
+          @neo4j-antora/aliases-redirects
+          @neo4j-antora/antora-modify-sitemaps
+          @neo4j-antora/antora-page-list
+          @neo4j-antora/antora-unlisted-pages
+          @neo4j-antora/roles-labels
+          @neo4j-antora/selector-labels
+          @neo4j-antora/xref-hash-validator
+          '
+      antora-extensions-exclude:
+        description: 'Antora extensions to NOT pass to the build script'
+        required: false
+        type: string
+        default: 'na'
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
-        required: true
+        required: false
         type: number
         default: 0
       retain-artifacts:
         description: 'The number of days to retain artifacts'
         type: number
-        default: 7
-      pageList:
+        default: 28
+      page-list:
         description: 'Upload page list artifact'
         type: boolean
         default: true
+      site-dir:
+        description: '(Deprecated) The root directory of the generated HTML inside the build directory, defined in an Antora playbook.'
+        type: string
+        default: ''
+        required: false
+
     outputs:
         pages-listed:
           description: "Page list artifact was uploaded"
           value: ${{ jobs.build-docs.outputs.pages-listed }}
-  workflow_dispatch:
-    inputs:
-      package-script:
-        description: 'The name of the script to run in package.json '
-        required: true
-        type: string
-        default: 'build-verify'
-      cli-default:
-          description: 'Default options (extensions) to pass to the build script'
-          required: false
-          type: string
-          default: '--extension ./.docs-tools/extensions/antora/antora-page-list --extension ./.docs-tools/extensions/antora/antora-unlisted-pages'
-      cli-options:
-        description: 'Options to pass to the build script'
-        required: false
-        type: string
-        default: ''
-      site-dir:
-        description: 'The built site root directory'
-        type: string
-        default: 'site'
-      deploy-id:
-        description: 'A deploy ID'
-        required: true
-        type: number
-        default: 0
-      retain-artifacts:
-        description: 'The number of days to retain artifacts'
-        type: number
-        default: 7
-      pageList:
-        description: 'Upload page list artifact'
-        required: false
-        type: boolean
-        default: true
-
 
 jobs:
+
   build-docs:
     runs-on: ubuntu-latest
     outputs:
@@ -84,20 +74,33 @@ jobs:
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
-      CLI_DEFAULT: ${{ inputs.cli-default }}
-      CLI_OPTIONS: ${{ inputs.cli-options }}
+      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
+      ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
+      ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
+      ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
+      ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
+      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'publish-verify' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
 
-    steps:    
+    steps:
+
     - uses: actions/checkout@v4
 
-    - name: Checkout tools repo
-      uses: actions/checkout@v4
-      with:
-        repository: neo4j/docs-tools
-        ref: dev
-        sparse-checkout: |
-          extensions/antora
-        path: .docs-tools
+    - name: Remove excluded extensions
+      run: |
+        for extension in $ANTORA_EXTENSIONS; do
+          if [[ $ANTORA_EXTENSIONS_EXCLUDE =~ "$extension" ]]; then
+            continue
+          fi
+          filtered_extensions=" ${extension} ${filtered_extensions}"
+        done
+        echo "ANTORA_FILTERED_EXTENSIONS=${filtered_extensions}" >> $GITHUB_ENV
+
+    - name: Create list of extensions for the Antora CLI
+      run: |
+        for extension in $ANTORA_FILTERED_EXTENSIONS; do
+          antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
+        done
+        echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
 
     - name: Use Node.js 18
       uses: actions/setup-node@v4
@@ -107,17 +110,42 @@ jobs:
     - name: Install dependencies
       run: npm install --omit=dev
 
+    - name: Install default publish extensions - except any excluded by the workflow input
+      run: npm install $ANTORA_FILTERED_EXTENSIONS
+
+    - name: Ensure correct version of antora-modify-sitemaps
+      run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.1
+
+    - name: Update all packages
+      run: npm update
+
+    - name: List packages
+      run: npm list
+
     - name: Run package script
-      run: npm run $PACKAGE_SCRIPT -- $CLI_DEFAULT $CLI_OPTIONS
+      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+
+    - name: Get the dir that contains the HTML
+      id: get-site-dir
+      run: |
+        shopt -s globstar
+        root=$(ls -R build/**/sitemap.xml | sed -r 's/build\/([^\/]*).*/\1/')
+        echo "site-dir=$root" >> $GITHUB_OUTPUT
+
+    - name: site-dir deprecation notice
+      if: "${{ inputs.site-dir != '' }}"
+      run: echo "::notice::The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow."
 
     - name: Save event-id
       run: echo $DEPLOY_ID > ./build/deployid
 
+    # we could set include-hidden-files to true to include the .etc and .meta dirs
     - name: Upload HTML artifact
       uses: actions/upload-artifact@v4
       with:
         name: docs
         path: build/
+        include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
@@ -129,8 +157,20 @@ jobs:
 
     - name: Upload Page List artifact
       id: page-list-artifact
+      if: ${{ inputs.page-list }}
       uses: actions/upload-artifact@v4
       with:
         name: page-list
-        path: build/${{ inputs.site-dir }}/.meta/pageList
+        path: build/${{ steps.get-site-dir.outputs.site-dir }}/.meta/pageList
+        retention-days: ${{ inputs.retain-artifacts }}
+
+    # upload an artifact for the redirects file is the aliases redirects extension is not excluded
+    - name: Upload Redirects artifact
+      id: redirects-artifact
+      if: ${{ !contains(inputs.antora-extensions-exclude, '@neo4j-antora/aliases-redirects') }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: redirects
+        path: build/${{ steps.get-site-dir.outputs.site-dir }}/.etc/**
+        include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}

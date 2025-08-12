@@ -1,11 +1,12 @@
 site:
   title: Docs Tools
   start_page: docs-tools:ROOT:index.adoc
+  url: https://neo4j.com/docs/
 
 content:
   sources:
   - url: ./
-    branches: ['dev']
+    branches: ['HEAD']
     exclude:
     - '!**/_includes/*'
     - '!**/readme.adoc'
@@ -13,18 +14,14 @@ content:
 
 ui:
   bundle:
-    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    url: https://static-content.neo4j.com/build/ui-bundle.zip
     snapshot: true
 
 urls:
   html_extension_style: indexify
 
-antora:
-  extensions:
-  - require: "./extensions/antora/antora-modify-sitemaps/modify-sitemaps.js"
-    sitemap_version: 'dev'
-    sitemap_loc_version: 'current'
-    move_sitemaps_to_components: true
+output:
+  dir: ./build/docs
 
 asciidoc:
   attributes:

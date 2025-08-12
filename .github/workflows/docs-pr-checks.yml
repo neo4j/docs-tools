@@ -13,8 +13,6 @@ jobs:
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       deploy-id: ${{ github.event.number }}
-      retain-artifacts: 14
-      site-dir: 'docs'
 
   # Parse the json log output from the HTML build, and output warnings and errors as annotations
   # Optionally, fail the build if there are warnings or errors
@@ -57,18 +55,3 @@ jobs:
     with:
       pages-modified: ${{ needs.docs-changes-pr.outputs.pages-modified }}
       pages-added: ${{ needs.docs-changes-pr.outputs.pages-added }}
-
-  # Use vale to verify the changes against the style guide
-  # You can specify your own vale config file if you want to override or replace the default Neo4j rules
-  docs-lint-pr:
-    needs: docs-changes-pr
-    if: needs.docs-changes-pr.outputs.asciidoc-files != ''
-    uses: ./.github/workflows/reusable-docs-lint.yml
-    with:
-      files: ${{ needs.docs-changes-pr.outputs.asciidoc-files }}
-      vale-fail-on-error: true
-      # use-default-rules: false
-      # vale-config-file: .vale.ini
-      separator: ','
-
-

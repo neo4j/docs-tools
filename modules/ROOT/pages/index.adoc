@@ -1,9 +1,17 @@
-# Docs tools
+= Docs tools
 :page-aliases: old-docs-tools.adoc
 
 Use these docs to test workflows and extensions.
 
-## Include test
+
+== Include test
 
 include::partial$include-target.adoc[]
 
+For more information, see <<section-with-id>>.
+
+
+[[section-with-id]]
+== Section with ID to test xref validator
+
+Lorem ipsum.
