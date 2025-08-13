@@ -1,4 +1,4 @@
-const { parse: parseHTML, valid } = require('node-html-parser')
+const { parse: parseHTML, valid: validHTML } = require('node-html-parser')
 
 module.exports.register = function ({ config }) {
 
@@ -18,6 +18,12 @@ module.exports.register = function ({ config }) {
 
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
+
+            if (!validHTML(file.contents.toString())) {
+                logger.warn({ file: file.src, source: file.src.origin }, 'Unable to process footnotes: the generated HTML for the file is not valid.')
+                return
+            }
+
             const parsed = parseHTML(file.contents.toString())
             const footnotesDiv = parsed.getElementById('footnotes')
             const tables = parsed.querySelectorAll('table')

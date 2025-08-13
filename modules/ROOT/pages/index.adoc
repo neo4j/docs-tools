@@ -1,5 +1,6 @@
 = Docs tools
 :page-aliases: old-docs-tools.adoc
+:page-role: enterprise-edition
 
 Use these docs to test workflows and extensions.
 
@@ -62,6 +63,3 @@ A footnote that is not in a table footnote:[Footnote not in a table.]
 |
 
 |===
-
-
-
