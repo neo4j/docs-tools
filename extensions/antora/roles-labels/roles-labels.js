@@ -1,4 +1,4 @@
-const { parse: parseHTML, valid } = require('node-html-parser')
+const { parse: parseHTML, valid: validHTML } = require('node-html-parser')
 const semver = require('semver')
 const rolesData = require('./data/roles.json')
 
@@ -240,6 +240,11 @@ module.exports.register = function ({ config }) {
 
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
+
+            if (!validHTML(file.contents.toString())) {
+                logger.warn({ file: file.src, source: file.src.origin }, 'Unable to process roles: the generated HTML for the file is not valid.')
+                return
+            }
 
             const parsed = parseHTML(file.contents.toString())
             const headings = ['H2', 'H3', 'H4', 'H5', 'H6', 'CAPTION']
