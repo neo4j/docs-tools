@@ -33,6 +33,7 @@ on:
           @neo4j-antora/antora-unlisted-pages
           @neo4j-antora/roles-labels
           @neo4j-antora/selector-labels
+          @neo4j-antora/table-footnotes
           @neo4j-antora/xref-hash-validator
           '
       antora-extensions-exclude:
