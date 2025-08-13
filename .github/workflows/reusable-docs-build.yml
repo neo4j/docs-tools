@@ -137,14 +137,14 @@ jobs:
       run: echo "::notice::The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow."
 
     - name: Save event-id
-      run: echo $DEPLOY_ID > ./build/deployid
+      run: echo $DEPLOY_ID > ./build/${{ steps.get-site-dir.outputs.site-dir }}/deployid
 
     # we could set include-hidden-files to true to include the .etc and .meta dirs
     - name: Upload HTML artifact
       uses: actions/upload-artifact@v4
       with:
         name: docs
-        path: build/
+        path: build/${{ steps.get-site-dir.outputs.site-dir }}
         include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}          
 
