@@ -21,7 +21,11 @@ urls:
   html_extension_style: indexify
 
 output:
-  dir: ./build/docs
+  dir: ./build/site
+
+antora:
+  extensions:
+  - "./extensions/antora/table-footnotes"
 
 asciidoc:
   attributes:
