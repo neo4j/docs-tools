@@ -1,5 +1,6 @@
 = Docs tools
 :page-aliases: old-docs-tools.adoc
+:page-role: enterprise-edition
 
 Use these docs to test workflows and extensions.
 
@@ -64,4 +65,6 @@ A footnote that is not in a table footnote:[Footnote not in a table.]
 |===
 
 
+== messed up asciidoc to test
 
+Procedures can contain both fully-qualified procedure names and partial names with the wildcard `*`, where the default (`*`) loads all procedures.
