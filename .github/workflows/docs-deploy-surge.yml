@@ -64,7 +64,9 @@ jobs:
         run: unzip docs.zip
 
       - id: get-top-dir
+        shell: bash
         run: |
+          ls -lR
           root=$(ls -d **/sitemap.xml | sed -r 's/([^\/]*).*/\1/')
           echo "top-dir=$root" >> $GITHUB_OUTPUT
 
