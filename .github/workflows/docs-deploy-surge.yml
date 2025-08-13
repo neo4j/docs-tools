@@ -65,6 +65,7 @@ jobs:
 
       - id: get-top-dir
         run: |
+          ls -lR
           root=$(ls -d **/sitemap.xml | sed -r 's/([^\/]*).*/\1/')
           echo "top-dir=$root" >> $GITHUB_OUTPUT
 
