@@ -63,3 +63,12 @@ A footnote that is not in a table footnote:[Footnote not in a table.]
 |
 
 |===
+
+[role=label--draft]
+This paragraph is marked as draft.
+
+
+[role=label--draft]
+== Heading with label
+
+This heading is marked as draft.
