@@ -5,14 +5,16 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npm run build && npm run serve",
+    "prestart": "npm update",
+    "start": "nodemon --exec \"npm run build\"",
     "serve": "node server.js",
-    "build": "antora preview.yml --stacktrace --log-format=pretty",
-    "publish": "antora publish.yml --stacktrace --log-format=pretty",
-    "build-verify": "antora --stacktrace --fetch preview.yml --log-format=json --log-level=info --log-file ./build/log/log.json",
-    "publish-verify": "antora --stacktrace --fetch publish.yml --log-format=json --log-level=info --log-file ./build/log/log.json",
-    "check-links-diff": "npm run build && link-checker build/site --do-file diff-links.txt --skip-file scripts/ignore-links.txt",
-    "check-links": "link-checker build/site -e --skip-file scripts/ignore-links.txt"
+    "clean": "rm -rf build",
+    "build": "npm run build:preview",
+    "postbuild": "node server.js",
+    "build:preview": "antora preview.yml --stacktrace --log-format=pretty",
+    "build:publish": "npm run clean && antora publish.yml --stacktrace --log-format=pretty",
+    "verify:preview": "antora --stacktrace --fetch preview.yml --log-format=json --log-level=info --log-file ./build/log/log.json",
+    "verify:publish": "antora --stacktrace --fetch publish.yml --log-format=json --log-level=info --log-file ./build/log/log.json"
   },
   "keywords": [
     "antora"
@@ -20,10 +22,24 @@
   "author": "Neil Dewhurst",
   "license": "ISC",
   "dependencies": {
-    "antora": "^3.1.10"
+    "antora": "^3.1.10",
+    "node-html-parser": "^7.0.1"
   },
   "devDependencies": {
     "express": "^5.1.0",
     "nodemon": "^3.1.10"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "**/modules/**",
+      "**/antora.yml",
+      "**/preview.yml",
+      "**/publish.yml"
+    ],
+    "ext": "yml,yaml,adoc,svg,png,jpg",
+    "ignore": [
+      "build",
+      "node_modules"
+    ]
   }
 }
