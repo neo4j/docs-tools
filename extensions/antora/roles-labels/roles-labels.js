@@ -350,12 +350,8 @@ module.exports.register = function ({ config }) {
                     labelsLocation.append(labelsDiv)
                     labelsLocation.classList.add('header-label-container')
                 } else {
-                    
-
-                    labelsLocation.append(labelsDiv)
+                    labelsLocation.prepend(labelsDiv)
                     roleDiv.classList.add('has-label')
-                    // add an id to the roldDiv
-                    
                 }
             })
 
