@@ -80,7 +80,7 @@ jobs:
       ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
-      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'publish-verify' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
+      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
 
     steps:
 
