@@ -1,7 +1,7 @@
 {
-  "name": "antora-actions",
+  "name": "docs-tools",
   "version": "1.0.0",
-  "description": "Test Antora log reporting in github actions",
+  "description": "Neo4j documentation tools: github workflows; Antora and Asciidoc extensions",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
