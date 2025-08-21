@@ -5,7 +5,7 @@ module.exports.register = function ({ config }) {
 
   const { playbook } = this.getVariables()
 
-  const { redirectFormat = 'neo4j', aliasLogLevel = playbook.asciidoc.attributes.aliasLogLevel || 'warn', logFoundAliases = playbook.asciidoc.attributes.logFoundAliases || false } = config
+  const { redirectFormat = 'neo4j', aliasLogLevel = playbook.asciidoc.attributes.aliasLogLevel || 'info', logFoundAliases = playbook.asciidoc.attributes.logFoundAliases || false } = config
 
   const pluralize = (count, noun, suffix = 's', plural = '') => {
     if (count !== 1) {
