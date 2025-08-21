@@ -84,7 +84,7 @@ module.exports.register = function ({ config }) {
     for (const c of Object.keys(componentVersions)) {
       if (data.components[c]) logger.info({  }, '%s sitemap will be generated from version %s (specified by playbook data)', c, data.components[c])
       else if (sitemapVersion) logger.info({  }, '%s sitemap will be generated from version %s (specified by playbook)', c, sitemapVersion)
-      else if (componentVersions[c].versions.length === 1) logger.info({  }, '%s sitemap will be generated from vesion %s because it is the only version available', c, componentVersions[c].latest)
+      else if (componentVersions[c].versions.length === 1) logger.info({  }, '%s sitemap will be generated from version %s because it is the only version available', c, componentVersions[c].latest)
       else if (componentVersions[c].latest) logger.info({  }, '%s sitemap will be generated from version %s (specified by semantic versioning rules)', c, componentVersions[c].latest)
 
       const versionToMap = data.components[c] || sitemapVersion || componentVersions[c].latest || defaultSiteMapVersion || ''
