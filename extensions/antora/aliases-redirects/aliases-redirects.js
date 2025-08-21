@@ -46,15 +46,22 @@ module.exports.register = function ({ config }) {
       // console.log(`Checking component: ${componentName}`)
       // console.log(versions)
 
-      const versionsToCheck = versions.reduce((v, { version }) => {
-        v.push(version)
+      const versionsToCheck = versions.reduce((v, { version, displayVersion }) => {
+        v.push({
+          version: version,
+          displayVersion: displayVersion || version
+        })
         return v
       }, [ ]).reverse()
   
 
       while (versionsToCheck.length > 1) {
-        const redirectFromVersion = versionsToCheck.shift()
-        const redirectToVersion = versionsToCheck[0]
+        const redirectFrom = versionsToCheck.shift()
+        const redirectFromVersion = redirectFrom.version
+        const redirectFromDisplayVersion = redirectFrom.displayVersion || redirectFromVersion
+
+        const redirectToVersion = versionsToCheck[0].version
+        const redirectToDisplayVersion = versionsToCheck[0].displayVersion || redirectToVersion
 
         // console.log(`Checking versions: ${redirectFromVersion} -> ${redirectToVersion}`)
 
@@ -103,7 +110,13 @@ module.exports.register = function ({ config }) {
           // return if the page has a page-external attribute, indicating that it has been moved outside this component
           // TODO - add a redirect to the external page URL
           if (page.asciidoc.attributes['page-external']) {
-            if (logFoundAliases) logger.info({ 'file': page.src, 'source': page.src.origin  }, 'Page %s (%s) has been moved to %s', page.src.relative, page.asciidoc.doctitle, page.asciidoc.attributes['page-external'])
+            logger.debug({ 'file': page.src, 'source': page.src.origin  }, 'Page %s (%s) was moved after version %s to %s', page.src.relative, page.asciidoc.doctitle, redirectFromDisplayVersion, page.asciidoc.attributes['page-external'])
+            return
+          }
+
+          // return if the page has a page-no-aliases attribute, indicating that it has been removed and has no equivalent alias
+          if (page.asciidoc.attributes['page-no-aliases'] !== undefined) {
+            logger.debug({ 'file': page.src, 'source': page.src.origin  }, 'Page %s (%s) was removed after version %s and is marked as having no aliases', page.src.relative, page.asciidoc.doctitle, redirectFromDisplayVersion)
             return
           }
     
@@ -113,7 +126,7 @@ module.exports.register = function ({ config }) {
 
           // First check if there are any page aliases that point to this page
           // If there is at least one, we don't need to do anything, that alias means there will be no 404 in the new version for this page
-          const requiredAliasTarget = page.pub.url.replace(redirectFromVersion, redirectToVersion)
+          const requiredAliasTarget = page.pub.url.replace(`/${redirectFromVersion}/`, redirectToVersion === '' ? '/' : `/${redirectToVersion}/`)
           const aliasesToHere = allAliases.filter(alias => alias.pub.url === ensureTrailingSlash(requiredAliasTarget))
 
           // alias.pub.url is constructed from the page-alias value
@@ -154,11 +167,11 @@ module.exports.register = function ({ config }) {
             redirectTo.forEach( (target, i) => {
               const newFile = contentCatalog.getByPath({component: target.component, version: target.version, path: target.path})
               // if (i ==0) contentCatalog.registerPageAlias(page.src.relative,newFile)
-              logger[aliasLogLevel]({ 'file': newFile.src, 'source': newFile.src.origin  }, '%s (%s) was removed after %s. A possible alias in %s is: %s', page.src.relative, searchTitle, redirectFromVersion, redirectToVersion, newFile.src.relative)
+              logger[aliasLogLevel]({ 'file': newFile.src, 'source': newFile.src.origin  }, '%s (%s) was removed after %s. A possible alias in %s is: %s', page.src.relative, searchTitle, redirectFromVersion, redirectToDisplayVersion, newFile.src.relative)
             })
     
           } else {
-            logger[aliasLogLevel]({ 'file': page.src, 'source': page.src.origin  }, 'No aliases found for %s (%s) which was removed in version %s', page.src.path, searchTitle, redirectToVersion)
+            logger[aliasLogLevel]({ 'file': page.src, 'source': page.src.origin  }, 'No aliases found for %s (%s) which was removed in version %s', page.src.path, searchTitle, redirectToDisplayVersion)
           }
     
         })
