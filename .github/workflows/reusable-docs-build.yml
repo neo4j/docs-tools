@@ -163,6 +163,7 @@ jobs:
       with:
         name: page-list
         path: build/${{ steps.get-site-dir.outputs.site-dir }}/.meta/pageList
+        if-no-files-found: ignore
         retention-days: ${{ inputs.retain-artifacts }}
 
     # upload an artifact for the redirects file is the aliases redirects extension is not excluded
@@ -173,5 +174,6 @@ jobs:
       with:
         name: redirects
         path: build/${{ steps.get-site-dir.outputs.site-dir }}/.etc/**
+        if-no-files-found: ignore
         include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}
