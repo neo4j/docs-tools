@@ -35,7 +35,7 @@ jobs:
         with:
           token: ${{ secrets.DISPATCH_TOKEN }}
           repository: neo4j/docs-publish
-          event-type: docs-tools
+          event-type: publish-html
           client-payload: |-
             {
               "org": "${{ github.repository_owner }}", 
