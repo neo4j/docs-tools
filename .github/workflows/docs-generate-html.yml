@@ -42,6 +42,7 @@ jobs:
               "repo": "${{ github.event.repository.name }}", 
               "run_id": "${{ github.run_id }}", 
               "branch": "${{ github.ref_name }}", 
+              "args": "--dryrun",
               "publish_env": "dev",
               "docsets": [
                 "docs-tools"
