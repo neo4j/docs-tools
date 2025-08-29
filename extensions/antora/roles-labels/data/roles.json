@@ -51,6 +51,12 @@
             "product": "Cypher 25",
             "displayText": "Cypher 25"
         },
+        "cypher-25-only":{
+            "description": "Function available only in Cypher 25",
+            "labelCategory": "product",
+            "product": "Cypher 25",
+            "displayText": "Cypher 25 only"
+        },
         "enterprise-edition":{
             "description": "Function available in Enterprise Edition only",
             "labelCategory": "product",
