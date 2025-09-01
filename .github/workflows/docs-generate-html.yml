@@ -42,10 +42,9 @@ jobs:
           event-type: publish-html
           client-payload: |-
             {
-              "org": "${{ github.repository_owner }}", 
-              "repo": "${{ github.event.repository.name }}", 
-              "run_id": "${{ github.run_id }}", 
-              "branch": "${{ github.ref_name }}", 
+              "org": "${{ github.repository_owner }}",
+              "repo": "${{ github.event.repository.name }}",
+              "run_id": "${{ github.run_id }}",
               "args": "--dryrun",
               "publish_env": "${{ env.PUBLISH_TO }}"
             }
