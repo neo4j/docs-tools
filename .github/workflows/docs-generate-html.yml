@@ -5,13 +5,13 @@ on:
   push:
     branches:
     - 'dev'
-    - 'main'
+    # - 'main'
   workflow_dispatch:
   # schedule:
   #   - cron:  '00 16 * * *'
 
 env:
-  PUBLISH_TO: ${{ github.ref == 'refs/heads/dev' && 'dev' || 'prod' }}
+  PUBLISH_TO: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
 
 jobs:
 
