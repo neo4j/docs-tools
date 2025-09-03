@@ -8,14 +8,15 @@ on:
     branches:
     - 'dev'
     - 'main'
+    - 'test-publish'
   workflow_dispatch:
 
 # change `dev` and `main` according to your repository's branch names
 # `dev` is the branch you use to build and publish to staging
 # `main` is the branch you use to build and publish to neo4j.com/docs
 env:
-  PUBLISH_TO: ${{ github.ref == 'refs/heads/dev' && 'dev' || 'prod' }}
-  BUILD_FROM: ${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
+  PROD_BRANCH: 'main'
+  DEV_BRANCH: 'dev'
 
 jobs:
 
@@ -27,7 +28,16 @@ jobs:
     steps:
       - name: Set Build Ref
         id: set-build-ref
-        run: echo "build-ref=${{ env.BUILD_FROM }}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/${{ env.DEV_BRANCH }}" ]]; then
+            build_from=${{ env.DEV_BRANCH }}
+            publish_to='dev'
+          else
+            build_from=${{ env.PROD_BRANCH }}
+            publish_to='prod'
+          fi
+          echo "build-ref=${build_from}" >> $GITHUB_OUTPUT
+          echo "PUBLISH_TO=${publish_to}" >> $GITHUB_ENV
 
   docs-build:
     name: Generate HTML
