@@ -18,12 +18,21 @@ env:
 
 jobs:
 
+  set-ref:
+    runs-on: ubuntu-latest
+    outputs:
+      build-ref: ${{ steps.set-build-ref.outputs.build-ref }}
+    steps:
+      - name: Set Build Ref
+        id: set-build-ref
+        run: echo "build-ref=${{ env.BUILD_FROM }}" >> $GITHUB_OUTPUT
+
   docs-build:
     name: Generate HTML
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       package-script: 'verify:publish'
-      build-ref: ${{ env.BUILD_FROM }}
+      build-ref: ${{needs.set-ref.outputs.build-ref}}
 
   docs-verify:
     name: Verify HTML
