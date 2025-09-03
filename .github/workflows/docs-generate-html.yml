@@ -1,24 +1,26 @@
 
 name: "Generate and Publish HTML"
 
-
+# edit the list of branches according to your repository
+# the list of branches should contain all the branches in your Antora publish playbooks
 on:
   push:
     branches:
     - 'dev'
     - 'main'
-    - 'test-publish'
   workflow_dispatch:
-  # schedule:
-  #   - cron:  '00 16 * * *'
 
+# change `dev` and `main` according to your repository's branch names
+# `dev` is the branch you use to build and publish to staging
+# `main` is the branch you use to build and publish to neo4j.com/docs
 env:
-  PUBLISH_TO: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
-  BUILD_FROM: ${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}
+  PUBLISH_TO: ${{ github.ref == 'refs/heads/dev' && 'dev' || 'prod' }}
+  BUILD_FROM: ${{ github.ref == 'refs/heads/dev' && 'dev' || 'main' }}
 
 jobs:
 
-  set-ref:
+  set-build-ref:
+    name: Set build branch
     runs-on: ubuntu-latest
     outputs:
       build-ref: ${{ steps.set-build-ref.outputs.build-ref }}
@@ -29,11 +31,11 @@ jobs:
 
   docs-build:
     name: Generate HTML
-    needs: set-ref
+    needs: set-build-ref
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       package-script: 'verify:publish'
-      build-ref: ${{needs.set-ref.outputs.build-ref}}
+      build-ref: ${{needs.set-build-ref.outputs.build-ref}}
 
   docs-verify:
     name: Verify HTML
