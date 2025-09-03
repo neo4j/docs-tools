@@ -1,17 +1,20 @@
 
-name: "Publish HTML"
+name: "Generate and Publish HTML"
+
 
 on:
   push:
     branches:
     - 'dev'
-    # - 'main'
+    - 'main'
+    - 'test-publish'
   workflow_dispatch:
   # schedule:
   #   - cron:  '00 16 * * *'
 
 env:
   PUBLISH_TO: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+  BUILD_FROM: ${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}
 
 jobs:
 
@@ -20,6 +23,7 @@ jobs:
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       package-script: 'verify:publish'
+      build-ref: ${{ env.BUILD_FROM }}
 
   docs-verify:
     name: Verify HTML
