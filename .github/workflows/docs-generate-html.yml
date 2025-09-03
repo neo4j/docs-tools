@@ -29,6 +29,7 @@ jobs:
 
   docs-build:
     name: Generate HTML
+    needs: set-ref
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       package-script: 'verify:publish'
