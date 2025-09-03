@@ -1,5 +1,5 @@
 
-name: "Generate and Publish HTML"
+name: "Generate HTML"
 
 # edit the list of branches according to your repository
 # the list of branches should contain all the branches in your Antora publish playbooks
