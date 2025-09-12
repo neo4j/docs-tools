@@ -51,6 +51,7 @@ jobs:
     with:
       package-script: 'verify:publish'
       build-ref: ${{needs.prepare-ref-env.outputs.build-ref}}
+      fetch-depth: 0
 
   docs-verify:
     name: Verify HTML

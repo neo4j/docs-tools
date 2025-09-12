@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: ''
+      fetch-depth:
+        description: 'The git fetch depth: 1 to fetch just the ref (branch or tag), 0 for full history'
+        required: false
+        type: number
+        default: 1
       package-script:
         description: 'The name of the script to run in package.json '
         type: string
@@ -81,6 +86,7 @@ jobs:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
+      FETCH_DEPTH: ${{ inputs.fetch-depth || 1 }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
       ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
       ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
@@ -93,6 +99,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         ref: ${{ env.BUILD_REF }}
+        fetch-depth: ${{ env.FETCH_DEPTH }}
 
     - name: Remove excluded extensions
       run: |
