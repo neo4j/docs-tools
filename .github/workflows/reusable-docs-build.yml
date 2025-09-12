@@ -86,7 +86,7 @@ jobs:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
-      FETCH_DEPTH: ${{ inputs.fetch-depth || 1 }}
+      FETCH_DEPTH: ${{ inputs.fetch-depth }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
       ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
       ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
