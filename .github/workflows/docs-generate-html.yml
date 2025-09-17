@@ -60,27 +60,27 @@ jobs:
     with:
       failOnWarnings: true
 
-  publish-html:
-    name: Publish HTML
-    needs: [docs-verify, prepare-ref-env]
-    runs-on: ubuntu-latest
+  # publish-html:
+  #   name: Publish HTML
+  #   needs: [docs-verify, prepare-ref-env]
+  #   runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        environments: ${{ fromJson(needs.prepare-ref-env.outputs.environments) }}
+  #   strategy:
+  #     matrix:
+  #       environments: ${{ fromJson(needs.prepare-ref-env.outputs.environments) }}
 
-    steps:
-      - name: Publish to ${{ matrix.environments }}
-        uses: peter-evans/repository-dispatch@bf47d102fdb849e755b0b0023ea3e81a44b6f570 # v2.1.2
-        with:
-          token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
-          repository: neo4j/docs-publish
-          event-type: publish-html
-          client-payload: |-
-            {
-              "org": "${{ github.repository_owner }}",
-              "repo": "${{ github.event.repository.name }}",
-              "run_id": "${{ github.run_id }}",
-              "args": "--dryrun",
-              "publish_env": "${{ matrix.environments }}"
-            }
+  #   steps:
+  #     - name: Publish to ${{ matrix.environments }}
+  #       uses: peter-evans/repository-dispatch@bf47d102fdb849e755b0b0023ea3e81a44b6f570 # v2.1.2
+  #       with:
+  #         token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+  #         repository: neo4j/docs-publish
+  #         event-type: publish-html
+  #         client-payload: |-
+  #           {
+  #             "org": "${{ github.repository_owner }}",
+  #             "repo": "${{ github.event.repository.name }}",
+  #             "run_id": "${{ github.run_id }}",
+  #             "args": "--dryrun",
+  #             "publish_env": "${{ matrix.environments }}"
+  #           }
