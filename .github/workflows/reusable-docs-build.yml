@@ -135,6 +135,11 @@ jobs:
     - name: Update all packages
       run: npm update
 
+    - name: Use Antora 3.1.12
+      run: |
+        npm uninstall @antora/cli @antora/site-generator-default
+        npm install antora@3.1.12
+
     - name: List packages
       run: npm list
 
