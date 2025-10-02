@@ -150,7 +150,7 @@ jobs:
       id: get-site-dir
       run: |
         shopt -s globstar
-        root=$(ls -R build/**/sitemap.xml | sed -r 's/build\/([^\/]*).*/\1/')
+        root=$(ls -R build/**/sitemap.xml | head -1 | sed -r 's/build\/([^\/]*).*/\1/')
         echo "site-dir=$root" >> $GITHUB_OUTPUT
 
     - name: site-dir deprecation notice
