@@ -5,6 +5,8 @@ site:
 
 content:
   sources:
+  - url: https://@gitlab.com/antora/demo/demo-component-a.git
+    branches: HEAD
   - url: ./
     branches: HEAD
     exclude:
