@@ -13,6 +13,11 @@ on:
         required: false
         type: number
         default: 1
+      node-version:
+        description: 'The Node.js version to use'
+        required: false
+        type: string
+        default: '20'
       package-script:
         description: 'The name of the script to run in package.json '
         type: string
@@ -84,6 +89,7 @@ jobs:
 
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
+      NODE_VERSION: ${{ inputs.node-version }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
@@ -118,10 +124,10 @@ jobs:
         done
         echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
 
-    - name: Use Node.js 18
+    - name: Use Node.js version ${{ env.NODE_VERSION }}
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: ${{ env.NODE_VERSION }}
 
     - name: Install dependencies
       run: npm install --omit=dev
