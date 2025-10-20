@@ -195,6 +195,11 @@
             "displayText": "Dynamic",
             "joinText": "since"
         },
+        "preview":{
+            "labelCategory": "version",
+            "displayText": "Preview",
+            "eventOrder": 0        
+        },
         "alpha":{
             "labelCategory": "version",
             "displayText": "Alpha",

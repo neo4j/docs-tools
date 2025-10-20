@@ -22,7 +22,7 @@
   "author": "Neil Dewhurst",
   "license": "ISC",
   "dependencies": {
-    "antora": "^3.1.10",
+    "antora": "3.1.14",
     "node-html-parser": "^7.0.1"
   },
   "devDependencies": {
