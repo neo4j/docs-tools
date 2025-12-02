@@ -22,13 +22,13 @@
             "displayText": "NEW",
             "usage": {
                 "page-role": [
-                    "featured"
+                    ":page-role: featured"
                 ],
                 "role": [
-                    "label--featured"
+                    "[role=label--featured]"
                 ],
                 "inline": [
-                    "featured[]"
+                    "label:featured[]"
                 ]
             }
         },
@@ -39,13 +39,13 @@
             "displayText": "Labs",
             "usage": {
                 "page-role": [
-                    "labs"
+                    ":page-role: labs"
                 ],
                 "role": [
-                    "label--labs"
+                    "[role=label--labs]"
                 ],
                 "inline": [
-                    "labs[]"
+                    "label:labs[]"
                 ]
             }
         },
@@ -56,13 +56,13 @@
             "displayText": "Labs",
             "usage": {
                 "page-role": [
-                    "labs-label"
+                    ":page-role: labs-label"
                 ],
                 "role": [
-                    "label--labs-label"
+                    "[role=label--labs-label]"
                 ],
                 "inline": [
-                    "labs-label[]"
+                    "label:labs-label[]"
                 ]
             }
         },
@@ -73,13 +73,13 @@
             "displayText": "Graph Academy",
             "usage": {
                 "page-role": [
-                    "graph-academy"
+                    ":page-role: graph-academy"
                 ],
                 "role": [
-                    "label--graph-academy"
+                    "[role=label--graph-academy]"
                 ],
                 "inline": [
-                    "graph-academy[]"
+                    "label:graph-academy[]"
                 ]
             }
         },
@@ -90,13 +90,13 @@
             "displayText": "Cypher 5",
             "usage": {
                 "page-role": [
-                    "cypher-5"
+                    ":page-role: cypher-5"
                 ],
                 "role": [
-                    "label--cypher-5"
+                    "[role=label--cypher-5]"
                 ],
                 "inline": [
-                    "cypher-5[]"
+                    "label:cypher-5[]"
                 ]
             }
         },
@@ -107,13 +107,13 @@
             "displayText": "Cypher 25",
             "usage": {
                 "page-role": [
-                    "cypher-25"
+                    ":page-role: cypher-25"
                 ],
                 "role": [
-                    "label--cypher-25"
+                    "[role=label--cypher-25]"
                 ],
                 "inline": [
-                    "cypher-25[]"
+                    "label:cypher-25[]"
                 ]
             }
         },
@@ -124,13 +124,13 @@
             "displayText": "Cypher 25 only",
             "usage": {
                 "page-role": [
-                    "cypher-25-only"
+                    ":page-role: cypher-25-only"
                 ],
                 "role": [
-                    "label--cypher-25-only"
+                    "[role=label--cypher-25-only]"
                 ],
                 "inline": [
-                    "cypher-25-only[]"
+                    "label:cypher-25-only[]"
                 ]
             }
         },
@@ -141,13 +141,13 @@
             "displayText": "Enterprise Edition",
             "usage": {
                 "page-role": [
-                    "enterprise-edition"
+                    ":page-role: enterprise-edition"
                 ],
                 "role": [
-                    "label--enterprise-edition"
+                    "[role=label--enterprise-edition]"
                 ],
                 "inline": [
-                    "enterprise-edition[]"
+                    "label:enterprise-edition[]"
                 ]
             }
         },
@@ -155,91 +155,245 @@
             "description": "Function available in Enterprise Edition only",
             "labelCategory": "product",
             "product": "Enterprise Edition",
-            "displayText": "Enterprise Only"
+            "displayText": "Enterprise Only",
+            "usage": {
+                "page-role": [
+                    ":page-role: enterprise-only"
+                ],
+                "role": [
+                    "[role=label--enterprise-only]"
+                ],
+                "inline": [
+                    "label:enterprise-only[]"
+                ]
+            }
         },
         "free":{
             "description": "Function available in Free version only",
             "labelCategory": "product",
             "product": "AuraDB Free",
-            "displayText": "Free"
+            "displayText": "Free",
+            "usage": {
+                "page-role": [
+                    ":page-role: free"
+                ],
+                "role": [
+                    "[role=label--free]"
+                ],
+                "inline": [
+                    "label:free[]"
+                ]
+            }
         },
         "full":{
             "description": "Function available in Enterprise Edition only",
             "labelCategory": "product",
             "product": "Enterprise Edition",
-            "displayText": "Full"
+            "displayText": "Full",
+            "usage": {
+                "page-role": [
+                    ":page-role: full"
+                ],
+                "role": [
+                    "[role=label--full]"
+                ],
+                "inline": [
+                    "label:full[]"
+                ]
+            }
         },
         "professional":{
             "description": "Function or feature is available on AuraDB Professional",
             "labelCategory": "product",
             "product": "AuraDB Professional",
-            "displayText": "Only available on AuraDB Professional"
+            "displayText": "Only available on AuraDB Professional",
+            "usage": {
+                "page-role": [
+                    ":page-role: professional"
+                ],
+                "role": [
+                    "[role=label--professional]"
+                ],
+                "inline": [
+                    "label:professional[]"
+                ]
+            }
         },
         "aura-db-free":{
             "description": "Function available in AuraDB Free",
             "labelCategory": "product",
             "product": "AuraDB Free",
-            "displayText": "AuraDB Free"
+            "displayText": "AuraDB Free",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-db-free"
+                ],
+                "role": [
+                    "[role=label--aura-db-free]"
+                ],
+                "inline": [
+                    "label:aura-db-free[]"
+                ]
+            }
         },
         "aura-db-enterprise":{
             "description": "Function available in AuraDB Virtual Dedicated Cloud",
             "labelCategory": "product",
             "product": "AuraDB Virtual Dedicated Cloud",
-            "displayText": "AuraDB Virtual Dedicated Cloud"
+            "displayText": "AuraDB Virtual Dedicated Cloud",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-db-enterprise"
+                ],
+                "role": [
+                    "[role=label--aura-db-enterprise]"
+                ],
+                "inline": [
+                    "label:aura-db-enterprise[]"
+                ]
+            }
         },
         "aura-db-business-critical":{
             "description": "Function available in AuraDB Business Critical",
             "labelCategory": "product",
             "product": "AuraDB Business Critical",
-            "displayText": "AuraDB Business Critical"
+            "displayText": "AuraDB Business Critical",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-db-business-critical"
+                ],
+                "role": [
+                    "[role=label--aura-db-business-critical]"
+                ],
+                "inline": [
+                    "label:aura-db-business-critical[]"
+                ]
+            }
         },
         "aura-db-dedicated":{
             "description": "Function available in AuraDB Virtual Dedicated Cloud",
             "labelCategory": "product",
             "product": "AuraDB Virtual Dedicated Cloud",
-            "displayText": "AuraDB Virtual Dedicated Cloud"
+            "displayText": "AuraDB Virtual Dedicated Cloud",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-db-dedicated"
+                ],
+                "role": [
+                    "[role=label--aura-db-dedicated]"
+                ],
+                "inline": [
+                    "label:aura-db-dedicated[]"
+                ]
+            }
         },
         "aura-db-professional":{
             "description": "Function available in AuraDB Professional",
             "labelCategory": "product",
             "product": "AuraDB Professional",
-            "displayText": "AuraDB Professional"
+            "displayText": "AuraDB Professional",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-db-professional"
+                ],
+                "role": [
+                    "[role=label--aura-db-professional]"
+                ],
+                "inline": [
+                    "label:aura-db-professional[]"
+                ]
+            }
         },
         "aura-ds-enterprise":{
             "description": "Function available in AuraDS Enterprise",
             "labelCategory": "product",
             "product": "AuraDS Enterprise",
-            "displayText": "AuraDS Enterprise"
+            "displayText": "AuraDS Enterprise",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-ds-enterprise"
+                ],
+                "role": [
+                    "[role=label--aura-ds-enterprise]"
+                ],
+                "inline": [
+                    "label:aura-ds-enterprise[]"
+                ]
+            }
         },
         "aura-ds-professional":{
             "description": "Function available in AuraDS Professional",
             "labelCategory": "product",
             "product": "AuraDS Professional",
-            "displayText": "AuraDS Professional"
+            "displayText": "AuraDS Professional",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-ds-professional"
+                ],
+                "role": [
+                    "[role=label--aura-ds-professional]"
+                ],
+                "inline": [
+                    "label:aura-ds-professional[]"
+                ]
+            }
         },
         "not-on-aura":{
             "description": "Function or feature is not available on Aura",
             "labelCategory": "product",
-            "displayText": "Not available on Aura"
+            "displayText": "Not available on Aura",
+            "usage": {
+                "page-role": [
+                    ":page-role: not-on-aura"
+                ],
+                "role": [
+                    "[role=label--not-on-aura]"
+                ],
+                "inline": [
+                    "label:not-on-aura[]"
+                ]
+            }
         },
         "aura":{
             "description": "Function or feature is available on Aura",
             "labelCategory": "product",
             "product": "Aura",
-            "displayText": "Available on Aura"
+            "displayText": "Available on Aura",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura"
+                ],
+                "role": [
+                    "[role=label--aura]"
+                ],
+                "inline": [
+                    "label:aura[]"
+                ]
+            }
         },
         "aura-only":{
             "description": "Function or feature is available on Aura only",
             "labelCategory": "product",
             "product": "Aura",
-            "displayText": "Only available on Aura"
+            "displayText": "Only available on Aura",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-only"
+                ],
+                "role": [
+                    "[role=label--aura-only]"
+                ],
+                "inline": [
+                    "label:aura-only[]"
+                ]
+            }
         },
         "new":{
             "description": "The feature or function was added in the version stated",
             "labelCategory": "version",
             "canBeVersionless": true,
             "displayText": "Introduced",
-            "altDisplayText": "New, Added",
+            "altDisplayText": ["New", "Added"],
             "eventOrder": 1,
             "usage": {
                 "page-role": [
@@ -275,21 +429,22 @@
             "description": "The feature or function was added in the version stated",
             "labelCategory": "version",
             "displayText": "Introduced",
-            "altDisplayText": "New, Added",
+            "altDisplayText": ["New", "Added"],
             "deprecated": true,
             "suggestedAlternative": "new",
             "eventOrder": 1,
             "usage": {
                 "page-role": [
-                    "added-2025.01"
+                    ":page-role: added-2025.01"
                 ],
                 "role": [
-                    "label--added-2025.01"
+                    "[role=label--added-2025.01]"
                 ],
                 "inline": [
-                    "added[Introduced in 2025.01]"
+                    "label:added[Introduced in 2025.01]"
                 ]
-            }
+            },
+            "notes": "The 'added' label is deprecated - use the 'new' label instead"
         },
         "changed":{
             "description": "The feature or function was changed in the version stated",
@@ -298,13 +453,13 @@
             "eventOrder": 2,
             "usage": {
                 "page-role": [
-                    "changed-2025.01"
+                    ":page-role: changed-2025.01"
                 ],
                 "role": [
-                    "label--changed-2025.01"
+                    "[role=label--changed-2025.01]"
                 ],
                 "inline": [
-                    "changed[Changed in 2025.01]"
+                    "label:changed[Changed in 2025.01]"
                 ]
             }
         },
@@ -314,20 +469,31 @@
             "displayText": "Default",
             "usage": {
                 "page-role": [
-                    "default"
+                    ":page-role: default"
                 ],
                 "role": [
-                    "label--default"
+                    "[role=label--default]"
                 ],
                 "inline": [
-                    "default[]"
+                    "label:default[]"
                 ]
             }
         },
         "default-output":{
             "description": "The value shown is part of the default output",
             "labelCategory": "function",
-            "displayText": "Default Output"
+            "displayText": "Default Output",
+            "usage": {
+                "page-role": [
+                    ":page-role: default-output"
+                ],
+                "role": [
+                    "[role=label--default-output]"
+                ],
+                "inline": [
+                    "label:default-output[]"
+                ]
+            }
         },
         "discontinued":{
             "description": "The feature is no longer available",
@@ -336,26 +502,52 @@
             "eventOrder": 4,
             "usage": {
                 "page-role": [
-                    "discontinued-2025.01"
+                    ":page-role: discontinued-2025.01"
                 ],
                 "role": [
-                    "label--discontinued-2025.01"
+                    "[role=label--discontinued-2025.01]"
                 ],
                 "inline": [
-                    "discontinued[Discontinued in 2025.01]"
+                    "label:discontinued[Discontinued in 2025.01]"
                 ]
             }
         },
         "dynamic":{
+            "description": "The feature or function is dynamic as of the version stated",
             "labelCategory": "function",
             "displayText": "Dynamic",
-            "joinText": "since"
+            "joinText": "since",
+            "usage": {
+                "page-role": [
+                    ":page-role: dynamic-2025.01"
+                ],
+                "role": [
+                    "[role=label--dynamic-2025.01]"
+                ],
+                "inline": [
+                    "label:dynamic[Dynamic since 2025.01]"
+                ]
+            }
         },
         "alpha":{
             "description": "The feature or function is in alpha",
             "labelCategory": "version",
             "displayText": "Alpha",
-            "eventOrder": 0        
+            "eventOrder": 0,
+            "usage": {
+                "page-role": [
+                    ":page-role: alpha",
+                    ":page-role: alpha-2025.01"
+                ],
+                "role": [
+                    "[role=label--alpha]",
+                    "[role=label--alpha-2025.01]"
+                ],
+                "inline": [
+                    "label:alpha[]",
+                    "label:alpha[Alpha in 2025.01]"
+                ]
+            }
         },
         "beta":{
             "description": "The feature or function is in beta",
@@ -365,17 +557,18 @@
             "eventOrder": 0,
             "usage": {
                 "page-role": [
-                    "beta",
-                    "beta-2025.01"
+                    ":page-role: beta",
+                    ":page-role: beta-2025.01"
                 ],
                 "role": [
-                    "label--beta",
-                    "label--beta-2025.01"
+                    "[role=label--beta]",
+                    "[role=label--beta-2025.01]"
                 ],
                 "inline": [
-                    "beta[]",
-                    "beta[Beta in 2025.01]"
+                    "label:beta[]",
+                    "label:beta[Beta in 2025.01]"
                 ]
+            }
         },
         "beta-until":{
             "description": "The feature or function was in beta until the version specified",
@@ -385,13 +578,13 @@
             "eventOrder": 0,
             "usage": {
                 "page-role": [
-                    "beta-until-2025.01"
+                    ":page-role: beta-until-2025.01"
                 ],
                 "role": [
-                    "label--beta-until-2025.01"
+                    "[role=label--beta-until-2025.01]"
                 ],
                 "inline": [
-                    "beta-until[Beta until 2025.01]"
+                    "label:beta-until[Beta until 2025.01]"
                 ]
             }
         },
@@ -403,16 +596,16 @@
             "eventOrder": 3,
             "usage": {
                 "page-role": [
-                    "deprecated",
-                    "deprecated-2025.01"
+                    ":page-role: deprecated",
+                    ":page-role: deprecated-2025.01"
                 ],
                 "role": [
-                    "label--deprecated",
-                    "label--deprecated-2025.01"
+                    "[role=label--deprecated]",
+                    "[role=label--deprecated-2025.01]"
                 ],
                 "inline": [
-                    "deprecated[]",
-                    "deprecated[Deprecated in 2025.01]"
+                    "label:deprecated[]",
+                    "label:deprecated[Deprecated in 2025.01]"
                 ]
             }
         },
@@ -424,16 +617,16 @@
             "eventOrder": 4,
             "usage": {
                 "page-role": [
-                    "removed",
-                    "removed-2025.01"
+                    ":page-role: removed",
+                    ":page-role: removed-2025.01"
                 ],
                 "role": [
-                    "label--removed",
-                    "label--removed-2025.01"
+                    "[role=label--removed]",
+                    "[role=label--removed-2025.01]"
                 ],
                 "inline": [
-                    "removed[]",
-                    "removed[Removed in 2025.01]"
+                    "label:removed[]",
+                    "label:removed[Removed in 2025.01]"
                 ]
             }
         },
@@ -445,16 +638,16 @@
             "eventOrder": 2,
             "usage": {
                 "page-role": [
-                    "renamed",
-                    "renamed-2025.01"
+                    ":page-role: renamed",
+                    ":page-role: renamed-2025.01"
                 ],
                 "role": [
-                    "label--renamed",
-                    "label--renamed-2025.01"
+                    "[role=label--renamed]",
+                    "[role=label--renamed-2025.01]"
                 ],
                 "inline": [
-                    "renamed[]",
-                    "renamed[Renamed in 2025.01]"
+                    "label:renamed[]",
+                    "label:renamed[Renamed in 2025.01]"
                 ]
             }
         },
@@ -466,131 +659,456 @@
             "eventOrder": 2,
             "usage": {
                 "page-role": [
-                    "updated",
-                    "updated-2025.01"
+                    ":page-role: updated",
+                    ":page-role: updated-2025.01"
                 ],
                 "role": [
-                    "label--updated",
-                    "label--updated-2025.01"
+                    "[role=label--updated]",
+                    "[role=label--updated-2025.01]"
                 ],
                 "inline": [
-                    "updated[]",
-                    "updated[Updated in 2025.01]"
+                    "label:updated[]",
+                    "label:updated[Updated in 2025.01]"
                 ]
             }
         },
         "fabric":{
+            "description": "Function relates to Fabric",
             "labelCategory": "function",
             "function": "Fabric",
-            "displayText": "Fabric"
+            "displayText": "Fabric",
+            "usage": {
+                "page-role": [
+                    ":page-role: fabric"
+                ],
+                "role": [
+                    "[role=label--fabric]"
+                ],
+                "inline": [
+                    "label:fabric[]"
+                ]
+            }
         },
         "apoc-core":{
+            "description": "The function is available in APOC Core",
             "labelCategory": "function",
-            "displayText": "APOC Core"
+            "displayText": "APOC Core",
+            "usage": {
+                "page-role": [
+                    ":page-role: apoc-core"
+                ],
+                "role": [
+                    "[role=label--apoc-core]"
+                ],
+                "inline": [
+                    "label:apoc-core[]"
+                ]
+            }
         },
         "apoc-full":{
+            "description": "The function is available in APOC Full",
             "labelCategory": "function",
-            "displayText": "APOC Full"
+            "displayText": "APOC Full",
+            "usage": {
+                "page-role": [
+                    ":page-role: apoc-full"
+                ],
+                "role": [
+                    "[role=label--apoc-full]"
+                ],
+                "inline": [
+                    "label:apoc-full[]"
+                ]
+            }
         },
         "recommended":{
+            "description": "A recommended method",
             "labelCategory": "admonition",
-            "displayText": "Recommended"
+            "displayText": "Recommended",
+            "usage": {
+                "page-role": [
+                    ":page-role: recommended"
+                ],
+                "role": [
+                    "[role=label--recommended]"
+                ],
+                "inline": [
+                    "label:recommended[]"
+                ]
+            }
         },
         "danger":{
+            "description": "Danger",
             "labelCategory": "admonition",
-            "displayText": "Danger"
+            "displayText": "Danger",
+            "deprecated": true,
+            "usage": {
+                "page-role": [
+                    ":page-role: danger"
+                ],
+                "role": [
+                    "[role=label--danger]"
+                ],
+                "inline": [
+                    "label:danger[]"
+                ]
+            }
         },
         "warning":{
+            "description": "A warning",
             "labelCategory": "admonition",
-            "displayText": "Warning"
+            "displayText": "Warning",
+            "usage": {
+                "page-role": [
+                    ":page-role: warning"
+                ],
+                "role": [
+                    "[role=label--warning]"
+                ],
+                "inline": [
+                    "label:warning[]"
+                ]
+            }
         },
         "information":{
+            "description": "Information",
             "labelCategory": "admonition",
-            "displayText": "Information"
+            "displayText": "Information",
+            "usage": {
+                "page-role": [
+                    ":page-role: information"
+                ],
+                "role": [
+                    "[role=label--information]"
+                ],
+                "inline": [
+                    "label:information[]"
+                ]
+            }
         },
         "yes":{
+            "description": "Yes",
             "labelCategory": "admonition",
-            "displayText": "Yes"
+            "displayText": "Yes",
+            "usage": {
+                "page-role": [
+                    ":page-role: yes"
+                ],
+                "role": [
+                    "[role=label--yes]"
+                ],
+                "inline": [
+                    "label:yes[]"
+                ]
+            }
         },
         "no":{
+            "description": "No",
             "labelCategory": "admonition",
-            "displayText": "No"
+            "displayText": "No",
+            "usage": {
+                "page-role": [
+                    ":page-role: no"
+                ],
+                "role": [
+                    "[role=label--no]"
+                ],
+                "inline": [
+                    "label:no[]"
+                ]
+            }
         },
         "admin-only": {
+            "description": "The feature or function can be used by an administrator only",
             "labelCategory": "function",
-            "displayText": "Admin Only"
+            "displayText": "Admin Only",
+            "usage": {
+                "page-role": [
+                    ":page-role: admin-only"
+                ],
+                "role": [
+                    "[role=label--admin-only]"
+                ],
+                "inline": [
+                    "label:admin-only[]"
+                ]
+            }
         },
         "eager":{
+            "description": "The feature or function is 'eager'",
             "labelCategory": "function",
             "displayText": "Eager",
-            "deprecated": false
+            "deprecated": false,
+            "usage": {
+                "page-role": [
+                    ":page-role: eager"
+                ],
+                "role": [
+                    "[role=label--eager]"
+                ],
+                "inline": [
+                    "label:eager[]"
+                ]
+            }
         },        
         "function":{
+            "description": "The text relates to a function",
             "labelCategory": "function",
-            "displayText": "Function"
+            "displayText": "Function",
+            "usage": {
+                "page-role": [
+                    ":page-role: function"
+                ],
+                "role": [
+                    "[role=label--function]"
+                ],
+                "inline": [
+                    "label:function[]"
+                ]
+            }
         },
         "functionality":{
+            "description": "The text relates to functionality",
             "labelCategory": "function",
             "displayText": "Functionality",
-            "deprecated": false
+            "deprecated": false,
+            "usage": {
+                "page-role": [
+                    ":page-role: functionality"
+                ],
+                "role": [
+                    "[role=label--functionality]"
+                ],
+                "inline": [
+                    "label:functionality[]"
+                ]
+            }
         },
         "required":{
+            "description": "A function is required",
             "labelCategory": "function",
             "displayText": "Required",
-            "deprecated": false
+            "deprecated": false,
+            "usage": {
+                "page-role": [
+                    ":page-role: required"
+                ],
+                "role": [
+                    "[role=label--required]"
+                ],
+                "inline": [ 
+                    "label:required[]"
+                ]
+            }
         },        
         "procedure":{
+            "description": "A procedure",
             "labelCategory": "procedure",
-            "displayText": "Procedure"
+            "displayText": "Procedure",
+            "usage": {
+                "page-role": [
+                    ":page-role: procedure"
+                ],
+                "role": [
+                    "[role=label--procedure]"
+                ],
+                "inline": [
+                    "label:procedure[]"
+                ]
+            }
         },
         "syntax":{
+            "description": "The text relates to syntax",
             "labelCategory": "function",
-            "displayText": "Syntax"
+            "displayText": "Syntax",
+            "usage": {
+                "page-role": [
+                    ":page-role: syntax"
+                ],
+                "role": [
+                    "[role=label--syntax]"
+                ],
+                "inline": [
+                    "label:syntax[]"
+                ]
+            }
         },
         "beginner":{
+            "description": "A beginner persona",
             "labelCategory": "persona",
-            "displayText": "Beginner"
+            "displayText": "Beginner",
+            "usage": {
+                "page-role": [
+                    ":page-role: beginner"
+                ],
+                "role": [
+                    "[role=label--beginner]"
+                ],
+                "inline": [
+                    "label:beginner[]"
+                ]
+            }
         },
         "linux":{
+            "description": "The text applies to Linux environments",
             "labelCategory": "environment",
-            "displayText": "Linux"
+            "displayText": "Linux",
+            "usage": {
+                "page-role": [
+                    ":page-role: linux"
+                ],
+                "role": [
+                    "[role=label--linux]"
+                ],
+                "inline": [
+                    "label:linux[]"
+                ]
+            }
         },
         "unix":{
+            "description": "The text applies to Unix environments",
             "labelCategory": "environment",
-            "displayText": "Unix"
+            "displayText": "Unix",
+            "usage": {
+                "page-role": [
+                    ":page-role: unix"
+                ],
+                "role": [
+                    "[role=label--unix]"
+                ],
+                "inline": [
+                    "label:unix[]"
+                ]
+            }
         },
         "mac-os":{
+            "description": "The text applies to Mac OS environments",
             "labelCategory": "environment",
-            "displayText": "Mac OS"
+            "displayText": "Mac OS",
+            "usage": {
+                "page-role": [
+                    ":page-role: mac-os"
+                ],
+                "role": [
+                    "[role=label--mac-os]"
+                ],
+                "inline": [
+                    "label:mac-os[]"
+                ]
+            }
         },
         "windows":{
+            "description": "The text applies to Windows environments",
             "labelCategory": "environment",
-            "displayText": "Windows"
+            "displayText": "Windows",
+            "usage": {
+                "page-role": [
+                    ":page-role: windows"
+                ],
+                "role": [
+                    "[role=label--windows]"
+                ],
+                "inline": [
+                    "label:windows[]"
+                ]
+            }
         },
         "cluster":{
+            "description": "The text relates to a cluster",
             "labelCategory": "function",
-            "displayText": "Cluster"
+            "displayText": "Cluster",
+            "usage": {
+                "page-role": [
+                    ":page-role: cluster"
+                ],
+                "role": [
+                    "[role=label--cluster]"
+                ],
+                "inline": [
+                    "label:cluster[]"
+                ]
+            }
         },
         "cluster-member-core":{
+            "description": "Indicates a core cluster member",
             "labelCategory": "function",
-            "displayText": "CORE"
+            "displayText": "CORE",
+            "usage": {
+                "page-role": [
+                    ":page-role: cluster-member-core"
+                ],
+                "role": [
+                    "[role=label--cluster-member-core]"
+                ],
+                "inline": [
+                    "label:cluster-member-core[]"
+                ]
+            }
         },
         "cluster-member-read-replica":{
+            "description": "Indicates a read replica cluster member",
             "labelCategory": "function",
-            "displayText": "READ_REPLICA"
+            "displayText": "READ_REPLICA",
+            "usage": {
+                "page-role": [
+                    ":page-role: cluster-member-read-replica"
+                ],
+                "role": [
+                    "[role=label--cluster-member-read-replica]"
+                ],
+                "inline": [
+                    "label:cluster-member-read-replica[]"
+                ]
+            }
         },
         "cluster-member-single":{
+            "description": "Indicates a single cluster member",
             "labelCategory": "function",
-            "displayText": "SINGLE"
+            "displayText": "SINGLE",
+            "usage": {
+                "page-role": [
+                    ":page-role: cluster-member-single"
+                ],
+                "role": [
+                    "[role=label--cluster-member-single]"
+                ],
+                "inline": [
+                    "label:cluster-member-single[]"
+                ]
+            }
         },
         "na":{
+            "description": "Not applicable",
             "labelCategory": "admonition",
-            "displayText": "N/A"
+            "displayText": "N/A",
+            "usage": {
+                "page-role": [
+                    ":page-role: na"
+                ],
+                "role": [
+                    "[role=label--na]"
+                ],
+                "inline": [
+                    "label:na[]"
+                ]
+            }
         },
         "draft":{
+            "description": "Content is in draft state and should not be published.",
             "labelCategory": "docs-internal",
             "displayText": "Draft",
-            "description": "Content is in draft state and should not be published."
+            "usage": {
+                "page-role": [
+                    ":page-role: draft"
+                ],
+                "role": [
+                    "[role=label--draft]"
+                ],
+                "inline": [
+                    "label:draft[]"
+                ]
+            },
+            "notes": "This label is for internal documentation purposes only and should not appear in published docs."
         }
     }
 }
