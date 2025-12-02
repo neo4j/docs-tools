@@ -28,6 +28,8 @@ jobs:
 
     - name: Install dependencies
       run: npm install -D
+      working-directory: ./extensions/antora/roles-labels
 
     - name: Validate roles.json
       run: node ./test/validate-json.js
+      working-directory: ./extensions/antora/roles-labels
