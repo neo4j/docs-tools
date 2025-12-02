@@ -17,6 +17,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         sparse-checkout: ./extensions/antora/roles-labels
+
+    - name: List files
+      run: ls -R
     
     - name: Use Node.js version 20
       uses: actions/setup-node@v4
