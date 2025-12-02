@@ -19,49 +19,137 @@
         "featured": {
             "description": "Featured cards",
             "labelCategory": "content",
-            "displayText": "NEW"
+            "displayText": "NEW",
+            "usage": {
+                "page-role": [
+                    "featured"
+                ],
+                "role": [
+                    "label--featured"
+                ],
+                "inline": [
+                    "featured[]"
+                ]
+            }
         },
         "labs":{
             "description": "Neo4j Labs project",
             "labelCategory": "content",
             "product": "Labs",
-            "displayText": "Labs"
+            "displayText": "Labs",
+            "usage": {
+                "page-role": [
+                    "labs"
+                ],
+                "role": [
+                    "label--labs"
+                ],
+                "inline": [
+                    "labs[]"
+                ]
+            }
         },
         "labs-label":{
             "description": "Neo4j Labs project label",
             "labelCategory": "content",
             "product": "Labs",
-            "displayText": "Labs"
+            "displayText": "Labs",
+            "usage": {
+                "page-role": [
+                    "labs-label"
+                ],
+                "role": [
+                    "label--labs-label"
+                ],
+                "inline": [
+                    "labs-label[]"
+                ]
+            }
         },
         "graph-academy":{
             "description": "Neo4j Graph Academy",
             "labelCategory": "content",
             "product": "Graph Academy",
-            "displayText": "Graph Academy"
+            "displayText": "Graph Academy",
+            "usage": {
+                "page-role": [
+                    "graph-academy"
+                ],
+                "role": [
+                    "label--graph-academy"
+                ],
+                "inline": [
+                    "graph-academy[]"
+                ]
+            }
         },
         "cypher-5":{
             "description": "Function available in Cypher 5",
             "labelCategory": "product",
             "product": "Cypher 5",
-            "displayText": "Cypher 5"
+            "displayText": "Cypher 5",
+            "usage": {
+                "page-role": [
+                    "cypher-5"
+                ],
+                "role": [
+                    "label--cypher-5"
+                ],
+                "inline": [
+                    "cypher-5[]"
+                ]
+            }
         },
         "cypher-25":{
             "description": "Function available in Cypher 25",
             "labelCategory": "product",
             "product": "Cypher 25",
-            "displayText": "Cypher 25"
+            "displayText": "Cypher 25",
+            "usage": {
+                "page-role": [
+                    "cypher-25"
+                ],
+                "role": [
+                    "label--cypher-25"
+                ],
+                "inline": [
+                    "cypher-25[]"
+                ]
+            }
         },
         "cypher-25-only":{
             "description": "Function available only in Cypher 25",
             "labelCategory": "product",
             "product": "Cypher 25",
-            "displayText": "Cypher 25 only"
+            "displayText": "Cypher 25 only",
+            "usage": {
+                "page-role": [
+                    "cypher-25-only"
+                ],
+                "role": [
+                    "label--cypher-25-only"
+                ],
+                "inline": [
+                    "cypher-25-only[]"
+                ]
+            }
         },
         "enterprise-edition":{
             "description": "Function available in Enterprise Edition only",
             "labelCategory": "product",
             "product": "Enterprise Edition",
-            "displayText": "Enterprise Edition"
+            "displayText": "Enterprise Edition",
+            "usage": {
+                "page-role": [
+                    "enterprise-edition"
+                ],
+                "role": [
+                    "label--enterprise-edition"
+                ],
+                "inline": [
+                    "enterprise-edition[]"
+                ]
+            }
         },
         "enterprise-only":{
             "description": "Function available in Enterprise Edition only",
@@ -152,12 +240,36 @@
             "canBeVersionless": true,
             "displayText": "Introduced",
             "altDisplayText": "New, Added",
-            "eventOrder": 1
+            "eventOrder": 1,
+            "usage": {
+                "page-role": [
+                    "new-2025.01"
+                ],
+                "role": [
+                    "label--new-2025.01"
+                ],
+                "inline": [
+                    "new[]",
+                    "new[Introduced in 2025.01]"
+                ]
+            },
+            "notes": "To add a 'New' role without a version, use the 'new-versionless' role"
         },
         "new-versionless": {
             "description": "A new feature of function, where the version is not specified",
             "labelCategory": "function",
-            "displayText": "New"
+            "displayText": "New",
+            "usage": {
+                "page-role": [
+                    "new"
+                ],
+                "role": [
+                    "label--new"
+                ],
+                "inline": [
+                    "new[]"
+                ]
+            }
         },
         "added":{
             "description": "The feature or function was added in the version stated",
@@ -166,18 +278,51 @@
             "altDisplayText": "New, Added",
             "deprecated": true,
             "suggestedAlternative": "new",
-            "eventOrder": 1
+            "eventOrder": 1,
+            "usage": {
+                "page-role": [
+                    "added-2025.01"
+                ],
+                "role": [
+                    "label--added-2025.01"
+                ],
+                "inline": [
+                    "added[Introduced in 2025.01]"
+                ]
+            }
         },
         "changed":{
             "description": "The feature or function was changed in the version stated",
             "labelCategory": "version",
             "displayText": "Changed",
-            "eventOrder": 2
+            "eventOrder": 2,
+            "usage": {
+                "page-role": [
+                    "changed-2025.01"
+                ],
+                "role": [
+                    "label--changed-2025.01"
+                ],
+                "inline": [
+                    "changed[Changed in 2025.01]"
+                ]
+            }
         },
         "default":{
             "description": "The value shown is the default value",
             "labelCategory": "function",
-            "displayText": "Default"
+            "displayText": "Default",
+            "usage": {
+                "page-role": [
+                    "default"
+                ],
+                "role": [
+                    "label--default"
+                ],
+                "inline": [
+                    "default[]"
+                ]
+            }
         },
         "default-output":{
             "description": "The value shown is part of the default output",
@@ -188,7 +333,18 @@
             "description": "The feature is no longer available",
             "labelCategory": "version",
             "displayText": "Discontinued",
-            "eventOrder": 4        
+            "eventOrder": 4,
+            "usage": {
+                "page-role": [
+                    "discontinued-2025.01"
+                ],
+                "role": [
+                    "label--discontinued-2025.01"
+                ],
+                "inline": [
+                    "discontinued[Discontinued in 2025.01]"
+                ]
+            }
         },
         "dynamic":{
             "labelCategory": "function",
@@ -196,48 +352,132 @@
             "joinText": "since"
         },
         "alpha":{
+            "description": "The feature or function is in alpha",
             "labelCategory": "version",
             "displayText": "Alpha",
             "eventOrder": 0        
         },
         "beta":{
+            "description": "The feature or function is in beta",
             "labelCategory": "version",
             "canBeVersionless": true,
             "displayText": "Beta",
-            "eventOrder": 0        
+            "eventOrder": 0,
+            "usage": {
+                "page-role": [
+                    "beta",
+                    "beta-2025.01"
+                ],
+                "role": [
+                    "label--beta",
+                    "label--beta-2025.01"
+                ],
+                "inline": [
+                    "beta[]",
+                    "beta[Beta in 2025.01]"
+                ]
         },
         "beta-until":{
             "description": "The feature or function was in beta until the version specified",
             "labelCategory": "version",
             "displayText": "Beta",
             "joinText": "until",
-            "eventOrder": 0
+            "eventOrder": 0,
+            "usage": {
+                "page-role": [
+                    "beta-until-2025.01"
+                ],
+                "role": [
+                    "label--beta-until-2025.01"
+                ],
+                "inline": [
+                    "beta-until[Beta until 2025.01]"
+                ]
+            }
         },
         "deprecated":{
             "description": "The feature or function was deprecated in the version stated",
             "labelCategory": "version",
             "canBeVersionless": true,
             "displayText": "Deprecated",
-            "eventOrder": 3
+            "eventOrder": 3,
+            "usage": {
+                "page-role": [
+                    "deprecated",
+                    "deprecated-2025.01"
+                ],
+                "role": [
+                    "label--deprecated",
+                    "label--deprecated-2025.01"
+                ],
+                "inline": [
+                    "deprecated[]",
+                    "deprecated[Deprecated in 2025.01]"
+                ]
+            }
         },
         "removed":{
+            "description": "The feature or function was removed in the version stated",
             "labelCategory": "version",
             "canBeVersionless": true,
             "displayText": "Removed",
-            "eventOrder": 4
+            "eventOrder": 4,
+            "usage": {
+                "page-role": [
+                    "removed",
+                    "removed-2025.01"
+                ],
+                "role": [
+                    "label--removed",
+                    "label--removed-2025.01"
+                ],
+                "inline": [
+                    "removed[]",
+                    "removed[Removed in 2025.01]"
+                ]
+            }
         },
         "renamed":{
+            "description": "The feature or function was renamed in the version stated",
             "labelCategory": "version",
             "canBeVersionless": true,
             "displayText": "Renamed",
-            "eventOrder": 2        
+            "eventOrder": 2,
+            "usage": {
+                "page-role": [
+                    "renamed",
+                    "renamed-2025.01"
+                ],
+                "role": [
+                    "label--renamed",
+                    "label--renamed-2025.01"
+                ],
+                "inline": [
+                    "renamed[]",
+                    "renamed[Renamed in 2025.01]"
+                ]
+            }
         },
         "updated":{
             "description": "The feature or function was updated in the version stated",
             "labelCategory": "version",
             "canBeVersionless": true,
             "displayText": "Updated",
-            "eventOrder": 2        
+            "eventOrder": 2,
+            "usage": {
+                "page-role": [
+                    "updated",
+                    "updated-2025.01"
+                ],
+                "role": [
+                    "label--updated",
+                    "label--updated-2025.01"
+                ],
+                "inline": [
+                    "updated[]",
+                    "updated[Updated in 2025.01]"
+                ]
+            }
         },
         "fabric":{
             "labelCategory": "function",
