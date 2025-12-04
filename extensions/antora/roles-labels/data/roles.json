@@ -397,14 +397,14 @@
             "eventOrder": 1,
             "usage": {
                 "page-role": [
-                    "new-2025.01"
+                    ":page-role: new-2025.01"
                 ],
                 "role": [
-                    "label--new-2025.01"
+                    "[role=label--new-2025.01]"
                 ],
                 "inline": [
-                    "new[]",
-                    "new[Introduced in 2025.01]"
+                    "label:new[]",
+                    "label:new[Introduced in 2025.01]"
                 ]
             },
             "notes": "To add a 'New' role without a version, use the 'new-versionless' role"
