@@ -13,6 +13,11 @@ on:
         required: false
         type: number
         default: 1
+      docs-dir:
+        description: 'The working directory to run jobs in'
+        required: false
+        type: string
+        default: '.'
       node-version:
         description: 'The Node.js version to use'
         required: false
@@ -93,6 +98,7 @@ jobs:
       DEPLOY_ID: ${{ inputs.deploy-id }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
+      DOCS_DIR: ${{ inputs.docs-dir }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
       ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
       ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
@@ -128,6 +134,9 @@ jobs:
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+
+    - name: Change to working directory
+      run: cd ${{ env.DOCS_DIR }}
 
     - name: Install dependencies
       run: npm install --omit=dev
