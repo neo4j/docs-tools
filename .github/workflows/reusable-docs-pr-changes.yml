@@ -34,14 +34,14 @@ jobs:
 
       - name: Get page list for PR changelog
         id: get-page-list
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: page-list
 
             # tbc - checkout the script from a repo so all docs projects can reuse it
       - name: Generate PR changelog comment
         # if: inputs.pages-modified != '' || inputs.pages-added != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           WORKSPACE: ${{ github.workspace }}
           DEPLOYURL: ${{ steps.get-deploy-url.outputs.deploy-url }}
@@ -117,7 +117,7 @@ jobs:
       # For upload-artifact v4 we need to provide a unique artifact name
       - name: Upload changelog
         if: ${{ hashFiles('changelog') != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
             name: changelog
             path: changelog

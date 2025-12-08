@@ -76,13 +76,13 @@ jobs:
     steps:
 
       # Checkout the repo
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # Fetch the default vale config and styles
       # Checkout to ./lint
       - name: download default rules
         if: ${{ inputs.use-default-rules }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: neo4j/docs-tools
           ref: dev
@@ -92,7 +92,7 @@ jobs:
           sparse-checkout-cone-mode: false
 
       # Run Vale
-      - uses: errata-ai/vale-action@reviewdog
+      - uses: errata-ai/vale-action@d89dee975228ae261d22c15adcd03578634d429c # v2
         with:
           files: ${{ inputs.files }}
           reporter: ${{ inputs.reporter }}
