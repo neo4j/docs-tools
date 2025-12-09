@@ -123,6 +123,7 @@ jobs:
         fetch-depth: ${{ env.FETCH_DEPTH }}
         sparse-checkout: ${{ env.DOCS_DIR }}
         sparse-checkout-cone-mode: false
+        path: '.'
 
     - name: list files
       run: |
