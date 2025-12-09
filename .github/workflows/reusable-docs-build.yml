@@ -125,12 +125,6 @@ jobs:
         sparse-checkout: ${{ env.DOCS_DIR }}
         sparse-checkout-cone-mode: false
 
-    - name: list files
-      working-directory: ${{ env.DOCS_DIR }}
-      run: |
-        echo "Files in working directory:"
-        ls -R
-
     - name: Remove excluded extensions
       run: |
         for extension in $ANTORA_EXTENSIONS; do
@@ -163,7 +157,7 @@ jobs:
 
     - name: Ensure correct version of antora-modify-sitemaps
       working-directory: ${{ env.DOCS_DIR }}
-      run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.1
+      run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
 
     - name: Update all packages
       working-directory: ${{ env.DOCS_DIR }}
