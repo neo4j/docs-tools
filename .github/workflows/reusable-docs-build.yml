@@ -91,9 +91,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
-    defaults:
-      run:
-        shell: bash -l {0}
 
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
@@ -127,10 +124,8 @@ jobs:
         sparse-checkout: ${{ env.DOCS_DIR }}
         sparse-checkout-cone-mode: false
 
-    - name: Change to working directory
-      run: cd ${{ env.DOCS_DIR }}
-
     - name: list files
+      working-directory: ${{ env.DOCS_DIR }}
       run: |
         echo "Files in working directory:"
         ls -R
@@ -158,29 +153,37 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
 
     - name: Install dependencies
+      working-directory: ${{ env.DOCS_DIR }}
       run: npm install --omit=dev
 
     - name: Install default publish extensions - except any excluded by the workflow input
+      working-directory: ${{ env.DOCS_DIR }}
       run: npm install $ANTORA_FILTERED_EXTENSIONS
 
     - name: Ensure correct version of antora-modify-sitemaps
+      working-directory: ${{ env.DOCS_DIR }}
       run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.1
 
     - name: Update all packages
+      working-directory: ${{ env.DOCS_DIR }}
       run: npm update
 
     - name: Use Antora 3.1.14
+      working-directory: ${{ env.DOCS_DIR }}
       run: |
         npm uninstall @antora/cli @antora/site-generator-default
         npm install antora@3.1.14
 
     - name: List packages
+      working-directory: ${{ env.DOCS_DIR }}
       run: npm list
 
     - name: Run package script
+      working-directory: ${{ env.DOCS_DIR }}
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Get the dir that contains the HTML
+      working-directory: ${{ env.DOCS_DIR }}
       id: get-site-dir
       run: |
         shopt -s globstar
@@ -192,6 +195,7 @@ jobs:
       run: echo "::notice::The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow."
 
     - name: Save event-id
+      working-directory: ${{ env.DOCS_DIR }}
       run: echo $DEPLOY_ID > ./build/${{ steps.get-site-dir.outputs.site-dir }}/deployid
 
     # we could set include-hidden-files to true to include the .etc and .meta dirs
