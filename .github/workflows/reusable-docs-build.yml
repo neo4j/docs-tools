@@ -153,33 +153,27 @@ jobs:
         # Install dependencies
         echo "<!---- Install npm packages -->"
         npm install --omit=dev
-        echo "<!---------------------------->"
 
         # Install Antora extensions
         echo "<!---- Install Antora extensions -->"
         npm install $ANTORA_FILTERED_EXTENSIONS
-        echo "<!--------------------------------->"
         
         # Ensure a correct version of sitemaps extension
         echo "<!---- Ensure correct sitemaps extension version -->"
         npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
-        echo "<!------------------------------------------------->"
 
         # Update extensions
         echo "<!---- Update extensions -->"
         npm update
-        echo "<!------------------------->"
         
         # Ensure correct version of Antora
         echo "<!---- Ensure correct version of Antora -->"
         npm uninstall @antora/cli @antora/site-generator-default
         npm install antora@3.1.14
-        echo "<!---------------------------------------->"
         
         # List installed packages
         echo "<!---- Installed packages -->"
         npm list
-        echo "<!-------------------------->"
 
     - name: Run package script
       working-directory: ${{ env.DOCS_DIR }}
