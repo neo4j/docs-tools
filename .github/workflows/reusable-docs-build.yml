@@ -147,31 +147,27 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    - name: Install dependencies
-      working-directory: ${{ env.DOCS_DIR }}
-      run: npm install --omit=dev
-
-    - name: Install default publish extensions - except any excluded by the workflow input
-      working-directory: ${{ env.DOCS_DIR }}
-      run: npm install $ANTORA_FILTERED_EXTENSIONS
-
-    - name: Ensure correct version of antora-modify-sitemaps
-      working-directory: ${{ env.DOCS_DIR }}
-      run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
-
-    - name: Update all packages
-      working-directory: ${{ env.DOCS_DIR }}
-      run: npm update
-
-    - name: Use Antora 3.1.14
+    - name: Install required extensions - except any excluded by the workflow input
       working-directory: ${{ env.DOCS_DIR }}
       run: |
+        # Install dependencies
+        npm install --omit=dev
+
+        # Install Antora extensions
+        npm install $ANTORA_FILTERED_EXTENSIONS
+        
+        # Ensure a correct version of sitemaps extension
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
+        
+        # Update extensions
+        npm update
+        
+        # Ensure correct version of Antora
         npm uninstall @antora/cli @antora/site-generator-default
         npm install antora@3.1.14
-
-    - name: List packages
-      working-directory: ${{ env.DOCS_DIR }}
-      run: npm list
+        
+        # List installed packages
+        npm list
 
     - name: Run package script
       working-directory: ${{ env.DOCS_DIR }}
