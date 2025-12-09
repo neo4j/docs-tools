@@ -124,6 +124,11 @@ jobs:
         sparse-checkout: ${{ env.DOCS_DIR }}
         sparse-checkout-cone-mode: false
 
+    - name: list files
+      run: |
+        echo "Files in working directory:"
+        ls -R
+
     - name: Remove excluded extensions
       run: |
         for extension in $ANTORA_EXTENSIONS; do
