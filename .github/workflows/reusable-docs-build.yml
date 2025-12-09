@@ -111,19 +111,19 @@ jobs:
 
     # Checkout the whole repo
     - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      # if: ${{ env.DOCS_DIR == '.' }}
+      if: ${{ env.DOCS_DIR == '.' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
     # Checkout the docs dir
-    # - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-    #   if: ${{ env.DOCS_DIR != '.' }}
-    #   with:
-    #     ref: ${{ env.BUILD_REF }}
-    #     fetch-depth: ${{ env.FETCH_DEPTH }}
-    #     sparse-checkout: ${{ env.DOCS_DIR }}
-    #     sparse-checkout-cone-mode: false
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      if: ${{ env.DOCS_DIR != '.' }}
+      with:
+        ref: ${{ env.BUILD_REF }}
+        fetch-depth: ${{ env.FETCH_DEPTH }}
+        sparse-checkout: ${{ env.DOCS_DIR }}
+        sparse-checkout-cone-mode: false
 
     - name: list files
       working-directory: ${{ env.DOCS_DIR }}
