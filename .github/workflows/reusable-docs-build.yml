@@ -172,7 +172,7 @@ jobs:
         npm install antora@3.1.14
         
         # List installed packages
-        printf "\n\n<!---- Installed packages -->"
+        printf "\n\n<!---- Installed packages -->\n"
         npm list
 
     - name: Run package script
