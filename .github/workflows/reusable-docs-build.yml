@@ -151,28 +151,28 @@ jobs:
       working-directory: ${{ env.DOCS_DIR }}
       run: |
         # Install dependencies
-        printf "\n<!---- Install npm packages -->"
+        printf "\n\n<!---- Install npm packages -->"
         npm install --omit=dev
 
         # Install Antora extensions
-        printf "\n<!---- Install Antora extensions -->"
+        printf "\n\n<!---- Install Antora extensions -->"
         npm install $ANTORA_FILTERED_EXTENSIONS
         
         # Ensure a correct version of sitemaps extension
-        printf "\n<!---- Ensure correct sitemaps extension version -->"
+        printf "\n\n<!---- Ensure correct sitemaps extension version -->"
         npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
 
         # Update extensions
-        printf "\n<!---- Update extensions -->"
+        printf "\n\n<!---- Update extensions -->"
         npm update
         
         # Ensure correct version of Antora
-        printf "\n<!---- Ensure correct version of Antora -->"
+        printf "\n\n<!---- Ensure correct version of Antora -->"
         npm uninstall @antora/cli @antora/site-generator-default
         npm install antora@3.1.14
         
         # List installed packages
-        printf "\n<!---- Installed packages -->"
+        printf "\n\n<!---- Installed packages -->"
         npm list
 
     - name: Run package script
