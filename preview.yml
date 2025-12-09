@@ -7,8 +7,7 @@ content:
   sources:
   - url: https://@gitlab.com/antora/demo/demo-component-a.git
     branches: HEAD
-  - url: ../
-    start_path: docs
+  - url: ./
     branches: HEAD
     exclude:
     - '!**/_includes/*'
