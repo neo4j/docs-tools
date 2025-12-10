@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/roles-labels",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Convert roles on a block to a labels div, add dataset info to a block based on roles and inline labels",
   "main": "roles-labels.js",
   "scripts": {
@@ -13,5 +13,8 @@
   "license": "MIT",
   "dependencies": {
     "node-html-parser": "^7.0.0"
+  },
+  "devDependencies": {
+    "jsonschema": "^1.5.0"
   }
 }
