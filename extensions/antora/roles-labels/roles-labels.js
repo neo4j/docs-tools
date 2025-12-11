@@ -133,7 +133,7 @@ module.exports.register = function ({ config }) {
                     eventOrder: rolesData.labels[dataLabel].eventOrder || -1,
                     joinText: dataVersion ? rolesData.labels[dataLabel].joinText || 'in' : '',
                     text: rolesData.labels[dataLabel].displayText || '',
-                    altText: rolesData.labels[dataLabel].altDisplayText || '',
+                    altText: rolesData.labels[dataLabel].altDisplayText || [],
                 },
                 data: {
                     product: dataProduct || rolesData.labels[dataLabel].product || attributes['page-product'] || '',
