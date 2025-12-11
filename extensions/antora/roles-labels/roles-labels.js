@@ -133,7 +133,7 @@ module.exports.register = function ({ config }) {
                     eventOrder: rolesData.labels[dataLabel].eventOrder || -1,
                     joinText: dataVersion ? rolesData.labels[dataLabel].joinText || 'in' : '',
                     text: rolesData.labels[dataLabel].displayText || '',
-                    altText: rolesData.labels[dataLabel].altDisplayText || '',
+                    altText: rolesData.labels[dataLabel].altDisplayText || [],
                 },
                 data: {
                     product: dataProduct || rolesData.labels[dataLabel].product || attributes['page-product'] || '',
@@ -198,7 +198,7 @@ module.exports.register = function ({ config }) {
 
             // if an inline label has custom text, log a message
             // we should always use the default generated text for inline labels
-            if (labelDetails.src.inline && labelDetails.src.text !== '' && labelDetails.src.text !== labelDetails.out.text && !labelDetails.out.altText.split(',').map((text) => text.trim()).includes(labelDetails.src.text) && rolesData.labels[labelClass] && labelDetails.src.validLabel) {
+            if (labelDetails.src.inline && labelDetails.src.text !== '' && labelDetails.src.text !== labelDetails.out.text && !labelDetails.out.altText.map((text) => text.trim()).includes(labelDetails.src.text) && rolesData.labels[labelClass] && labelDetails.src.validLabel) {
                 if (replaceInlineLabelText) {
                     logger[labelDetails.logLevel]({ file: src, source: src.origin }, 'Text "%s" on label "%s" will be updated to the default text output: "%s"', el.textContent, labelClass, labelDetails.out.text)
                 } else {

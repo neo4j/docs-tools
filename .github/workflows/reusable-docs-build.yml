@@ -13,6 +13,11 @@ on:
         required: false
         type: number
         default: 1
+      docs-dir:
+        description: 'The working directory to run jobs in'
+        required: false
+        type: string
+        default: '.'
       node-version:
         description: 'The Node.js version to use'
         required: false
@@ -93,6 +98,8 @@ jobs:
       DEPLOY_ID: ${{ inputs.deploy-id }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
+      DOCS_DIR: ${{ inputs.docs-dir }}
+      SITE_DIR: ${{ inputs.site-dir }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
       ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
       ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
@@ -102,10 +109,21 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
+    # Checkout the whole repo
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      if: ${{ env.DOCS_DIR == '.' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
+
+    # Checkout the docs dir
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      if: ${{ env.DOCS_DIR != '.' }}
+      with:
+        ref: ${{ env.BUILD_REF }}
+        fetch-depth: ${{ env.FETCH_DEPTH }}
+        sparse-checkout: ${{ env.DOCS_DIR }}
+        sparse-checkout-cone-mode: false
 
     - name: Remove excluded extensions
       run: |
@@ -125,34 +143,44 @@ jobs:
         echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
 
     - name: Use Node.js version ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    - name: Install dependencies
-      run: npm install --omit=dev
-
-    - name: Install default publish extensions - except any excluded by the workflow input
-      run: npm install $ANTORA_FILTERED_EXTENSIONS
-
-    - name: Ensure correct version of antora-modify-sitemaps
-      run: npm install @neo4j-antora/antora-modify-sitemaps@0.7.1
-
-    - name: Update all packages
-      run: npm update
-
-    - name: Use Antora 3.1.14
+    - name: Install required extensions - except any excluded by the workflow input
+      working-directory: ${{ env.DOCS_DIR }}
       run: |
+        # Install dependencies
+        printf "\n\n<!---- Install npm packages -->"
+        npm install --omit=dev
+
+        # Install Antora extensions
+        printf "\n\n<!---- Install Antora extensions -->"
+        npm install $ANTORA_FILTERED_EXTENSIONS
+        
+        # Ensure a correct version of sitemaps extension
+        printf "\n\n<!---- Ensure correct sitemaps extension version -->"
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
+
+        # Update extensions
+        printf "\n\n<!---- Update extensions -->"
+        npm update
+        
+        # Ensure correct version of Antora
+        printf "\n\n<!---- Ensure correct version of Antora -->"
         npm uninstall @antora/cli @antora/site-generator-default
         npm install antora@3.1.14
-
-    - name: List packages
-      run: npm list
+        
+        # List installed packages
+        printf "\n\n<!---- Installed packages -->\n"
+        npm list
 
     - name: Run package script
+      working-directory: ${{ env.DOCS_DIR }}
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Get the dir that contains the HTML
+      working-directory: ${{ env.DOCS_DIR }}
       id: get-site-dir
       run: |
         shopt -s globstar
@@ -160,35 +188,36 @@ jobs:
         echo "site-dir=$root" >> $GITHUB_OUTPUT
 
     - name: site-dir deprecation notice
-      if: "${{ inputs.site-dir != '' }}"
+      if: ${{ env.SITE_DIR != '' }}
       run: echo "::notice::The site-dir input is deprecated. The value is automatically determined from the build output. You can remove this input from your workflow."
 
     - name: Save event-id
+      working-directory: ${{ env.DOCS_DIR }}
       run: echo $DEPLOY_ID > ./build/${{ steps.get-site-dir.outputs.site-dir }}/deployid
 
     # we could set include-hidden-files to true to include the .etc and .meta dirs
     - name: Upload HTML artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: docs
-        path: build/${{ steps.get-site-dir.outputs.site-dir }}
+        path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}
         include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: antora-log
-        path: build/log
+        path: ${{ env.DOCS_DIR }}/build/log
         retention-days: ${{ inputs.retain-artifacts }}
 
     - name: Upload Page List artifact
       id: page-list-artifact
       if: ${{ inputs.page-list }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: page-list
-        path: build/${{ steps.get-site-dir.outputs.site-dir }}/.meta/pageList
+        path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}/.meta/pageList
         if-no-files-found: ignore
         retention-days: ${{ inputs.retain-artifacts }}
 
@@ -196,10 +225,10 @@ jobs:
     - name: Upload Redirects artifact
       id: redirects-artifact
       if: ${{ !contains(inputs.antora-extensions-exclude, '@neo4j-antora/aliases-redirects') }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: redirects
-        path: build/${{ steps.get-site-dir.outputs.site-dir }}/.etc/**
+        path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}/.etc/**
         if-no-files-found: ignore
         include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}
