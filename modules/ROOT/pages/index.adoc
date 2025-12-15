@@ -79,3 +79,36 @@ This paragraph is marked as draft.
 == Heading with label
 
 This heading is marked as draft.
+
+
+== Example with no title
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
+
+
+== Example with title and label
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+.Example title
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
+
+
+== Admonition block with title and label
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+.Note the following about OIDC auth providers
+[NOTE]
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
