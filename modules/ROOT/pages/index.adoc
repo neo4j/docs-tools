@@ -96,7 +96,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Lorem ipsum.
 
 [role=label--enterprise-edition]
-.Example title
+.Example title (with label)
 ====
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 ====
@@ -107,7 +107,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Lorem ipsum.
 
 [role=label--enterprise-edition]
-.Note the following about OIDC auth providers
+.Example title (with label)
 [NOTE]
 ====
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
