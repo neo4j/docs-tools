@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/antora-page-list",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Create JSON mapping source files to HTML URLs",
   "main": "page-list.js",
   "scripts": {
