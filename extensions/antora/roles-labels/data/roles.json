@@ -530,9 +530,25 @@
             }
         },
         "preview":{
+            "description": "The feature is a preview feature",
             "labelCategory": "version",
+            "canBeVersionless": true,
             "displayText": "Preview",
-            "eventOrder": 0        
+            "eventOrder": 0,
+            "usage": {
+                "page-role": [
+                    ":page-role: preview",
+                    ":page-role: preview-2025.01"
+                ],
+                "role": [
+                    "[role=label--preview]",
+                    "[role=label--preview-2025.01]"
+                ],
+                "inline": [
+                    "label:preview[]",
+                    "label:preview[Preview in 2025.01]"
+                ]
+            }
         },
         "alpha":{
             "description": "The feature or function is in alpha",
