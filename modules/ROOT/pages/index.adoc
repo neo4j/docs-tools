@@ -15,9 +15,14 @@ For more information, see <<section-with-id>>.
 [[section-with-id]]
 == Section with ID to test xref validator
 
-Lorem ipsum.
+Lorem ipsum label:enterprise-edition[Incorrect label text] (should result in a log message)
 
+Testing the `new` label:
+- with incorrect label text: label:new[Incorrect label text] (should result in a log message).
+- with valid alternative text: label:new-2025.11[Added in 2025.11].
+- versionless: label:new[Added].
 
+[role=label--enterprise-edition]
 == A table with footnote
 
 .Table with footnotes
@@ -34,6 +39,8 @@ Lorem ipsum.
 
 |===
 
+// should result in a log message
+[role=label--test-label] 
 == A random footnote
 
 A footnote that is not in a table footnote:[Footnote not in a table.]
@@ -72,3 +79,36 @@ This paragraph is marked as draft.
 == Heading with label
 
 This heading is marked as draft.
+
+
+== Example with no title
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
+
+
+== Example with title and label
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+.Example title (with label)
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
+
+
+== Admonition block with title and label
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+.Example title (with label)
+[NOTE]
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====

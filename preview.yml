@@ -27,10 +27,12 @@ output:
 
 antora:
   extensions:
-  - "./extensions/antora/table-footnotes"
+  # - "./extensions/antora/table-footnotes"
   - "./extensions/antora/roles-labels"
 
 asciidoc:
+  extensions:
+  - "@neo4j-documentation/macros"
   attributes:
     page-theme: docs
     page-type: Docs

@@ -1,0 +1,32 @@
+name: Validate roles.json
+
+on:
+  pull_request:
+    branches:
+    - dev
+    paths:
+    - 'extensions/antora/roles-labels/data/roles.json'
+
+
+jobs:
+  validate-roles-json:
+    runs-on: ubuntu-latest
+    
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        sparse-checkout: ./extensions/antora/roles-labels
+    
+    - name: Use Node.js version 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install dependencies
+      run: npm install -D
+      working-directory: ./extensions/antora/roles-labels
+
+    - name: Validate roles.json
+      run: node ./test/validate-json.js
+      working-directory: ./extensions/antora/roles-labels
