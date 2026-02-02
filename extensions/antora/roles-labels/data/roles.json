@@ -304,6 +304,24 @@
                 ]
             }
         },
+        "aura-graph-analytics":{
+            "description": "Function available in Aura Graph Analytics",
+            "labelCategory": "product",
+            "product": "Aura Graph Analytics",
+            "displayText": "Aura Graph Analytics",
+            "usage": {
+                "page-role": [
+                    ":page-role: aura-graph-analytics"
+                ],
+                "role": [
+                    "[role=label--aura-graph-analytics]"
+                ],
+                "inline": [
+                    "label:aura-graph-analytics[]"
+                ]
+            }
+        },
+
         "aura-ds-enterprise":{
             "description": "Function available in AuraDS Enterprise",
             "labelCategory": "product",
