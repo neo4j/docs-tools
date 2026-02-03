@@ -112,3 +112,12 @@ Lorem ipsum.
 ====
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 ====
+
+
+[role=label--aura-graph-analytics]
+== Aura Graph Analytics label
+
+This section is marked with the Aura Graph Analytics label.
+
+- label:aura-graph-analytics[] list item with label
+- List item without label
