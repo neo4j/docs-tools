@@ -24,6 +24,7 @@ jobs:
   deploy-docs:
     # Uncomment this if statement to deploy only when the PR builds cleanly
     # if: github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.head_repository.full_name == github.repository
 
     runs-on: ubuntu-latest
 
@@ -72,6 +73,17 @@ jobs:
         run: |
           cd "$ARTIFACT_DIR"
           if unzip -l docs.zip | grep -q "\.\./"; then
+            exit 1
+          fi
+
+      - id: check-suspicious
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/artifacts/docs
+        run: |
+          cd "$ARTIFACT_DIR"
+          HIDDEN_FILES=$(find . -type f -name ".*" | wc -l)
+          if [ "$HIDDEN_FILES" -ne 0 ]; then
+            echo "Security Alert: Unexpected hidden files detected!"
             exit 1
           fi
 
