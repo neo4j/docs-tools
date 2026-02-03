@@ -1,6 +1,10 @@
 # Use vale to lint asciidoc
 name: "Check Docs style"
 
+permissions:
+  contents: read
+  pull-requests: read
+
 on:
   # push:
   #   branches:
