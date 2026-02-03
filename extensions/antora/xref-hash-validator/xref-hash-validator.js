@@ -115,7 +115,27 @@ module.exports.register = function ({ config }) {
 
                 // if searchForThisURL is outside the site url, something is up and we should not try to validate it
                 // remember: we are validating only xrefs to files that are in the contentCatalog
-                if (!searchForThisURL.href.startsWith(siteURLRoot)) {
+                let siteRootUrl
+                try {
+                    siteRootUrl = new URL(siteURLRoot)
+                } catch (e) {
+                    // if the configured site URL is invalid, log and skip validation for this link
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: invalid site url %s', siteURLRoot)
+                    return
+                }
+
+                const sameOrigin =
+                    searchForThisURL.protocol === siteRootUrl.protocol &&
+                    searchForThisURL.hostname === siteRootUrl.hostname &&
+                    searchForThisURL.port === siteRootUrl.port
+
+                // Ensure the target path is under the site root path
+                const siteRootPath = siteRootUrl.pathname.endsWith('/')
+                    ? siteRootUrl.pathname
+                    : siteRootUrl.pathname + '/'
+                const targetPath = searchForThisURL.pathname
+
+                if (!sameOrigin || !targetPath.startsWith(siteRootPath)) {
                     logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: %s resolves outside site url %s', searchForThisURL.href, siteURLRoot)
                     return
                 }
