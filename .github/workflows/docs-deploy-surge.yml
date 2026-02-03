@@ -24,6 +24,7 @@ jobs:
   deploy-docs:
     # Uncomment this if statement to deploy only when the PR builds cleanly
     # if: github.event.workflow_run.conclusion == 'success'
+    if: ${{ github.event.workflow_run.event != 'pull_request' }}
 
     runs-on: ubuntu-latest
 
@@ -65,6 +66,15 @@ jobs:
             });
             fs.mkdirSync(process.env.ARTIFACT_DIR + '/changelog', { recursive: true });
             fs.writeFileSync(process.env.ARTIFACT_DIR + '/changelog/changelog.zip', Buffer.from(downloadChangelog.data));
+
+      - id: verify-docs-zip
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/artifacts/docs
+        run: |
+          cd "$ARTIFACT_DIR"
+          if unzip -l docs.zip | grep -q "\.\./"; then
+            exit 1
+          fi
 
       - id: unzip-docs
         env:
