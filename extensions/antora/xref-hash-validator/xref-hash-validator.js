@@ -109,8 +109,16 @@ module.exports.register = function ({ config }) {
             // check the internal links in the file
             file.xrefChecker.internalLinks.forEach((link) => {
 
+                const siteURLRoot = (playbook.site && playbook.site.url) ? playbook.site.url : 'http://example.com'
                 // what is the full url of each link?
-                searchForThisURL = new URL(path.join(file.pub.url, link), (playbook.site && playbook.site.url) ? playbook.site.url : 'https://example.com')
+                const searchForThisURL = new URL(path.join('.', file.pub.url, link), siteURLRoot)
+
+                // if searchForThisURL is outside the site url, something is up and we should not try to validate it
+                // remember: we are validating only xrefs to files that are in the contentCatalog
+                if (!searchForThisURL.href.startsWith(siteURLRoot)) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: %s resolves outside site url %s', searchForThisURL.href, siteURLRoot)
+                    return
+                }
 
                 // if there's no hash the xref is already checked by Antora
                 // this check shouldn't ever match anyway because we should have already filtered out links without hashes
