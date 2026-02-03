@@ -174,7 +174,7 @@ module.exports.register = function ({ config }) {
                     // the pages you could link to (possibleSources) instead are the files that do contain this anchor (hashTarget)
                     // we can log each of these
                     const possibleSources = linkTargets[hashTarget].map( (f) => {
-                        return `${f.src} (branch: ${f.branch})`
+                        return `${f.src} (component: ${f.component}, branch: ${f.branch})`
                     }).join(', ')
 
                     logger[logLevel]({ file: file.src, source: file.src.origin }, 'section %s not found in target page %s (branch: %s) - anchor found in %s', decodeURI(searchForThisURL.hash), targetFile.src.path, targetFile.src.origin.branch, possibleSources)      

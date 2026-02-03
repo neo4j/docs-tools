@@ -344,14 +344,16 @@ module.exports.register = function ({ config }) {
                     labelsLocation = roleDiv.querySelector('td.content')
                 }
 
-                
-
                 if (roleDiv.tagName === 'H1' || headings.includes(roleDiv.firstElementChild.tagName)) {
                     labelsLocation.append(labelsDiv)
                     labelsLocation.classList.add('header-label-container')
                 } else {
                     labelsLocation.prepend(labelsDiv)
                     roleDiv.classList.add('has-label')
+                }
+
+                if (roleDiv.classList.contains('exampleblock') && (titleDiv = roleDiv.querySelector('div.title'))) {
+                    roleDiv.prepend(titleDiv)
                 }
             })
 

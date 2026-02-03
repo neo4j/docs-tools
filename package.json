@@ -22,8 +22,8 @@
   "author": "Neil Dewhurst",
   "license": "ISC",
   "dependencies": {
+    "antora": "3.1.14",
     "@neo4j-documentation/macros": "^1.0.4",
-    "antora": "^3.1.10",
     "node-html-parser": "^7.0.1"
   },
   "devDependencies": {

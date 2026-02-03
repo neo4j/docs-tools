@@ -79,3 +79,45 @@ This paragraph is marked as draft.
 == Heading with label
 
 This heading is marked as draft.
+
+
+== Example with no title
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
+
+
+== Example with title and label
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+.Example title (with label)
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
+
+
+== Admonition block with title and label
+
+Lorem ipsum.
+
+[role=label--enterprise-edition]
+.Example title (with label)
+[NOTE]
+====
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+====
+
+
+[role=label--aura-graph-analytics]
+== Aura Graph Analytics label
+
+This section is marked with the Aura Graph Analytics label.
+
+- label:aura-graph-analytics[] list item with label
+- List item without label
