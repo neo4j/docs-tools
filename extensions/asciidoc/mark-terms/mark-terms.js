@@ -14,17 +14,31 @@ module.exports = function (registry) {
       let markTitles = doc.getAttribute('page-terms-mark-titles')? true : false
       let devMode = doc.getAttribute('page-terms-dev-mode')
       
-      let marker = doc.getAttribute('page-terms-marker') || '^&reg;^'
+      let marker = doc.getAttribute('page-terms-marker') || '&reg;'
+
+      // test marker
+      // marker must be a string that starts with & ends with ;
+      if (!/^&[\w\s-]+?;$/.test(marker)) {
+        doc.getLogger().error(`mark-terms: invalid marker "${marker}"`)
+        return
+      }
 
       let markAdded = []
-
-      // escape special characters in the term to mark before using in regexp
-      function escapeRegExp(str) {
-        let escapedStr = str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-        return escapedStr
-      }
       
       terms.forEach(term => {
+
+        // test term
+        // let's reject it if it contains anything other than word characters, spaces, numbers, or hyphens
+        if (!/^[\w\s-]+$/.test(term)) {
+          doc.getLogger().error(`mark-terms: invalid term "${term}"`)
+          return
+        }
+
+        // escape special characters in the term to mark before using in regexp
+        function escapeRegExp(str) {
+          let escapedStr = str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+          return escapedStr
+        }
 
         let re = new RegExp(`(^|\\[|\\s)${escapeRegExp(term)}\\b`)
 
