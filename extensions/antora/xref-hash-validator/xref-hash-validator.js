@@ -145,11 +145,6 @@ module.exports.register = function ({ config }) {
                     return
                 }
 
-                if (!testThisURL.href.startsWith(siteURLRoot)) {
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: %s resolves outside site url %s', testThisURL.href, siteURLRoot)
-                    return
-                }
-
                 // and now for some semgrep or CodeQL suggested checks that I'm not sure are needed
                 const sameOrigin =
                     testThisURL.protocol === siteRootUrl.protocol &&
