@@ -17,12 +17,18 @@ module.exports = function (registry) {
       let marker = doc.getAttribute('page-terms-marker') || '^&reg;^'
 
       let markAdded = []
+
+      // escape special characters in the term to mark before using in regexp
+      function escapeRegExp(str) {
+        let escapedStr = str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+        return escapedStr
+      }
       
       terms.forEach(term => {
 
-        let re = new RegExp(`(^|\\[|\\s)${term}\\b`)
+        let re = new RegExp(`(^|\\[|\\s)${escapeRegExp(term)}\\b`)
 
-        let reMarked = new RegExp(`${term} ${marker}`)
+        let reMarked = new RegExp(`${escapeRegExp(term)} ${escapeRegExp(marker)}`)
 
         doc.findBy().forEach(block => {
 
