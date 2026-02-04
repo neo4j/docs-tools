@@ -20,12 +20,13 @@ asciidoc:
     page-terms-to-mark: Term1, Term2
 ```
 
-Optionally, add the asciidoc to be appended to the first instance of the term:
+Optionally, specify an HTML entity to be appended to the first instance of the term:
 
 ```
 asciidoc:
   attributes:
-    page-terms-marker: &copy;
+    page-terms-marker: '&copy;'
 ```
 
-If you don't add `page-terms-marker`, the default value is used. The default value is `&reg;`
+If you don't specify a value for `page-terms-marker`, the default value is used.
+The default value is `&reg;`
