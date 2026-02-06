@@ -168,6 +168,23 @@
                 ]
             }
         },
+        "infinigraph-edition":{
+            "description": "Function available in Infinigraph Edition only",
+            "labelCategory": "product",
+            "product": "Infinigraph Edition",
+            "displayText": "Infinigraph Edition",
+            "usage": {
+                "page-role": [
+                    ":page-role: infinigraph-edition"
+                ],
+                "role": [
+                    "[role=label--infinigraph-edition]"
+                ],
+                "inline": [
+                    "label:infinigraph-edition[]"
+                ]
+            }
+        },
         "free":{
             "description": "Function available in Free version only",
             "labelCategory": "product",

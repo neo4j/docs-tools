@@ -123,3 +123,12 @@ This section is marked with the Aura Graph Analytics label.
 - List item without label
 
 I like cypher, Cypher, neo4j, and Neo4j.
+
+
+[role=label--infinigraph-edition]
+== Infinigraph Edition label
+
+This section is marked with the Infinigraph Edition label.
+
+- label:infinigraph-edition[] list item with label
+- List item without label
