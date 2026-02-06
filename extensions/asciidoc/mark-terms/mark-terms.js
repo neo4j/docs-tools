@@ -14,8 +14,7 @@ module.exports = function (registry) {
 
       // test terms against regexp attacks
       // let terms = doc.getAttribute('page-terms-to-mark')
-
-      let terms = "Cypher, Neo4j"
+      let terms = doc.getAttribute('page-terms-to-mark')
       if (!/^[\w\s-,]+?$/.test(terms)) {
         doc.getLogger().error(`mark-terms: invalid terms "${terms}"`)
         return
@@ -27,17 +26,16 @@ module.exports = function (registry) {
 
       if (!safeTerms) return
 
-      let markTitles = doc.getAttribute('page-terms-mark-titles')? true : false
-      let devMode = doc.getAttribute('page-terms-dev-mode')
-      
-      let marker = doc.getAttribute('page-terms-marker') || '&reg;'
-
       // test marker
       // marker must be a string that starts with & ends with ;
+      let marker = doc.getAttribute('page-terms-marker') || '&reg;'
       if (!/^&[\w\s-]+?;$/.test(marker)) {
-        doc.getLogger().error(`mark-terms: invalid marker "${marker}"`)
+        doc.getLogger().error(`(mark-terms) marker '${marker}' is not an HTML entity`)
         return
       }
+
+      let markTitles = doc.getAttribute('page-terms-mark-titles')? true : false
+      let devMode = doc.getAttribute('page-terms-dev-mode')
 
       const safeMarker = escapeRegExp(marker)
 
@@ -48,7 +46,7 @@ module.exports = function (registry) {
         // test safeTerm
         // let's reject it if it contains anything other than word characters, spaces, numbers, or hyphens
         if (!/^[\w\s-]+$/.test(safeTerm)) {
-          doc.getLogger().error(`mark-terms: invalid term "${safeTerm}"`)
+          doc.getLogger().error(`(mark-terms): term '${safeTerm}' is not valid. Terms must only contain letters, numbers, spaces, or hyphens.`)
           return
         }
 
@@ -90,7 +88,7 @@ module.exports = function (registry) {
 
           // test each line
           block.lines.forEach((line, i) => {
-            let reggedLine = testLine(line)
+            let reggedLine = testLine(line, i)
             block.lines[i] = reggedLine
           })
 
@@ -111,7 +109,8 @@ module.exports = function (registry) {
 
           // mark the first instance of the term if we find a match
           if (line.includes(safeTerm)) {
-            return line.replace(safeTerm, safelyMarkedTerm)          
+            doc.getLogger().info(`(mark-terms) marked '${safeTerm}'`)
+            return line.replace(safeTerm, safelyMarkedTerm)
           }
 
           // we checked but there was no match
