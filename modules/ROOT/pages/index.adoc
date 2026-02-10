@@ -122,4 +122,13 @@ This section is marked with the Aura Graph Analytics label.
 - label:aura-graph-analytics[] list item with label
 - List item without label
 
-I like cypher, Cypher, neo4j, and Neo4j, but I really like Cypher the most.
+I like cypher, Cypher, neo4j, and Neo4j.
+
+
+[role=label--infinigraph]
+== Infinigraph label
+
+This section is marked with the Infinigraph label.
+
+- label:infinigraph[] list item with label
+- List item without label
