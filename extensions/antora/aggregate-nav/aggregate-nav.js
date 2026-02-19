@@ -1,13 +1,14 @@
 const { posix: path, resolve } = require('path')
 const File = require('vinyl')
 const fs = require('fs')
+const { title } = require('process')
 
 // const { buildNavigation, NavigationCatalog } = require('@antora/navigation-builder')
 
 module.exports.register = function ({ config }) {
 
   const {
-    logLevel = 'info', 
+    logLevel = 'warn', 
     tabNavExtraFile = '.meta/tabNavExtra.json',
     generateNav,
     consumeNav
@@ -59,6 +60,14 @@ module.exports.register = function ({ config }) {
                     const { attributes } = (page.asciidoc = extractAsciiDocMetadata(
                       loadAsciiDoc(page, contentCatalog, asciidocConfig || Object.assign({}, siteAsciiDocConfig, headerOverrides))
                     ))
+
+                    if (attributes['page-tabs']) {
+                      // console.log(`Page ${page.src.path} has page-tabs: ${attributes['page-tabs']}`)
+                    } else {
+                      console.log(`Page ${page.src.path} has no page-tabs`)
+                      logger[logLevel]({ file: page.src, source: page.src.origin }, 'Page %s has no defined page-tabs', page.src.path)
+                      attributes['page-tabs'] = 'unassigned'
+                    }
                     Object.defineProperty(page, 'title', {
                       get () {
                         return this.asciidoc.doctitle
@@ -94,7 +103,7 @@ module.exports.register = function ({ config }) {
 
     })
 
-    this.once('navigationBuilt', ({ contentCatalog, siteCatalog }) => {
+    this.once('navigationBuilt', ({ contentCatalog, siteCatalog, playbook }) => {
 
       // we need to do stuff to the nav for the thing we are building, regardless of whether we are generating
       // an aggregate nav or consuming it
@@ -151,6 +160,12 @@ module.exports.register = function ({ config }) {
                       addTabInfoToNavItem(childItem, component, version, page.asciidoc.attributes['page-tabs'], page.asciidoc.attributes['page-tabs-index'] || 99999)
                       item.pageTabs = item.pageTabs ? item.pageTabs : page.asciidoc.attributes['page-tabs']
                       item.tabIndex = page.asciidoc.attributes['page-tabs-index'] ? parseInt(page.asciidoc.attributes['page-tabs-index']) : 99999
+                      logger.debug({file: page.src, source: page.src.origin },`Navigation item: ${childItem.content} assigned tab "${childItem.pageTabs}"`)
+                    }
+
+                    if (page && page.asciidoc && !page.asciidoc.attributes['page-tabs']) {
+                      logger[logLevel]({file: page.src, source: page.src.origin },`Navigation item: ${childItem.content} added to unassigned tab "${childItem.pageTabs}"`)
+
                     }
                     // console.log(`  ${childItem.content}`)
                   }
@@ -162,13 +177,13 @@ module.exports.register = function ({ config }) {
 
                   // if the page has page-tabs attribute get the tab value
                   if (page && page.asciidoc && page.asciidoc.attributes['page-tabs']) {
-                    // console.log('the page has something - let us add the tab value to the nav item')
+
                     addTabInfoToNavItem(item, component, version, page.asciidoc.attributes['page-tabs'], page.asciidoc.attributes['page-tabs-index'] || 99999)
 
                     // if there's a tab candidate (ie a heading that seems on its own)
                     // give the tab candidate the same tab as this item
                     // this works when we are reading a page in the component that has the section header
-                    // when we go into a page in another component, and this header is in additionalNav, the header is not getting the tab.
+                    // when we go into a page in another component, and this header is in tabNav, the header is not getting the tab.
                     // how do we add it in that case?
                     // how about on this page, we add something to say it has a lead in heading above it that needs to be included?
                     if (tabCandidate && tabCandidate.pageTabs === 'provisional-tab') {
@@ -198,13 +213,13 @@ module.exports.register = function ({ config }) {
       if (generateNav) {
 
 
-        const tabNavExtra = {}
+        const tabNavContents = {}
 
         contentCatalog.getComponents().forEach(({ latest, versions }) => {
           // console.log(versions)
-          // console.log(latest)
+          console.log(`latest.title: ${latest.title}`)
 
-          // after updating all the nav items we need to go through it again and add additionalNav to the relevant pages
+          // after updating all the nav items we need to go through it again and add tabNav to the relevant pages
           // we do this as a second run through because we will probably have updated the page-tabs attribute for some pages
           // because they might have a tab assigned from antora.yml
           // but they are in a section of the nav so they are a child of a parent that has a different tab
@@ -217,12 +232,16 @@ module.exports.register = function ({ config }) {
             for (const nav of navigation) {
               for (const item of nav.items) {
 
-                  // if this item has a pageTabs property we also need to add this item (and its children) to the additionalNav
+                console.log('Processing nav item:', item)
+
+                  // if this item has a pageTabs property we also need to add this item (and its children) to the tabNav
                   // property of all the pages in contentCatalog that have this tab in their page-tabs attribute
                   // but which are not in the same component
 
                   if (item.pageTabs) {
+                    item.componentTitle = latest.title
 
+                    // console.log(item, item.pageTabs)
                     // is this the latest version of the component?
                     // if not, we just skip it
                     if (version !== latest.version && versions.length > 1) {
@@ -231,8 +250,36 @@ module.exports.register = function ({ config }) {
                       continue
                     }
 
-                    tabNavExtra[item.pageTabs] ? tabNavExtra[item.pageTabs].push(item) : tabNavExtra[item.pageTabs] = [item]
+                    if (!tabNavContents[item.pageTabs]) {
+                      tabNavContents[item.pageTabs] = {}
+                    }
+                    
+                    if (!tabNavContents[item.pageTabs][latest.name]) {
+                      tabNavContents[item.pageTabs][latest.name] = {
+                        name: latest.name,
+                        title: latest.title,
+                        tabIndex: item.tabIndex || 99999,
+                        items: []
+                      }
+                      console.log('added a new item to tabNavContents:', item.tabIndex, item.componentTitle)
 
+                    }
+
+                    // if the item has child items we need to find out which have the same tab and add those
+                    if (item.items && item.items.length) {
+                      const childItemsWithSameTab = item.items.filter( (childItem) => childItem.pageTabs === item.pageTabs )
+                      console.log(childItemsWithSameTab.length, 'child items with same tab found for', item.content)
+                      item.items = childItemsWithSameTab
+                    }
+
+                    if (tabNavContents[item.pageTabs]) {
+                      tabNavContents[item.pageTabs][latest.name] ? tabNavContents[item.pageTabs][latest.name].items.push(item) : tabNavContents[item.pageTabs][latest.name] = { items: [item] }
+                    }
+
+                  }
+
+                  if (!item.pageTabs && item.urlType === 'internal') {
+                    console.log(`Nav item "${item.content}" ${item.url ? `(${item.url})` : ''} in ${version}@${component} has no pageTabs - skipping`)
                   }
 
               }
@@ -245,60 +292,104 @@ module.exports.register = function ({ config }) {
 
         })
 
-        const tabNavExtraFileResult = generateTabNavExtraFile(tabNavExtra, tabNavExtraFile)
-        siteCatalog.addFile(tabNavExtraFileResult)
-        logger[logLevel]({   }, 'Tab nav file generated')
+        // console.log(tabNavContents)
+
+        const tabNavContentsFileResult = generateTabNavExtraFile(tabNavContents, tabNavExtraFile)
+        siteCatalog.addFile(tabNavContentsFileResult)
+        logger[logLevel]({file: tabNavExtraFile}, 'Tab nav file generated')
 
       }
 
 
       if (consumeNav) {
 
+        const tabbedNav = {}
+
         // get the generated json file
         // parse it into an object
 
-        const navFromFile = JSON.parse(fs.readFileSync('./tabNavExtra.json'))
+        console.log('Consuming tab nav extra file from:', tabNavExtraFile)
+
+        const navFilePath = path.join((playbook.output.dir || '.'), tabNavExtraFile)
+        const navFromFile = JSON.parse(fs.readFileSync(navFilePath, 'utf8'))
+
+        // for every key in navFromFile
+        // that key is a tab name 
+
+        // order the docsets in each tab by tabIndex
+        for (const tab of Object.keys(navFromFile)) {
+          navFromFile[tab] = Object.fromEntries(
+            Object.entries(navFromFile[tab]).sort(([, a], [, b]) => (a.tabIndex || 99999) - (b.tabIndex || 99999))
+          )
+        }
 
         for (const tab of Object.keys(navFromFile)) {
 
-          // loop thrugh the object
-          // for each key, add that key's items to pages that have a pageTabs that matches the key
+          // for every key in the tab name we have the name of a docset
+          // the key also has items
+          // the items are the nav pages for that tab
+          console.log(`Processing nav items for tab "${tab}"`)
+          for (const component of Object.keys(navFromFile[tab])) {
+            console.log(` - component: ${component} has ${navFromFile[tab][component].items.length} nav items`)
+            console.log(`   - title: ${navFromFile[tab][component].title}`)
+            // console.log(' I need to add the items')
+            // console.log(navFromFile[tab][component].items)
+            tabbedNav[tab] = tabbedNav[tab] || {items: []}
+            tabbedNav[tab].items.push(
+              // ...tabbedNav[tab] && tabbedNav[tab].items ? [... tabbedNav[tab].items] : [],
+                {
+                  content: navFromFile[tab][component].title,
+                  tabIndex: navFromFile[tab][component].tabIndex || 99999,
+                  component: component,
+                  componentTitle: navFromFile[tab][component].title,
+                  componentHeader: true,
+                  items: [...navFromFile[tab][component].items]
+                },
+            )
+            // tabbedNav[tab].items[0].items.push(...navFromFile[tab][component].items)
+            // console.log(tabbedNav[tab])
+          }
+
+          console.log(tabbedNav[tab])
 
           const pagesWithThisTab = contentCatalog
             .findBy({ family: 'page' })
             .filter((page) => page.asciidoc && page.asciidoc.attributes['page-tabs'] && page.asciidoc.attributes['page-tabs'] === tab )
 
-          for (const item of navFromFile[tab]) {
+          for (const page of pagesWithThisTab) {
 
-            for (const page of pagesWithThisTab) {
-              // only add this nav item to the additionalNavigationPages if the page is in a different component
-              if (page.src.component !== item.component) {
-                page.additionalNav = page.additionalNav || [
-                  {
-                    items: [],
-                    root: true,
-                    order: 0
-                  }
-                ]
+            // console.log(` - Adding nav items to page ${page.src.path} (${page.src.component})`)
 
-                // does the page have a navheading (ie a section header nav item)
-                // if so, we need to ensure that is added to the additionalNav too
-                // if (pageForThisItem && pageForThisItem.navHeading) {
-                  // console.log(` - page ${page.src.path} has a navHeading - ensure it's in additionalNav`)
-                  // page.additionalNav[0].items.push(pageForThisItem.navHeading)
-                // }
-              
-                page.additionalNav[0].items.push({
-                    content: item.content,
-                    items: item.items || [],
-                    url: item.url,
-                    urlType: item.urlType,
-                    pageTabs: item.pageTabs,
-                    tabIndex: item.tabIndex
-                })
+            for (const item of tabbedNav[tab].items) {
 
+              // console.log(`   - adding nav item ${item.content} (${item.url}) to tabNav of page ${page.src.path}`)
+              page.tabNav = page.tabNav || [
+                {
+                  items: [],
+                  root: true,
+                  order: 0
+                }
+              ]
 
-              }
+              // does the page have a navheading (ie a section header nav item)
+              // if so, we need to ensure that is added to the tabNav too
+              // if (pageForThisItem && pageForThisItem.navHeading) {
+                // console.log(` - page ${page.src.path} has a navHeading - ensure it's in tabNav`)
+                // page.tabNav[0].items.push(pageForThisItem.navHeading)
+              // }
+            
+              page.tabNav[0].items.push({
+                  content: item.content,
+                  items: item.items || [],
+                  url: item.url,
+                  urlType: item.urlType,
+                  pageTabs: item.pageTabs,
+                  tabIndex: item.tabIndex,
+                  component: item.component,
+                  componentTitle: item.componentTitle,
+                  componentHeader: item.componentHeader || false
+              })
+
 
             }
 
@@ -307,19 +398,24 @@ module.exports.register = function ({ config }) {
 
       }
 
-      // for every page that has page.additionalNav
-      // turn the additionalNavigationPages into a string that can be added as a page attribute
+      // for every page that has page.tabNav
+      // turn the tabNavigationPages into a string that can be added as a page attribute
       // maybe this should be stored as an object that the ui bundle can access?
       // could it be something in sitecatalog?
       // or written to file? (like we do with .meta/pageList)
-      const pages = contentCatalog.getFiles().filter((f) => f.additionalNav && f.additionalNav.length > 0)
+      const pages = contentCatalog.getFiles().filter((f) => f.tabNav && f.tabNav.length > 0)
       for (const page of pages) {
         // console.log('after navigationBuilt:')
-        // console.log(page.additionalNav)
-        const additionalNavString = JSON.stringify(page.additionalNav)
-        page.asciidoc.attributes['page-additionalNav'] = additionalNavString
-        // console.log(`Page ${page.src.path} has additionalNav:`)
-        // console.log(page.asciidoc.attributes['page-additionalNav'])
+        // console.log(page.src.path)
+        // console.log(page.tabNav)
+        for (const navItem of page.tabNav) {
+          // console.log(navItem)
+          // console.log(` - ${navItem.content} (${navItem.url}) [tab: ${navItem.pageTabs}]`)
+        }
+        const tabNavString = JSON.stringify(page.tabNav)
+        page.asciidoc.attributes['page-tabNav'] = tabNavString
+        // console.log(`Page ${page.src.path} has tabNav:`)
+        // console.log(page.asciidoc.attributes['page-tabNav'])
       }
 
 
@@ -364,13 +460,13 @@ module.exports.register = function ({ config }) {
       // for each value in the tabs array
       // find all the nav items in this component and version that have that tav
       // and for every page in the contentCatalog that has that tab in page-tabs
-      // add these navitmes as additionalNavigationPages
+      // add these navitmes as tabNavigationPages
 
     })
 
     // this.once('navigationBuilt', ({ }) => {
 
-    //     // add a file.additionalNavigationPages property to each file in the contentCatalog
+    //     // add a file.tabNavigationPages property to each file in the contentCatalog
     //     // we can add this now, before the contentCatalog object is locked
     //     // we can modify its values after the documentsConverted event
     //     const { contentCatalog } = this.getVariables()
@@ -395,21 +491,21 @@ module.exports.register = function ({ config }) {
 
     // this.once('pagesComposed', ({ contentCatalog }) => {
 
-    //   // let's just quickly go through the contentCatalog and output every page that has additionalNavigationPages
-    //   const pages = contentCatalog.getFiles().filter((f) => f.additionalNavigationPages && f.additionalNavigationPages.length > 0)
+    //   // let's just quickly go through the contentCatalog and output every page that has tabNavigationPages
+    //   const pages = contentCatalog.getFiles().filter((f) => f.tabNavigationPages && f.tabNavigationPages.length > 0)
     //   pages.forEach( (page) => {
 
     //     console.log('adding nav to page')
-    //     // turn the additionalNavigationPages into a string that can be added as a page attribute
-    //     const additionalNavString = JSON.stringify(page.additionalNavigationPages)
-    //     page.asciidoc.attributes['additional-navigation-pages'] = additionalNavString
+    //     // turn the tabNavigationPages into a string that can be added as a page attribute
+    //     const tabNavString = JSON.stringify(page.tabNavigationPages)
+    //     page.asciidoc.attributes['additional-navigation-pages'] = tabNavString
 
     //     console.log(page.asciidoc.attributes)
 
 
 
-    //     console.log(`Page ${page.src.path} has additionalNavigationPages:`)
-    //     page.additionalNavigationPages.forEach( (navItem) => {
+    //     console.log(`Page ${page.src.path} has tabNavigationPages:`)
+    //     page.tabNavigationPages.forEach( (navItem) => {
     //       console.log(` - ${navItem.content} (${navItem.url}) [tab: ${navItem.pageTabs}]`)
     //       if (navItem.items && navItem.items.length > 0) navItem.items.forEach( (childItem) => {
     //         console.log(`    - ${childItem.content} (${childItem.url}) [tab: ${childItem.pageTabs}]`)
