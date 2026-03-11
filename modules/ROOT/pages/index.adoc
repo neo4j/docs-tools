@@ -22,6 +22,31 @@ Testing the `new` label:
 - with valid alternative text: label:new-2025.11[Added in 2025.11].
 - versionless: label:new[Added].
 
+
+[[mark-terms-test]]
+== Test the mark terms extension
+
+Lorem ipsum
+
+
+== Section containing xrefs to another section
+
+For more information, see <<mark-terms-test>>
+
+For this next link we are going to use a marked term in the link text.
+For more information, see <<Cypher>>
+In the same paragraph, to verify that we only mark the first usage, this link goes to a section where the ID is a marked term: <<Cypher>>.
+And this is just a plain text instance of the term Cypher.
+
+We can also test links where the link text is specified, for example <<Cypher, test term>>.
+
+
+[[Cypher]]
+== The ID of this section is Cypher
+
+Lorem ipsum dolor sit etc.
+
+
 [role=label--enterprise-edition]
 == A table with footnote
 
