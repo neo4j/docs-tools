@@ -107,9 +107,17 @@ module.exports = function (registry) {
             return line
           }
 
+          // handle xref shorthand <<Term>> → <<Term, markedTerm>> to preserve the reference target
+          if (line.includes(`<<${safeTerm}>>`)) {
+            doc.getLogger().info(`(mark-terms) marked '${safeTerm}'`)
+            markAdded.push(safeTerm)
+            return line.replace(`<<${safeTerm}>>`, `<<${safeTerm}, ${safelyMarkedTerm}>>`)
+          }
+
           // mark the first instance of the term if we find a match
           if (line.includes(safeTerm)) {
             doc.getLogger().info(`(mark-terms) marked '${safeTerm}'`)
+            markAdded.push(safeTerm)
             return line.replace(safeTerm, safelyMarkedTerm)
           }
 
