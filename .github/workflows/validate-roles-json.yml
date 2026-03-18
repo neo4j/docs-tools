@@ -22,10 +22,10 @@ jobs:
       with:
         sparse-checkout: ./extensions/antora/roles-labels
     
-    - name: Use Node.js version 20
+    - name: Use Node.js version 24
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24
 
     - name: Install dependencies
       run: npm install -D
