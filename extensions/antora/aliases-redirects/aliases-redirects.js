@@ -48,7 +48,7 @@ module.exports.register = function ({ config }) {
       const relSrc = alias.rel.src
       if (aliasByUrl.has(url)) {
         const existingRelSrc = aliasByUrl.get(url).rel.src
-        logger.warn(
+        logger[aliasLogLevel](
           { file: relSrc, source: relSrc.origin },
           'Duplicate alias URL %s — also defined in %s',
           url,
