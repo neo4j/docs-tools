@@ -1,5 +1,6 @@
 const { posix: path } = require('path')
 const File = require('vinyl')
+const ENCODED_SPACE_RX = /%20/g
 
 module.exports.register = function ({ config }) {
 
@@ -39,6 +40,32 @@ module.exports.register = function ({ config }) {
     const { contentCatalog } = this.getVariables()
 
     const allAliases = contentCatalog.findBy({ family: 'alias' })
+
+    // Validate aliases early
+    const aliasByUrl = new Map()
+    allAliases.forEach((alias) => {
+      const url = alias.pub.url
+      const relSrc = alias.rel.src
+      if (aliasByUrl.has(url)) {
+        const existingRelSrc = aliasByUrl.get(url).rel.src
+        logger.warn(
+          { file: relSrc, source: relSrc.origin },
+          'Duplicate alias URL %s — also defined in %s',
+          url,
+          existingRelSrc.path
+        )
+      } else {
+        aliasByUrl.set(url, alias)
+      }
+      if (url.includes('.adoc%20')) {
+        logger.error(
+          { file: relSrc, source: relSrc.origin },
+          'Alias in %s appears malformed. Check for a missing comma between aliases in the source file: %s',
+          relSrc.path,
+          url
+        )
+      }
+    })
 
     contentCatalog.getComponents().forEach(({ name, versions }) => {
 
