@@ -74,7 +74,7 @@ A footnote that is not in a table footnote:[Footnote not in a table.]
 == Another table with footnote
 
 .Table with footnotes
-[options="header, footer", cols="5,5,3,3,3"]
+[options="header", cols="5,5,3,3,3"]
 |===
 | Col 1
 | Col 2
