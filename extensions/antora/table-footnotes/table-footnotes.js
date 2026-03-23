@@ -32,16 +32,18 @@ module.exports.register = function ({ config }) {
             const logLevel = file.asciidoc.attributes['suppress-table-footnote-messages'] ? 'debug' : (file.asciidoc.attributes['table-footnotes-custom-log-level'] || defaultLogLevel)
             
             tables.forEach( (table) => {
-                const tableFootnotes = table.querySelectorAll('tbody a.footnote')
+                const tableFootnotes = table.querySelectorAll('a.footnote')
                 if (tableFootnotes.length === 0) return
 
                 // Get the number of columns in the table for the footnotes colspan
                 const cols = table.querySelectorAll('colgroup col').length
 
                 // create the footer
-                const tFoot = createElement('tfoot')
+                const existingTFoot = table.querySelector('tfoot')
+                const tFoot = existingTFoot || createElement('tfoot')
                 const footnoteRow = createElement('tr')
-                tFoot.firstElementChild.appendChild(footnoteRow)
+                if (!existingTFoot) tFoot.firstElementChild.appendChild(footnoteRow)
+                else tFoot.appendChild(footnoteRow)
                 const footnoteCell = createElement('td', 'tableblock footnote-cell')
                 footnoteCell.firstElementChild.setAttribute('colspan', cols)
 
@@ -57,7 +59,7 @@ module.exports.register = function ({ config }) {
                 })
 
                 footnoteRow.firstElementChild.appendChild(footnoteCell)
-                table.appendChild(tFoot)
+                if (!existingTFoot) table.appendChild(tFoot)
 
                 // log the change
                 logger[logLevel]({ file: file.src, source: file.src.origin }, 
