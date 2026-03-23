@@ -79,17 +79,17 @@ A footnote that is not in a table footnote:[Footnote not in a table.]
 | Col 1
 | Col 2
 | Col 3
-| Col 4
+| Col 4 footnote:1[A footnote in the table header.]
 | Col 5
-
-| Lorem Ipsum footnote:[Footnote 1 in the table.]
-| The footnote footer row cell will span the full table width
-|
-|
-|
 
 | Lorem Ipsum footnote:[Footnote 2 in the table.]
 | The footnote footer row cell will span the full table width
+|
+|
+|
+
+| Lorem Ipsum 
+| The footnote footer row cell will span the full table width footnote:[Footnote 3 in the table.]
 |
 |
 |
