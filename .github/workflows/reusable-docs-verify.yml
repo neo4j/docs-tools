@@ -29,7 +29,7 @@ jobs:
 
     - name: Analyze Antora log
       id: antora-log-check-test
-      uses: neo4j/antora-log-analyzer@c5362639f36edaabe719bfcbed32b7938d834615 # v1
+      uses: neo4j/antora-log-analyzer@v2
       with:
         fail-on-errors: ${{ inputs.failOnErrors }}
         fail-on-warnings: ${{ inputs.failOnWarnings }}
