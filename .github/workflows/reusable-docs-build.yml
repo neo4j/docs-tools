@@ -114,14 +114,14 @@ jobs:
     steps:
 
     # Checkout the whole repo
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       if: ${{ env.DOCS_DIR == '.' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
     # Checkout the docs dir
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       if: ${{ env.DOCS_DIR != '.' }}
       with:
         ref: ${{ env.BUILD_REF }}
@@ -147,7 +147,7 @@ jobs:
         echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
 
     - name: Use Node.js version ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -201,7 +201,7 @@ jobs:
 
     # we could set include-hidden-files to true to include the .etc and .meta dirs
     - name: Upload HTML artifact
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: docs
         path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}
@@ -209,7 +209,7 @@ jobs:
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: antora-log
         path: ${{ env.DOCS_DIR }}/build/log
@@ -218,7 +218,7 @@ jobs:
     - name: Upload Page List artifact
       id: page-list-artifact
       if: ${{ inputs.page-list }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: page-list
         path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}/.meta/pageList
@@ -229,7 +229,7 @@ jobs:
     - name: Upload Redirects artifact
       id: redirects-artifact
       if: ${{ !contains(inputs.antora-extensions-exclude, '@neo4j-antora/aliases-redirects') }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: redirects
         path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}/.etc/**

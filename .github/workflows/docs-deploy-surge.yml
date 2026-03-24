@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: "Download built documentation"
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           RUN_ID: ${{ github.event.workflow_run.id }}
           ARTIFACT_DIR: ${{ runner.temp }}/artifacts
@@ -150,7 +150,7 @@ jobs:
           deployurl=$ORG-$REPO-$DEPLOYID.surge.sh
           echo "deploy-url=$deployurl" >> $GITHUB_OUTPUT
       
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: lts/*
 
