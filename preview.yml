@@ -27,7 +27,7 @@ output:
 
 antora:
   extensions:
-  # - "./extensions/antora/table-footnotes"
+  - "./extensions/antora/table-footnotes"
   - "./extensions/antora/roles-labels"
 
 asciidoc:
