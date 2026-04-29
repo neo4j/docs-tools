@@ -35,8 +35,12 @@ module.exports.register = function ({ config }) {
                 const tableFootnotes = table.querySelectorAll('a.footnote')
                 if (tableFootnotes.length === 0) return
 
+                const admonTable = table.parentNode.classList.contains('admonitionblock')
+
                 // Get the number of columns in the table for the footnotes colspan
-                const cols = table.querySelectorAll('colgroup col').length
+                const cols = admonTable
+                    ? '2'
+                    : table.querySelectorAll('colgroup col').length
 
                 // create the footer
                 const existingTFoot = table.querySelector('tfoot')
@@ -46,6 +50,11 @@ module.exports.register = function ({ config }) {
                 else tFoot.appendChild(footnoteRow)
                 const footnoteCell = createElement('td', 'tableblock footnote-cell')
                 footnoteCell.firstElementChild.setAttribute('colspan', cols)
+
+                if (admonTable) {
+                    const contentClasses = table.querySelector('td.content').classList.value
+                    contentClasses.forEach(cls => footnoteCell.firstElementChild.classList.add(cls))
+                }
 
                 // go through all the footnotes in the table
                 // for each one, find the matching footnote in the footnotes div

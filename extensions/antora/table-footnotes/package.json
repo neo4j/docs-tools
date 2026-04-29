@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/table-footnotes",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Move table footnotes from the end of a page to a footer row in the table",
   "main": "table-footnotes.js",
   "scripts": {
