@@ -5,6 +5,47 @@
 Use these docs to test workflows and extensions.
 
 
+== Admonition with footnote
+
+Admonitions are rendered as tables.
+The table-footnotes extension needs to be able to handle that.
+
+[NOTE]
+====
+This is a note with some paragraphs.
+
+This paragraph contains a footnote that needs to be rendered footnote:admonfoot[Footnote 1].
+====
+
+
+== Admonition with table, with footnotes
+
+What if the admonition contains a table, and the table itself contains footnotes?
+
+[NOTE]
+====
+Table inside a table?
+
+.Table with footnotes
+[options="header", cols="5,10"]
+|===
+| Col 1
+| Col 2
+
+| Lorem Ipsum footnote:[Footnote 1 in the table.]
+| The footnote footer row cell will span the full table width
+
+| Lorem Ipsum footnote:[Footnote 2 in the table.]
+| The footnote footer row cell will span the full table width
+
+|===
+
+====
+
+== Admonition with table, with footnotes
+
+[NOTE]
+
 == Include test
 
 include::partial$include-target.adoc[]
