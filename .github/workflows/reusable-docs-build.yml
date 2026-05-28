@@ -181,7 +181,53 @@ jobs:
 
     - name: Run package script
       working-directory: ${{ env.DOCS_DIR }}
-      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+      run: |
+        echo "::group::Pre-run environment"
+        node --version
+        npm --version
+        which antora || echo "antora not on PATH"
+        npx antora --version || echo "npx antora --version failed: $?"
+        echo "pwd: $(pwd)"
+        echo "--- ls -la ---"
+        ls -la
+        echo "--- ls -la build/ (if exists) ---"
+        ls -la build/ 2>&1 || true
+        echo "::endgroup::"
+
+        echo "::group::Running npm script with set -x"
+        set -x
+        mkdir -p build/log
+        npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK > build/log/stdout.txt 2> build/log/stderr.txt
+        rc=$?
+        set +x
+        echo "::endgroup::"
+
+        echo "::group::Exit code"
+        echo "npm run exit code: $rc"
+        echo "::endgroup::"
+
+        echo "::group::Captured stdout"
+        cat build/log/stdout.txt || echo "(no stdout.txt)"
+        echo "::endgroup::"
+
+        echo "::group::Captured stderr"
+        cat build/log/stderr.txt || echo "(no stderr.txt)"
+        echo "::endgroup::"
+
+        echo "::group::Post-run build/ contents"
+        find build -maxdepth 4 -print 2>&1 || echo "(no build dir)"
+        echo "::endgroup::"
+
+        echo "::group::Antora log file"
+        if [ -f build/log/log.json ]; then
+          echo "size: $(wc -c < build/log/log.json) bytes"
+          cat build/log/log.json
+        else
+          echo "(no log.json)"
+        fi
+        echo "::endgroup::"
+
+        exit $rc
 
     - name: Get the dir that contains the HTML
       working-directory: ${{ env.DOCS_DIR }}
