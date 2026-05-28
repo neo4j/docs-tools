@@ -1,6 +1,7 @@
 = Docs tools
 :page-aliases: old-docs-tools.adoc
 :page-role: enterprise-edition
+:description: the index page
 
 Use these docs to test workflows and extensions.
 
