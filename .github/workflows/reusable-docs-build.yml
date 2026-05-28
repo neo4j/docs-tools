@@ -194,9 +194,25 @@ jobs:
         ls -la build/ 2>&1 || true
         echo "::endgroup::"
 
+        echo "::group::Direct antora invocation (no npm run) — pretty to stdout"
+        mkdir -p build/log
+        set -x
+        npx antora --stacktrace --fetch preview.yml --log-format=pretty --log-level=all --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK > build/log/direct-stdout.txt 2> build/log/direct-stderr.txt
+        direct_rc=$?
+        set +x
+        echo "direct exit code: $direct_rc"
+        echo "--- direct stdout (first 100 lines) ---"
+        head -100 build/log/direct-stdout.txt
+        echo "--- direct stderr (first 100 lines) ---"
+        head -100 build/log/direct-stderr.txt
+        echo "::endgroup::"
+
+        # clean before second attempt so we don't see stale state
+        rm -rf build/site build/log/log.json
+        mkdir -p build/log
+
         echo "::group::Running npm script with set -x"
         set -x
-        mkdir -p build/log
         npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK > build/log/stdout.txt 2> build/log/stderr.txt
         rc=$?
         set +x
