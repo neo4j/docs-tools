@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: '24'
+      antora-version:
+        description: 'The Antora version to install'
+        required: false
+        type: string
+        default: '3.1.15'
       package-script:
         description: 'The name of the script to run in package.json '
         type: string
@@ -99,6 +104,7 @@ jobs:
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       NODE_VERSION: ${{ inputs.node-version }}
+      ANTORA_VERSION: ${{ inputs.antora-version }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
@@ -173,7 +179,7 @@ jobs:
         # Ensure correct version of Antora
         printf "\n\n<!---- Ensure correct version of Antora -->"
         npm uninstall @antora/cli @antora/site-generator-default
-        npm install antora@3.1.14
+        npm install antora@$ANTORA_VERSION
         
         # List installed packages
         printf "\n\n<!---- Installed packages -->\n"
