@@ -26,7 +26,6 @@ jobs:
           ./extensions/antora/selector-labels
           ./extensions/antora/table-footnotes
           ./extensions/antora/xref-hash-validator
-          ./extensions/asciidoc/mark-terms
           '
 
   # Parse the json log output from the HTML build, and output warnings and errors as annotations
