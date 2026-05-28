@@ -173,7 +173,7 @@ jobs:
         # Ensure correct version of Antora
         printf "\n\n<!---- Ensure correct version of Antora -->"
         npm uninstall @antora/cli @antora/site-generator-default
-        npm install antora@3.1.14
+        npm install antora@3.1.15
         
         # List installed packages
         printf "\n\n<!---- Installed packages -->\n"
