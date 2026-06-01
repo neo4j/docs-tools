@@ -36,6 +36,10 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'verify:preview'
+      publish-target:
+        description: 'The eventual publish target for this content: "staging" or "prod"'
+        type: string
+        default: 'staging'
       antora-attributes:
         description: 'Antora attributes to pass to the build script'
         required: false
@@ -110,6 +114,10 @@ jobs:
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
+      DOCS_URL: >-
+        ${{ inputs.publish-target == 'prod'
+            && '${{ secrets.DOCS_PROD_URL }}'
+            || '${{ secrets.DOCS_STAGING_URL }}' }}
       DOCS_EMIT_LOCAL_MANIFEST: ${{ inputs.package-script == 'verify:preview' && '1' || '' }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
       ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
