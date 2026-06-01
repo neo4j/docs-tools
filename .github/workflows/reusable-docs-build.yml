@@ -116,8 +116,8 @@ jobs:
       SITE_DIR: ${{ inputs.site-dir }}
       DOCS_URL: >-
         ${{ inputs.publish-target == 'prod'
-            && '${{ secrets.DOCS_PROD_URL }}'
-            || '${{ secrets.DOCS_STAGING_URL }}' }}
+            && 'https://neo4j.com/docs'
+            || secrets.DOCS_STAGING_URL }}
       DOCS_EMIT_LOCAL_MANIFEST: ${{ inputs.package-script == 'verify:preview' && '1' || '' }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
       ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
