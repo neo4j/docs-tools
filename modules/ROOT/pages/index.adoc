@@ -5,21 +5,9 @@
 Use these docs to test workflows and extensions.
 
 
-== table footnotes
+== Verify table footnotes
 
-.JSON format log entries for log type `query`
-[cols="2m,3a", options="header"]
-|===
-| Name
-| Description
-
-| authenticatedUser
-| The username footnote:[simple footnote]
-
-| authenticatedUser
-| The username footnote:[simple footnote]
-
-|===
+A bug was found where footnotes were not handled correctly in cells where asciidoc format was specified.
 
 .JSON format log entries for log type `query`
 [cols="2m,3a", options="header"]
