@@ -5,6 +5,37 @@
 Use these docs to test workflows and extensions.
 
 
+== table footnotes
+
+.JSON format log entries for log type `query`
+[cols="2m,3a", options="header"]
+|===
+| Name
+| Description
+
+| authenticatedUser
+| The username footnote:[simple footnote]
+
+| authenticatedUser
+| The username footnote:[simple footnote]
+
+|===
+
+.JSON format log entries for log type `query`
+[cols="2m,3a", options="header"]
+|===
+| Name
+| Description
+
+| authenticatedUser
+| The username footnote:[simple footnote]
+
+| authenticatedUser
+| The username footnote:[simple footnote]
+
+|===
+
+
 == Admonition with footnote
 
 Admonitions are rendered as tables.
