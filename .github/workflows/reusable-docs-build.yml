@@ -194,9 +194,45 @@ jobs:
         printf "\n\n<!---- Installed packages -->\n"
         npm list
 
+    # Derive the --url override that antora should use, so the build's
+    # absolute URLs (canonical, og tags, etc.) match where the content will
+    # actually live. Three cases:
+    #   - PR build (deploy-id != 0) → preview subdomain, pattern
+    #     <org>-<repo>-<deploy-id>.<vars.DOCS_PREVIEW_HOST> (the org var
+    #     must match what docs-deploy-surge.yml in the calling repo
+    #     templates).
+    #   - Non-PR build targeting staging → use $DOCS_URL (already resolved
+    #     above from inputs.publish-target → vars.DOCS_STAGING_URL).
+    #   - Non-PR build targeting prod → no override; the playbook's baked
+    #     site.url (https://neo4j.com/docs) is correct.
+    # Setting ANTORA_SITE_URL_CLI here means callers don't need to pass
+    # --url through antora-cli-options.
+    - name: Compute --url override
+      if: ${{ inputs.deploy-id != 0 || inputs.publish-target != 'prod' }}
+      env:
+        ORG: ${{ github.event.repository.owner.login }}
+        REPO: ${{ github.event.repository.name }}
+        DEPLOYID: ${{ inputs.deploy-id }}
+        # Org-level variable; e.g. "surge.sh". Set in Neo4j org → Settings →
+        # Actions → Variables. Required when building PR previews.
+        PREVIEW_HOST: ${{ vars.DOCS_PREVIEW_HOST }}
+      run: |
+        if [ "$DEPLOYID" != "0" ]; then
+          if [ -z "$PREVIEW_HOST" ]; then
+            echo "::warning::vars.DOCS_PREVIEW_HOST is not set at the org level; PR preview HTML will be built with the playbook's site.url instead of the surge subdomain. Canonical/og tags will be wrong but the build itself is unaffected. Set DOCS_PREVIEW_HOST (e.g. 'surge.sh') to fix."
+          else
+            url="https://${ORG}-${REPO}-${DEPLOYID}.${PREVIEW_HOST}"
+          fi
+        else
+          url="$DOCS_URL"
+        fi
+        if [ -n "$url" ]; then
+          echo "ANTORA_SITE_URL_CLI=--url $url" >> "$GITHUB_ENV"
+        fi
+
     - name: Run package script
       working-directory: ${{ env.DOCS_DIR }}
-      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_SITE_URL_CLI $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Get the dir that contains the HTML
       working-directory: ${{ env.DOCS_DIR }}

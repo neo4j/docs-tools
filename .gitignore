@@ -116,3 +116,4 @@ vale/styles/Google
 package-lock.json
 node_modules/
 .env
+.claude
