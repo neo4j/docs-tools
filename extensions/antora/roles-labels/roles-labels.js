@@ -264,6 +264,10 @@ module.exports.register = function ({ config }) {
                 // - discrete headers
                 if (rolesClassList.contains('discrete')) return
 
+                // - the body element: page-role values render as bare classes on <body>,
+                //   but labels belong on headings/blocks, so never build a label div here
+                if (roleDiv.tagName === 'BODY') return
+
                 roles = rolesClassList.value.sort().filter(function (c) {
                     return (c.startsWith('label--') || rolesData.synonyms[c])
                 })
