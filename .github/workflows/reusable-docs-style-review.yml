@@ -84,11 +84,14 @@ jobs:
       # Written to the same file as the review so it surfaces in the one sticky comment.
       - name: Skip note (too many files)
         if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count > inputs.max-files
+        env:
+          CHANGED_COUNT: ${{ steps.changes.outputs.all_changed_files_count }}
+          MAX_FILES: ${{ inputs.max-files }}
         run: |
-          echo "::warning::Skipping automated style review: ${{ steps.changes.outputs.all_changed_files_count }} changed files (limit ${{ inputs.max-files }})."
-          cat > style-review-comment.md <<'EOF'
-          ℹ️ **Automated style-guide review skipped** — this PR changes ${{ steps.changes.outputs.all_changed_files_count }} files (limit ${{ inputs.max-files }}). Request a manual style review if needed.
-          EOF
+          echo "::warning::Skipping automated style review: ${CHANGED_COUNT} changed files (limit ${MAX_FILES})."
+          {
+            printf 'ℹ️ **Automated style-guide review skipped** — this PR changes %s files (limit %s). Request a manual style review if needed.\n' "$CHANGED_COUNT" "$MAX_FILES"
+          } > style-review-comment.md
 
       # docs-tools is public, so the default GITHUB_TOKEN can check it out. Pin to the exact
       # version the caller used (job_workflow_sha) so the prompt matches this workflow.
@@ -104,8 +107,11 @@ jobs:
       - name: Assemble review prompt (base + optional per-repo)
         if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
         run: |
+          # Random delimiter so untrusted per-repo prompt content can't close the
+          # heredoc early and inject extra variables into $GITHUB_ENV.
+          delimiter="PROMPT_EOF_$(openssl rand -hex 12)"
           {
-            echo 'PROMPT<<PROMPT_EOF'
+            echo "PROMPT<<${delimiter}"
             cat .docs-tools/prompts/docs-style-review.md
             if [ -f .github/prompts/docs-style-review.md ]; then
               echo
@@ -113,7 +119,7 @@ jobs:
               echo
               cat .github/prompts/docs-style-review.md
             fi
-            echo 'PROMPT_EOF'
+            echo "${delimiter}"
           } >> "$GITHUB_ENV"
 
       - name: Style review
