@@ -34,9 +34,9 @@ on:
           **/modules/**/pages/**/*.adoc
           **/modules/**/partials/**/*.adoc
     secrets:
-      ANTHROPIC_API_KEY:
+      DOCS_STYLE_GUIDE_ANTHROPIC_API_KEY:
         required: true
-      STYLE_GUIDE_LLMS_URL:
+      DOCS_STYLE_GUIDE_LLMS_URL:
         required: true
       DOCS_PR_COMMENT_TOKEN:
         required: true
@@ -73,8 +73,8 @@ jobs:
       - name: Verify required secrets
         if: steps.changes.outputs.any_changed == 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          STYLE_GUIDE_LLMS_URL: ${{ secrets.STYLE_GUIDE_LLMS_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.DOCS_STYLE_GUIDE_ANTHROPIC_API_KEY }}
+          STYLE_GUIDE_LLMS_URL: ${{ secrets.DOCS_STYLE_GUIDE_LLMS_URL }}
         run: |
           [ -n "$ANTHROPIC_API_KEY" ]    || { echo "::error::ANTHROPIC_API_KEY secret not set"; exit 1; }
           [ -n "$STYLE_GUIDE_LLMS_URL" ] || { echo "::error::STYLE_GUIDE_LLMS_URL secret not set"; exit 1; }
@@ -120,7 +120,7 @@ jobs:
         if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
         uses: anthropics/claude-code-action@d5726de019ec4498aa667642bc3a80fca83aa102 # v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.DOCS_STYLE_GUIDE_ANTHROPIC_API_KEY }}
           # Default GITHUB_TOKEN for the action's GitHub auth, so it does NOT require the
           # Claude GitHub App. Claude only writes a file; the sticky step posts it.
           github_token: ${{ github.token }}
@@ -133,7 +133,7 @@ jobs:
               git diff origin/${{ github.base_ref }}...HEAD -- <file>
 
             Style guide URL (fetch this single file as your reference):
-            ${{ secrets.STYLE_GUIDE_LLMS_URL }}
+            ${{ secrets.DOCS_STYLE_GUIDE_LLMS_URL }}
 
             ${{ env.PROMPT }}
           claude_args: |
