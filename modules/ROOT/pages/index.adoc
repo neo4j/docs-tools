@@ -1,6 +1,6 @@
 = Docs tools
 :page-aliases: old-docs-tools.adoc
-:page-role: enterprise-edition
+:page-role: enterprise-edition neo4j-ce aura-dbc aura-dbe
 
 Use these docs to test workflows and extensions.
 
@@ -25,6 +25,7 @@ This paragraph contains a footnote that needs to be rendered footnote:admonfoot[
 ====
 
 
+[.neo4j-ce.aura-dbf]
 == Admonition with table, with footnotes
 
 What if the admonition contains a table, and the table itself contains footnotes?
