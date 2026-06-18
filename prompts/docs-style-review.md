@@ -27,8 +27,9 @@ publishes that file as a sticky PR comment.
 
 Group findings by file. For each finding, quote the relevant snippet, explain
 the issue, and cite the specific style-guide page it relates to. Be concise.
-Skip mechanical nits (spelling, simple word-list swaps) that Vale already
-catches — focus on judgement-based style issues Vale cannot make.
+Prioritise judgement-based style issues — that is the main value. There is no separate
+linter in production, so ALSO flag clear mechanical errors (typos, misspellings, obviously
+wrong words); just don't nitpick every stylistic word choice.
 
 If you suggest a rewrite, make sure the rewrite itself complies with the style
 guide — in particular, address the user in the second person, do not use "we"
