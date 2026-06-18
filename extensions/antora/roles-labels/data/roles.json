@@ -13,7 +13,15 @@
         "auradb-virtual-dedicated-cloud": "aura-db-dedicated",
         "auradb-professional": "aura-db-professional",
         "aurads-enterprise": "aura-ds-enterprise",
-        "aurads-professional": "aura-ds-professional"        
+        "aurads-professional": "aura-ds-professional",
+        "neo4j-ce": "community-edition",
+        "neo4j-ee": "enterprise-edition",
+        "aura-dbf": "aura-db-free",
+        "aura-dbp": "aura-db-professional",
+        "aura-dbc": "aura-db-business-critical",
+        "aura-dbe": "aura-db-enterprise",
+        "aura-dsp": "aura-ds-professional",
+        "aura-dse": "aura-ds-enterprise"
     },
     "labels": {
         "featured": {
@@ -131,6 +139,23 @@
                 ],
                 "inline": [
                     "label:cypher-25-only[]"
+                ]
+            }
+        },
+        "community-edition":{
+            "description": "Function available in Community Edition",
+            "labelCategory": "product",
+            "product": "Neo4j Community Edition",
+            "displayText": "Community Edition",
+            "usage": {
+                "page-role": [
+                    ":page-role: community-edition"
+                ],
+                "role": [
+                    "[role=label--community-edition]"
+                ],
+                "inline": [
+                    "label:community-edition[]"
                 ]
             }
         },
