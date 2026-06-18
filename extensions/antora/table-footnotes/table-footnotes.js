@@ -25,9 +25,12 @@ module.exports.register = function ({ config }) {
             }
 
             const parsed = parseHTML(file.contents.toString())
-            const footnotesDiv = parsed.getElementById('footnotes')
+            // AsciiDoc-styled table cells are rendered as nested documents, so a single
+            // page can contain several "footnotes" divs: one at the page level plus one
+            // inside each such cell that defines a footnote. Collect them all.
+            const footnotesDivs = parsed.querySelectorAll('[id="footnotes"]')
             const tables = parsed.querySelectorAll('table')
-            if (!footnotesDiv || tables.length === 0) return
+            if (footnotesDivs.length === 0 || tables.length === 0) return
 
             const logLevel = file.asciidoc.attributes['suppress-table-footnote-messages'] ? 'debug' : (file.asciidoc.attributes['table-footnotes-custom-log-level'] || defaultLogLevel)
             
@@ -61,7 +64,9 @@ module.exports.register = function ({ config }) {
                 // the matching footnote will have an ID that matches the href of the footnote link
                 tableFootnotes.forEach( (footnote) => {
                     const footnoteId = footnote.getAttribute('href').replace('#', '')
-                    const matchingFootnote = footnotesDiv.querySelector(`#${footnoteId}`)
+                    // The matching definition may live in any of the page's footnotes divs
+                    // (page-level or inside another cell), so search the whole document.
+                    const matchingFootnote = parsed.querySelector(`#${footnoteId}`)
                     if (!matchingFootnote) return
                     // If we found a matching footnote, we can add it to the td
                     footnoteCell.firstElementChild.appendChild(matchingFootnote)
@@ -77,11 +82,13 @@ module.exports.register = function ({ config }) {
                     table.querySelector('caption') ? table.querySelector('caption').textContent : 'table'
                 )
             })
-            // remove the footnotes div if it contains no footnotes
-            if (footnotesDiv.querySelectorAll('div.footnote').length === 0) {
-                footnotesDiv.remove()
-                logger[logLevel]({ file: file.src, source: file.src.origin }, 'All footnotes moved to table footers: footnote div removed')
-            }
+            // remove any footnotes div that no longer contains footnotes
+            footnotesDivs.forEach( (footnotesDiv) => {
+                if (footnotesDiv.querySelectorAll('div.footnote').length === 0) {
+                    footnotesDiv.remove()
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'All footnotes moved to table footers: footnote div removed')
+                }
+            })
             file.contents = Buffer.from(parsed.toString())
         })
     })
