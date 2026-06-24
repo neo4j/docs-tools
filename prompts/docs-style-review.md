@@ -6,6 +6,10 @@ Review ONLY the changed AsciiDoc pages and partials listed under "Context"
 above, and focus on the ADDED or CHANGED lines (use the `git diff` command
 shown there). Do not comment on pre-existing text outside the diff.
 
+Ignore AsciiDoc comments — single-line comments starting with `//` and block
+comments delimited by `////`. They are not published, so do not review or flag
+their content even when they appear in the diff.
+
 ## Reference: the style guide
 Fetch the consolidated style guide from the URL given under "Context" above —
 it is a single file containing the entire style guide. Use it as your reference,
