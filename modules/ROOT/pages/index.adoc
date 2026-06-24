@@ -231,4 +231,4 @@ This section is marked with the Infinigraph label.
 == Breaking change label (with version)
 
 === Changes
-- label:breaking-2026.06[] This single feature is a breaking change.
+- label:breaking[Breaking change in 2026.01] This single feature is a breaking change.
