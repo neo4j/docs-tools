@@ -1190,6 +1190,22 @@
                 ]
             },
             "notes": "This label is for internal documentation purposes only and should not appear in published docs."
+        },
+        "breaking":{
+            "description": "Introduces a breaking change",
+            "labelCategory": "version",
+            "displayText": "Breaking change",
+            "usage": {
+                "page-role": [
+                    ":page-role: breaking"
+                ],
+                "role": [
+                    "[role=label--breaking]"
+                ],
+                "inline": [
+                    "label:breaking[]"
+                ]
+            }
         }
     }
 }
