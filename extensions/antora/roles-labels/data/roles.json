@@ -1194,6 +1194,25 @@
         "breaking":{
             "description": "Introduces a breaking change",
             "labelCategory": "version",
+            "canBeVersionless": true,
+            "displayText": "Breaking change",
+            "eventOrder": 1,
+            "usage": {
+                "page-role": [
+                    ":page-role: breaking-2026.01"
+                ],
+                "role": [
+                    "[role=label--breaking-2026.01]"
+                ],
+                "inline": [
+                    "label:breaking[Breaking change in 2026.01]"
+                ]
+            },
+            "notes": "To add a 'Breaking' role without a version, use the 'breaking-versionless' role"
+        },
+        "breaking-versionless":{
+            "description": "Introduces a breaking change without a specified version",
+            "labelCategory": "version",
             "displayText": "Breaking change",
             "usage": {
                 "page-role": [
