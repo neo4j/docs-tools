@@ -1,0 +1,52 @@
+{
+  "name": "@neo4j-antora/tabbed-nav",
+  "version": "0.2.0-beta.6",
+  "description": "Antora extension, Express middleware, S3 aggregator, and turnkey dev server for tabbed cross-docset navigation across Neo4j docs repos.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./middleware": "./middleware.js",
+    "./aggregate": "./aggregate.js",
+    "./serve": "./serve.js"
+  },
+  "bin": {
+    "tabbed-nav-aggregate": "./aggregate.js",
+    "tabbed-nav-serve": "./serve.js"
+  },
+  "files": [
+    "index.js",
+    "middleware.js",
+    "aggregate.js",
+    "serve.js"
+  ],
+  "keywords": [
+    "antora",
+    "antora-extension",
+    "neo4j",
+    "navigation",
+    "tabs",
+    "docs"
+  ],
+  "author": "Neo4j",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tabbed-nav-poc.git",
+    "directory": "extensions/antora/tabbed-nav"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1053.0",
+    "vinyl": "3.0.1"
+  },
+  "peerDependencies": {
+    "antora": "3.1.14",
+    "express": "5.2.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  }
+}
