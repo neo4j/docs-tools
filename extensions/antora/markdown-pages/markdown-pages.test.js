@@ -60,6 +60,23 @@ test('irregular headerless tables (embedded sub-grid) are kept as HTML, not mang
   assert.match(md, /Arguments/)
 })
 
+// roles-labels nests <div class="labels"> INSIDE the labeled element.
+const LABELED_HEADING = `<article class="doc"><h1 class="page header-label-container">Docs tools<div class="labels"><span class="label content-label label--aura-db-business-critical">AuraDB Business Critical</span><span class="label content-label label--enterprise-edition">Enterprise Edition</span><span class="label content-label label--community-edition">Community Edition</span></div></h1><div class="paragraph"><p>Body.</p></div></article>`
+const LABELED_PARAGRAPH = `<article class="doc"><div class="paragraph has-label"><div class="labels"><span class="label content-label label--draft">Draft</span></div><p>This paragraph is marked as draft.</p></div></article>`
+
+test('merges labels onto the heading line as inline (`label` ...) badges', () => {
+  const md = htmlToMarkdown(LABELED_HEADING, { title: 'Docs tools' })
+  assert.match(md, /^# Docs tools \(`AuraDB Business Critical` `Enterprise Edition` `Community Edition`\)$/m)
+  assert.doesNotMatch(md, /CriticalEnterprise/) // the reported concatenation bug
+})
+
+test('renders labels on non-heading blocks (paragraph) as bare badges, no parens', () => {
+  const md = htmlToMarkdown(LABELED_PARAGRAPH, {})
+  assert.match(md, /`Draft`/)
+  assert.doesNotMatch(md, /\(`Draft`\)/) // parentheses are heading-only
+  assert.match(md, /This paragraph is marked as draft\./)
+})
+
 test('absolutizes relative links against the page base URL', () => {
   const md = htmlToMarkdown(ARTICLE, { baseUrl: 'https://neo4j.com/docs/comp/1/page/' })
   assert.match(md, /\(https:\/\/neo4j\.com\/docs\/comp\/1\/other\/\)/)

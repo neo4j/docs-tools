@@ -130,11 +130,33 @@ function absolutize (root, baseUrl) {
   root.querySelectorAll('img').forEach((el) => fix(el, 'src'))
 }
 
+function escapeHtml (s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// roles-labels emits a `<div class="labels">` *inside* the labeled element (heading,
+// paragraph, example, table cell, ...) with a `<span class="label ...">` per label.
+// Rewrite each in place to inline-code badges so they attach to their block and don't
+// concatenate. On headings the badges are wrapped in parentheses after the title text
+// (`## Heading (`label`)`); on other blocks they render bare on their own line.
+function formatLabels (root) {
+  for (const div of Array.from(root.querySelectorAll('div.labels'))) {
+    const labels = Array.from(div.querySelectorAll('.label')).map((s) => s.textContent.trim()).filter(Boolean)
+    if (!labels.length) { div.remove(); continue }
+    const badges = labels.map((l) => `<code>${escapeHtml(l)}</code>`).join(' ')
+    const parent = div.parentNode
+    const inHeading = parent && /^H[1-6]$/.test((parent.tagName || '').toUpperCase())
+    div.insertAdjacentHTML('afterend', inHeading ? ` (${badges})` : badges)
+    div.remove()
+  }
+}
+
 // Convert a composed page's HTML (or a bare article fragment) to Markdown.
 // Selects the `article.doc` content node when present, so page chrome is excluded.
 function htmlToMarkdown (html, { baseUrl = '', title = '' } = {}) {
   const root = parseHTML(html)
   const article = root.querySelector('article.doc') || root
+  formatLabels(article)
   absolutize(article, baseUrl)
   let md = createTurndown().turndown(article.toString()).trim()
   const firstLine = md.split('\n', 1)[0] || ''
