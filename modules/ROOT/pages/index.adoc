@@ -206,3 +206,17 @@ This section is marked with the Infinigraph label.
 
 - label:infinigraph[] list item with label
 - List item without label
+
+
+[role=label--breaking]
+== Breaking change label (no version)
+
+=== Changes in version X.Y.Z
+- label:breaking[] This single feature is a breaking change.
+
+
+[role=label--breaking-2026.06]
+== Breaking change label (with version)
+
+=== Changes
+- label:breaking[Breaking change in 2026.01] This single feature is a breaking change.
