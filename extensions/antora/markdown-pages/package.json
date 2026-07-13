@@ -1,0 +1,21 @@
+{
+  "name": "@neo4j-antora/markdown-pages",
+  "version": "0.1.0",
+  "description": "Emit a Markdown version of every published page (sibling .md) for LLM consumption",
+  "main": "markdown-pages.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "antora",
+    "markdown",
+    "llms"
+  ],
+  "author": "Neo4j",
+  "license": "MIT",
+  "dependencies": {
+    "node-html-parser": "7.1.0",
+    "turndown": "^7.2.0",
+    "turndown-plugin-gfm": "^1.0.2"
+  }
+}
