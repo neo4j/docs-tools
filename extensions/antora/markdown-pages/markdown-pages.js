@@ -52,7 +52,7 @@ function convertTable (node, td) {
   if (hasHead) {
     const toInline = (cell) => toMd(cell)
       .split('\n').map((s) => s.trim()).filter(Boolean).join(' <br> ')
-      .replace(/\|/g, '\\|')
+      .replace(/[\\|]/g, '\\$&') // escape backslashes and pipes for GFM cells
     const width = Math.max(...rowCells.map((r) => r.length))
     const pad = (cells) => { const a = cells.slice(); while (a.length < width) a.push(' '); return a }
     const mkRow = (cells) => '| ' + pad(cells).join(' | ') + ' |'
@@ -154,11 +154,14 @@ function mdOutPath (p) {
 
 function joinUrl (siteUrl, pubUrl) {
   if (!siteUrl || !pubUrl) return pubUrl || ''
-  return siteUrl.replace(/\/+$/, '') + pubUrl
+  // Strip trailing slashes without a regex (avoids polynomial-regex on untrusted input).
+  let base = siteUrl
+  while (base.endsWith('/')) base = base.slice(0, -1)
+  return base + pubUrl
 }
 
 function frontmatter (title, url) {
-  const esc = (s) => String(s == null ? '' : s).replace(/"/g, '\\"')
+  const esc = (s) => String(s == null ? '' : s).replace(/[\\"]/g, '\\$&')
   const lines = ['---', `title: "${esc(title)}"`]
   if (url) lines.push(`url: "${esc(url)}"`)
   lines.push('---', '', '')
