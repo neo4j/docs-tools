@@ -134,6 +134,29 @@ function escapeHtml (s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+// Asciidoctor `icon:name[]` renders as an icon-font glyph `<i class="fa fa-name">` with no
+// text content. Turndown treats empty elements as blank nodes and drops them (before rule
+// matching), which silently empties e.g. the check marks in capability matrices. Resolve the
+// glyph to text so it survives: map common docs icons to a Unicode symbol, else fall back to
+// the title or the icon name. Run in preprocessing (not a turndown rule) to dodge blank-node
+// handling and so the text is present for both the top-level and nested (table cell) passes.
+function iconText (node) {
+  const cls = node.getAttribute('class') || ''
+  if (/(^|\s|-)fa-check(\s|$)/.test(cls)) return '✓'
+  if (/(^|\s|-)fa-(times|close|xmark|ban)(\s|$)/.test(cls)) return '✗'
+  const title = (node.getAttribute('title') || '').trim()
+  if (title) return title
+  const m = cls.match(/(?:^|\s)fa-([a-z0-9-]+)(?:\s|$)/)
+  return m ? m[1].replace(/-/g, ' ') : ''
+}
+
+function formatIcons (root) {
+  for (const i of Array.from(root.querySelectorAll('i.fa'))) {
+    i.insertAdjacentHTML('afterend', escapeHtml(iconText(i)))
+    i.remove()
+  }
+}
+
 // roles-labels emits a `<div class="labels">` *inside* the labeled element (heading,
 // paragraph, example, table cell, ...) with a `<span class="label ...">` per label.
 // Rewrite each in place to inline-code badges so they attach to their block and don't
@@ -156,6 +179,7 @@ function formatLabels (root) {
 function htmlToMarkdown (html, { baseUrl = '', title = '' } = {}) {
   const root = parseHTML(html)
   const article = root.querySelector('article.doc') || root
+  formatIcons(article)
   formatLabels(article)
   absolutize(article, baseUrl)
   let md = createTurndown().turndown(article.toString()).trim()

@@ -36,6 +36,17 @@ test('renders tables as GFM (cell paragraphs inlined)', () => {
   assert.match(md, /\| one +\| two +\|/)
 })
 
+// Asciidoctor `icon:check[]` -> <i class="fa fa-check"> (no text content).
+const ICON_MATRIX = `<article class="doc"><table class="tableblock frame-all grid-all"><thead><tr><th class="tableblock"><p class="tableblock">Capability</p></th><th class="tableblock"><p class="tableblock">Owner</p></th><th class="tableblock"><p class="tableblock">Member</p></th></tr></thead><tbody>
+<tr><td class="tableblock"><p class="tableblock">List org</p></td><td class="tableblock"><p class="tableblock"><span class="icon"><i class="fa fa-check"></i></span></p></td><td class="tableblock"><p class="tableblock"><span class="icon"><i class="fa fa-times"></i></span></p></td></tr>
+</tbody></table></article>`
+
+test('icon glyphs (icon:check[]/icon:times[]) map to unicode, not empty cells', () => {
+  const md = htmlToMarkdown(ICON_MATRIX, {})
+  assert.match(md, /\| List org +\| ✓ +\| ✗ +\|/)
+  assert.doesNotMatch(md, /\| List org \|  \|  \|/) // the empty-cell data-loss bug
+})
+
 const KV_TABLE = `<article class="doc"><table class="tableblock noheader"><caption class="title">Details</caption><tbody>
 <tr><td class="tableblock"><p class="tableblock"><strong>Syntax</strong></p></td><td class="tableblock" colspan="3"><p class="tableblock"><code>avg(input)</code></p></td></tr>
 <tr><td class="tableblock"><p class="tableblock"><strong>Description</strong></p></td><td class="tableblock" colspan="3"><div class="content"><div class="paragraph"><p>Returns the average.</p></div><div class="paragraph"><p>Second para.</p></div></div></td></tr>
