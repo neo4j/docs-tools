@@ -34,7 +34,7 @@
     "@neo4j-documentation/remote-include": "^1.0.0",
     "antora": "3.1.14",
     "turndown": "7.2.4",
-    "turndown-plugin-gfm": "1.0.2"
+    "turndown-plugin-gfm": "1.0.2",
     "node-html-parser": "9.0.0"
   },
   "devDependencies": {
