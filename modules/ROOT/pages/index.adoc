@@ -5,23 +5,11 @@
 Use these docs to test workflows and extensions.
 
 
-== Verify table footnotes
+== Style check
 
-A bug was found where footnotes were not handled correctly in cells where asciidoc format was specified.
-
-.JSON format log entries for log type `query`
-[cols="2m,3a", options="header"]
-|===
-| Name
-| Description
-
-| authenticatedUser
-| The username footnote:[simple footnote]
-
-| authenticatedUser
-| The username footnote:[simple footnote]
-
-|===
+We need to ensure the behaviour of the style guide checker is absolutely magnificent and the best.
+I don't know whether we check certain usages eg OLPS (in case you don't know, that stands for one line per sentence). Maybe we do, maybe we don't.
+Inter alia, latin phrases should be avoided at all costs.
 
 
 == Admonition with footnote
