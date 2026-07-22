@@ -276,17 +276,11 @@ module.exports.register = function ({ config }) {
 
                   }
 
-                  if (!item.pageTabs && item.urlType === 'internal') {
-                    console.log(`Nav item "${item.content}" ${item.url ? `(${item.url})` : ''} in ${version}@${component} has no pageTabs - skipping`)
-                  }
-
               }
 
             }
 
           })
-
-
 
         })
 
