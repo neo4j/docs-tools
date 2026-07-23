@@ -54,7 +54,7 @@ jobs:
   docs-build:
     name: Generate HTML
     needs: prepare-ref-env
-    uses: neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@v2
+    uses: neo4j/docs-tools/.github/workflows/reusable-docs-build.yml@publish-tabbed-nav
     with:
       package-script: 'verify:publish'
       build-ref: ${{needs.prepare-ref-env.outputs.build-ref}}
