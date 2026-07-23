@@ -145,6 +145,14 @@ jobs:
         sparse-checkout: ${{ env.DOCS_DIR }}
         sparse-checkout-cone-mode: false
 
+    - name: DEBUG secret visibility
+      env:
+        STEP_ENV_SECRET: ${{ secrets.DOCS_PUBLISH_URL }}
+      run: |
+        echo "job-env ANTORA_CLI_OPTIONS length: ${#ANTORA_CLI_OPTIONS}"
+        echo "job-env PUBLISH_URL length: ${#PUBLISH_URL}"
+        echo "step-env STEP_ENV_SECRET length: ${#STEP_ENV_SECRET}"
+
     - name: Remove excluded extensions
       run: |
         for extension in $ANTORA_EXTENSIONS; do
