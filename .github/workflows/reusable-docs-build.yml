@@ -36,6 +36,11 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'verify:preview'
+      publish-env:
+        description: "The publish environment to build docs for: staging or prod"
+        required: false
+        type: string
+        default: 'staging'
       antora-attributes:
         description: 'Antora attributes to pass to the build script'
         required: false
@@ -101,6 +106,10 @@ jobs:
     outputs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
+    environment: 
+      name: ${{ inputs.publish-env }}
+      deployment: false
+
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       NODE_VERSION: ${{ inputs.node-version }}
@@ -110,10 +119,11 @@ jobs:
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
-      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
-      ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
-      ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
-      ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
+      PUBLISH_URL: ${{ secrets.DOCS_PUBLISH_URL }}
+      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', secrets.DOCS_PUBLISH_URL) || '' }}"
+      ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
+      ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
+      ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && ' --extension @neo4j-antora/tabbed-nav@0.2.0-beta.8' || '' }}"
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
 
