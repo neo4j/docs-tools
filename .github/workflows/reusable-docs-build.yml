@@ -119,8 +119,8 @@ jobs:
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
-      PUBLISH_URL: ${{ secrets.DOCS_PUBLISH_URL }}
-      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', secrets.DOCS_PUBLISH_URL) || '' }}"
+      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
+      ANTORA_PUBLISH_URL: "${{ inputs.publish-env == 'staging' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs' }}"
       ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
       ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
       ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
@@ -144,14 +144,6 @@ jobs:
         fetch-depth: ${{ env.FETCH_DEPTH }}
         sparse-checkout: ${{ env.DOCS_DIR }}
         sparse-checkout-cone-mode: false
-
-    - name: DEBUG secret visibility
-      env:
-        STEP_ENV_SECRET: ${{ secrets.DOCS_PUBLISH_URL }}
-      run: |
-        echo "job-env ANTORA_CLI_OPTIONS length: ${#ANTORA_CLI_OPTIONS}"
-        echo "job-env PUBLISH_URL length: ${#PUBLISH_URL}"
-        echo "step-env STEP_ENV_SECRET length: ${#STEP_ENV_SECRET}"
 
     - name: Remove excluded extensions
       run: |
@@ -188,7 +180,7 @@ jobs:
         
         # Ensure a correct version of sitemaps extension
         printf "\n\n<!---- Ensure correct sitemaps extension version -->"
-        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2 @neo4j-antora/tabbed-nav@0.2.0-beta.8
 
         # Update extensions
         printf "\n\n<!---- Update extensions -->"
@@ -205,7 +197,7 @@ jobs:
 
     - name: Run package script
       working-directory: ${{ env.DOCS_DIR }}
-      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL --url $ANTORA_PUBLISH_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Get the dir that contains the HTML
       working-directory: ${{ env.DOCS_DIR }}
