@@ -70,6 +70,11 @@ on:
         required: false
         type: string
         default: 'na'
+      antora-fetch-branches:
+        description: 'Space-separated list of additional branches to fetch (e.g. other versions referenced by a multi-version Antora playbook). Fetched with git before the build, so Antora does not have to rely on its own --fetch (isomorphic-git), which is less reliable for this.'
+        required: false
+        type: string
+        default: ''
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: false
@@ -116,6 +121,7 @@ jobs:
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
+      ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
 
     steps:
 
@@ -132,6 +138,17 @@ jobs:
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
+
+    # fetch any additional branches a multi-version Antora playbook needs, using real git
+    # (more reliable than relying on antora --fetch, which uses isomorphic-git)
+    - name: Fetch additional Antora playbook branches
+      if: ${{ env.ANTORA_FETCH_BRANCHES != '' }}
+      run: |
+        refspecs=()
+        for branch in $ANTORA_FETCH_BRANCHES; do
+          refspecs+=("+refs/heads/${branch}:refs/remotes/origin/${branch}")
+        done
+        git fetch --no-tags --depth=1 origin "${refspecs[@]}"
 
     - name: Remove excluded extensions
       run: |
