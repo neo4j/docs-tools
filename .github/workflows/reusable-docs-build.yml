@@ -132,8 +132,6 @@ jobs:
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
-        # sparse-checkout: ${{ env.DOCS_DIR }}
-        # sparse-checkout-cone-mode: false
 
     - name: Remove excluded extensions
       run: |
