@@ -186,8 +186,20 @@ jobs:
         npm list
 
     - name: Run package script
+      id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
+      continue-on-error: true
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+
+    - name: Print Antora log
+      if: steps.run-package-script.outcome == 'failure'
+      working-directory: ${{ env.DOCS_DIR }}
+      run: |
+        if [ -f build/log/log.json ]; then
+          cat build/log/log.json
+        else
+          echo "No log file found at build/log/log.json"
+        fi
 
     - name: Get the dir that contains the HTML
       working-directory: ${{ env.DOCS_DIR }}
@@ -215,6 +227,7 @@ jobs:
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
+      if: always()
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: antora-log
@@ -242,3 +255,7 @@ jobs:
         if-no-files-found: ignore
         include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}
+
+    - name: Fail job if package script failed
+      if: always() && steps.run-package-script.outcome == 'failure'
+      run: exit 1
