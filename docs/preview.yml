@@ -22,13 +22,13 @@ output:
 
 antora:
   extensions:
-  - "./extensions/antora/table-footnotes"
-  - "./extensions/antora/roles-labels"
+  - "../extensions/antora/table-footnotes"
+  - "../extensions/antora/roles-labels"
 
 asciidoc:
   extensions:
   - "@neo4j-documentation/macros"
-  - "./extensions/asciidoc/mark-terms/mark-terms"
+  - "../extensions/asciidoc/mark-terms/mark-terms"
   attributes:
     page-theme: docs
     page-type: Docs
