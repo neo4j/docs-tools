@@ -8,7 +8,7 @@ content:
   - url: https://@gitlab.com/antora/demo/demo-component-a.git
     branches: HEAD
   - url: ./
-    branches: HEAD
+    branches: [ 'HEAD' , 'test/add-branches' ]
     exclude:
     - '!**/_includes/*'
     - '!**/readme.adoc'
