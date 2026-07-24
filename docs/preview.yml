@@ -5,14 +5,9 @@ site:
 
 content:
   sources:
-  - url: https://@gitlab.com/antora/demo/demo-component-a.git
-    branches: HEAD
-  - url: ./
+  - url: ../
+    start_path: docs
     branches: [ 'HEAD' , 'test/add-branches' ]
-    exclude:
-    - '!**/_includes/*'
-    - '!**/readme.adoc'
-    - '!**/README.adoc'
 
 ui:
   bundle:

@@ -17,6 +17,7 @@ jobs:
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       deploy-id: ${{ github.event.number }}
+      docs-dir: 'docs'
       antora-fetch-branches: 'test/add-branches'
       antora-extensions: '
           ./extensions/antora/aliases-redirects
