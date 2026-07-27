@@ -214,6 +214,10 @@ jobs:
       id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
       continue-on-error: true
+      env:
+        # local-path extensions (e.g. sibling extensions/ dir) are symlinked into node_modules;
+        # without this, Node resolves the symlink's real path and misses hoisted deps like vinyl
+        NODE_OPTIONS: --preserve-symlinks
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Print Antora log
