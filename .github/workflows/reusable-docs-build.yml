@@ -215,9 +215,11 @@ jobs:
       working-directory: ${{ env.DOCS_DIR }}
       continue-on-error: true
       env:
-        # local-path extensions (e.g. sibling extensions/ dir) are symlinked into node_modules;
-        # without this, Node resolves the symlink's real path and misses hoisted deps like vinyl
-        NODE_OPTIONS: --preserve-symlinks
+        # antora requires local-path extensions (e.g. a sibling extensions/ dir) directly by their
+        # real filesystem path, bypassing node_modules resolution entirely. NODE_PATH gives Node an
+        # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
+        # only installed under docs/node_modules.
+        NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Print Antora log
