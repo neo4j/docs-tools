@@ -28,6 +28,7 @@ jobs:
           ./extensions/antora/xref-hash-validator
           ./extensions/asciidoc/mark-terms
           '
+      antora-ui-bundle-url: 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'
 
   # Parse the json log output from the HTML build, and output warnings and errors as annotations
   # Optionally, fail the build if there are warnings or errors
