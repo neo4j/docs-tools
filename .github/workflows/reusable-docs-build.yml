@@ -106,8 +106,12 @@ jobs:
     outputs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
-    environment: 
-      name: ${{ inputs.publish-env }}
+    # Only scope to an environment (and its branch protection rules) for actual
+    # publish builds, which are the only ones that need DOCS_PUBLISH_URL. Ordinary
+    # preview builds (e.g. PR checks) don't need it and shouldn't be blocked by
+    # environment branch-protection rules meant for publishing.
+    environment:
+      name: ${{ inputs.package-script == 'verify:publish' && inputs.publish-env || '' }}
       deployment: false
 
     env:
