@@ -120,7 +120,7 @@ jobs:
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
       ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
-      ANTORA_PUBLISH_URL: "${{ inputs.publish-env == 'staging' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs' }}"
+      ANTORA_PUBLISH_URL: ${{ secrets.DOCS_PUBLISH_URL }}
       ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
       ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
       ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
