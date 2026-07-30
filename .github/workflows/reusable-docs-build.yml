@@ -106,12 +106,12 @@ jobs:
     outputs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
-    # Only scope to an environment (and its branch protection rules) for actual
-    # publish builds, which are the only ones that need DOCS_PUBLISH_URL. Ordinary
-    # preview builds (e.g. PR checks) don't need it and shouldn't be blocked by
-    # environment branch-protection rules meant for publishing.
+    # Always scope to publish-env (defaults to "staging"), not just for verify:publish
+    # builds - preview builds also need to read that environment's DOCS_PUBLISH_URL,
+    # to derive the nav aggregator URL (see DOCS_NAV_URL below). The staging/prod
+    # environments' branch policies allow "*/merge" so PR builds can enter them too.
     environment:
-      name: ${{ inputs.package-script == 'verify:publish' && inputs.publish-env || '' }}
+      name: ${{ inputs.publish-env }}
       deployment: false
 
     env:
@@ -129,6 +129,11 @@ jobs:
       # docs-deploy-surge.yml, which computes the same $ORG-$REPO-$DEPLOYID.surge.sh
       # pattern), so nav links depending on an absolute site URL still resolve.
       ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ format(' --url {0}', inputs.package-script == 'verify:publish' && secrets.DOCS_PUBLISH_URL || format('https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id)) }}"
+      # Always the real published nav aggregator, regardless of package-script - the
+      # tabbed-nav extension merges this build's own locally-generated nav shard into
+      # whatever's already published, so even preview builds should read from there
+      # rather than a not-yet-deployed preview URL.
+      DOCS_NAV_URL: ${{ format('{0}/nav/tabs.json', secrets.DOCS_PUBLISH_URL) }}
       ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
       ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
       ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"

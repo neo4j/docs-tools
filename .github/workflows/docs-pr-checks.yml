@@ -27,6 +27,7 @@ jobs:
           ./extensions/antora/table-footnotes
           ./extensions/antora/xref-hash-validator
           ./extensions/asciidoc/mark-terms
+          @neo4j-antora/tabbed-nav
           '
       antora-ui-bundle-url: 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'
 
