@@ -123,17 +123,17 @@ jobs:
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
-      # Publish builds use the real published URL, org secrets (DOCS_PUBLISH_URL_STAGING /
-      # DOCS_PUBLISH_URL_PROD) picked by publish-env - org-level, not per-repo, since every
-      # repo publishes under the same staging/prod roots. Everything else - including PR
-      # previews - derives the surge.sh URL it's about to be deployed to (see
-      # docs-deploy-surge.yml, which computes the same $ORG-$REPO-$DEPLOYID.surge.sh
-      # pattern), so nav links depending on an absolute site URL still resolve.
-      # The branch is decided purely by package-script - NOT compounded with whether
-      # the secret happens to have a value, so a publish build with a missing secret
-      # fails loudly (empty --url) instead of silently falling back to a fabricated,
-      # never-deployed surge URL.
-      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', inputs.publish-env == 'staging' && secrets.DOCS_PUBLISH_URL_STAGING || secrets.DOCS_PUBLISH_URL_PROD) || format(' --url https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id) }}"
+      # Publish builds use the real published URL. TEMPORARY: hardcoded rather than read
+      # from a secret, because reusable workflows never get the caller's secrets (org,
+      # repo, or environment) unless the caller adds `secrets: inherit` - no caller of
+      # this workflow does, anywhere, so secrets.* has always resolved empty here. See
+      # memory note project_reusable_workflow_secrets_inherit for the proper fix (roll
+      # out secrets: inherit to every caller); deferred since we're only testing in a
+      # sandbox right now. Everything else - including PR previews - derives the surge.sh
+      # URL it's about to be deployed to (see docs-deploy-surge.yml, which computes the
+      # same $ORG-$REPO-$DEPLOYID.surge.sh pattern), so nav links depending on an
+      # absolute site URL still resolve.
+      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', inputs.publish-env == 'staging' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs') || format(' --url https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id) }}"
       ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
       ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
       ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
