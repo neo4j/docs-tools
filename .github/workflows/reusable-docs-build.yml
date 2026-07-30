@@ -123,8 +123,7 @@ jobs:
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
-      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
-      ANTORA_PUBLISH_URL: ${{ secrets.DOCS_PUBLISH_URL }}
+      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', secrets.DOCS_PUBLISH_URL) || '' }}"
       ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
       ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
       ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
@@ -203,7 +202,7 @@ jobs:
       id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
       continue-on-error: true
-      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL --url $ANTORA_PUBLISH_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Print Antora log
       if: steps.run-package-script.outcome == 'failure'
