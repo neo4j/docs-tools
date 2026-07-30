@@ -36,6 +36,11 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'verify:preview'
+      publish-env:
+        description: "The publish environment to build docs for: staging or prod"
+        required: false
+        type: string
+        default: 'staging'
       antora-attributes:
         description: 'Antora attributes to pass to the build script'
         required: false
@@ -101,6 +106,14 @@ jobs:
     outputs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
+    # Only scope to an environment (and its branch protection rules) for actual
+    # publish builds, which are the only ones that need DOCS_PUBLISH_URL. Ordinary
+    # preview builds (e.g. PR checks) don't need it and shouldn't be blocked by
+    # environment branch-protection rules meant for publishing.
+    environment:
+      name: ${{ inputs.package-script == 'verify:publish' && inputs.publish-env || '' }}
+      deployment: false
+
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       NODE_VERSION: ${{ inputs.node-version }}
@@ -110,10 +123,15 @@ jobs:
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
-      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
-      ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
-      ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
-      ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
+      # Publish builds use the real published URL (needed to resolve secrets, which
+      # requires the "publish-env" environment above). Everything else - including
+      # PR previews - derives the surge.sh URL it's about to be deployed to (see
+      # docs-deploy-surge.yml, which computes the same $ORG-$REPO-$DEPLOYID.surge.sh
+      # pattern), so nav links depending on an absolute site URL still resolve.
+      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ format(' --url {0}', inputs.package-script == 'verify:publish' && secrets.DOCS_PUBLISH_URL || format('https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id)) }}"
+      ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
+      ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
+      ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
 
@@ -170,7 +188,7 @@ jobs:
         
         # Ensure a correct version of sitemaps extension
         printf "\n\n<!---- Ensure correct sitemaps extension version -->"
-        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2 @neo4j-antora/tabbed-nav@0.2.0-beta.8
 
         # Update extensions
         printf "\n\n<!---- Update extensions -->"
