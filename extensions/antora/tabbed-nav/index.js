@@ -421,7 +421,7 @@ module.exports.register = function ({ config }) {
               const normalItems = versionData.items.filter(item => !item.navPromote && (item.url || item.content || (item.items && item.items.length)))
 
               for (const item of promotedItems) {
-                const sectionTitle = item.content ? item.content.replace(/<[^>]+>/g, '').trim() : versionData.title
+                const sectionTitle = item.content ? stripTags(item.content).trim() : versionData.title
                 tabNav[0].items.push({
                   content: sectionTitle,
                   tabIndex: item.tabIndex || versionData.tabIndex || 99999,
@@ -572,6 +572,18 @@ module.exports.register = function ({ config }) {
     // })
 
 
+}
+
+// A single-pass tag strip can be bypassed by a crafted string like
+// "<scrip<script>t>", which reassembles into "<script>" after one replace.
+// Loop until a pass makes no further change.
+function stripTags (str) {
+  let previous
+  do {
+    previous = str
+    str = str.replace(/<[^>]+>/g, '')
+  } while (str !== previous)
+  return str
 }
 
 function getNavEntriesByUrl (items = [], accum = {}) {
