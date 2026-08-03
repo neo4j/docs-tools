@@ -105,14 +105,35 @@ module.exports.register = function ({ config }) {
 
             for (const nav of navigation) {
 
-              let tabCandidate = {}
+              // Url-less leaf items (section headers, or link items Antora didn't
+              // parse a url out of) awaiting backfill once a later sibling resolves
+              // a real tab. Kept as a list, not a single slot - two such items in a
+              // row (e.g. a bare link followed by a section header) would otherwise
+              // have the second overwrite the first's reference before it backfills.
+              let provisionalItems = []
 
               for (const item of nav.items) {
+
+                // Some external-link AsciiDoc syntax (e.g. the `link:` macro) leaves
+                // Antora's nav builder without a parsed .url - the href only shows up
+                // baked into .content as a raw <a> tag. Promote it to a real .url/.content
+                // pair so this item flows through the same "resolved link" handling as
+                // every other nav link below, instead of falling into the leaf/section-header
+                // path and losing its nav-link styling (indentation, hover state, etc.) in
+                // the nav-tree template's raw-content fallback.
+                if (!item.url && item.content) {
+                  const linkMatch = /^\s*<a\s+href="([^"]+)"[^>]*>(.*)<\/a>\s*$/s.exec(item.content)
+                  if (linkMatch) {
+                    item.url = linkMatch[1]
+                    item.urlType = 'external'
+                    item.content = linkMatch[2]
+                  }
+                }
 
                 if (!item.url) {
                   if (!item.items || item.items.length === 0) {
                     addTabInfoToNavItem(item, component, version, 'provisional-tab', 99999, latest.title, pagesByUrl)
-                    tabCandidate = item
+                    provisionalItems.push(item)
                     continue
                   }
 
@@ -164,13 +185,29 @@ module.exports.register = function ({ config }) {
 
                   const page = pagesByUrl.get(item.url)
 
-                  if (page && page.asciidoc && page.asciidoc.attributes['page-tabs']) {
+                  // A page-tabs value to use: prefer the specific page's own attribute,
+                  // but fall back to the component-wide default (set in antora.yml/the
+                  // playbook) for items whose url doesn't resolve to a page in this
+                  // component at all - e.g. an external link (GraphAcademy course, etc.),
+                  // which can never carry a per-page attribute since there's no page.
+                  // The component-wide fallback comes straight from antora.yml, unprocessed by
+                  // Asciidoctor - so a soft-set value like "drivers-apis@" still has its trailing
+                  // "@" (Asciidoctor strips this marker when it resolves a page's own attributes,
+                  // which is why the per-page value never needs this).
+                  const pageTabs = (page && page.asciidoc && page.asciidoc.attributes['page-tabs']) ||
+                    (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs'] && asciidoc.attributes['page-tabs'].replace(/@$/, ''))
+                  const pageTabsIndex = (page && page.asciidoc && page.asciidoc.attributes['page-tabs-index']) ||
+                    (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-index'])
 
-                    addTabInfoToNavItem(item, component, version, page.asciidoc.attributes['page-tabs'], page.asciidoc.attributes['page-tabs-index'] || 99999, latest.title, pagesByUrl)
+                  if (pageTabs) {
 
-                    if (tabCandidate && tabCandidate.pageTabs === 'provisional-tab') {
-                      addTabInfoToNavItem(tabCandidate, component, version, item.pageTabs, item.tabIndex || 99999, latest.title, pagesByUrl)
-                      tabCandidate = null
+                    addTabInfoToNavItem(item, component, version, pageTabs, pageTabsIndex || 99999, latest.title, pagesByUrl)
+
+                    if (provisionalItems.length) {
+                      for (const pending of provisionalItems) {
+                        addTabInfoToNavItem(pending, component, version, item.pageTabs, item.tabIndex || 99999, latest.title, pagesByUrl)
+                      }
+                      provisionalItems = []
                     }
                   }
 
@@ -377,7 +414,11 @@ module.exports.register = function ({ config }) {
               logger.debug(` - tab "${tab}": ${component}@${version} has ${versionData.items.length} nav items`)
 
               const promotedItems = versionData.items.filter(item => item.navPromote)
-              const normalItems = versionData.items.filter(item => !item.navPromote && (item.url || (item.items && item.items.length)))
+              // Keep text-only section titles too (e.g. "* *Regular workflow*" written as a
+              // flat sibling, not a parent with nested items) - they have neither a url nor
+              // child items, but do have content, and the renderer already knows how to
+              // render that shape as a plain section header.
+              const normalItems = versionData.items.filter(item => !item.navPromote && (item.url || item.content || (item.items && item.items.length)))
 
               for (const item of promotedItems) {
                 const sectionTitle = item.content ? item.content.replace(/<[^>]+>/g, '').trim() : versionData.title
