@@ -1,0 +1,85 @@
+name: "Publish docs"
+
+permissions:
+  contents: read
+  actions: write
+
+# edit the list of branches according to your repository
+# the list of branches should contain all the branches in your Antora publish playbooks
+on:
+  push:
+    branches:
+    - 'dev'
+  workflow_dispatch:
+
+# Set DEV_BRANCH to your staging branch.
+# Set PROD_BRANCH if you also publish to neo4j.com/docs; omit it for staging-only repos.
+env:
+  DEV_BRANCH: 'dev'
+  # PROD_BRANCH: 'main'
+
+jobs:
+
+  prepare-ref-env:
+    name: Set build branch and environments
+    runs-on: ubuntu-latest
+    outputs:
+      build-ref: ${{ steps.set-ref-env.outputs.build-ref }}
+      environments: ${{ steps.set-ref-env.outputs.environments }}
+    steps:
+      - name: Set Build Ref
+        id: set-ref-env
+        run: |
+          dev_branch="${{ env.DEV_BRANCH }}"
+          prod_branch="${{ env.PROD_BRANCH }}"
+
+          if [[ -z "${prod_branch}" ]]; then
+            build_from="${dev_branch}"
+            environments='["dev"]'
+          elif [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
+            build_from="${dev_branch}"
+            environments='["dev"]'
+          else
+            build_from="${prod_branch}"
+            environments='["prod"]'
+          fi
+
+          if [[ -n "${prod_branch}" && "${dev_branch}" == "${prod_branch}" ]]; then
+            environments='["dev","prod"]'
+          fi
+
+          echo "build-ref=${build_from}" >> $GITHUB_OUTPUT
+          echo "environments=${environments}" >> $GITHUB_OUTPUT
+
+  # Trigger docs-generate-html.yml as its own separate run, once per environment that
+  # applies - not a workflow_call (which would keep both in this one run) - so dev and
+  # prod are fully independent runs: if dev's run fails, prod's run is unaffected, and
+  # each ends up with a plain "docs" artifact exactly like a run does today.
+  trigger-generate-html:
+    name: Trigger per-environment builds
+    needs: prepare-ref-env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch docs-generate-html.yml for each environment
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          BUILD_REF: ${{ needs.prepare-ref-env.outputs.build-ref }}
+          ENVIRONMENTS: ${{ needs.prepare-ref-env.outputs.environments }}
+          DISPATCH_REF: ${{ github.ref_name }}
+        with:
+          script: |
+            const environments = JSON.parse(process.env.ENVIRONMENTS)
+            const publishEnvFor = { dev: 'staging', prod: 'prod' }
+            for (const dispatchEnv of environments) {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'docs-generate-html.yml',
+                ref: process.env.DISPATCH_REF,
+                inputs: {
+                  'build-ref': process.env.BUILD_REF,
+                  'publish-env': publishEnvFor[dispatchEnv],
+                  'dispatch-env': dispatchEnv,
+                },
+              })
+            }

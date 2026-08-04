@@ -1,9 +1,58 @@
 = Docs tools
 :page-aliases: old-docs-tools.adoc
-:page-role: enterprise-edition
+:page-role: enterprise-edition neo4j-ce aura-dbc aura-dbe
 
 Use these docs to test workflows and extensions.
 
+
+== Style check
+
+We need to ensure the behaviour of the style guide checker is absolutely magnificent and the best.
+I don't know whether we check certain usages eg OLPS (in case you don't know, that stands for one line per sentence). Maybe we do, maybe we don't.
+Inter alia, latin phrases should be avoided at all costs.
+
+
+== Admonition with footnote
+
+Admonitions are rendered as tables.
+The table-footnotes extension needs to be able to handle that.
+
+[NOTE]
+====
+This is a note with some paragraphs.
+
+This paragraph contains a footnote that needs to be rendered footnote:admonfoot[Footnote 1].
+====
+
+
+[.neo4j-ce.aura-dbf]
+== Admonition with table, with footnotes
+
+What if the admonition contains a table, and the table itself contains footnotes?
+
+[NOTE]
+====
+Table inside a table?
+
+.Table with footnotes
+[options="header", cols="5,10"]
+|===
+| Col 1
+| Col 2
+
+| Lorem Ipsum footnote:[Footnote 1 in the table.]
+| The footnote footer row cell will span the full table width
+
+| Lorem Ipsum footnote:[Footnote 2 in the table.]
+| The footnote footer row cell will span the full table width
+
+|===
+
+====
+
+== Admonition with table, with footnotes
+
+[NOTE]
 
 == Include test
 
@@ -21,6 +70,31 @@ Testing the `new` label:
 - with incorrect label text: label:new[Incorrect label text] (should result in a log message).
 - with valid alternative text: label:new-2025.11[Added in 2025.11].
 - versionless: label:new[Added].
+
+
+[[mark-terms-test]]
+== Test the mark terms extension
+
+Lorem ipsum
+
+
+== Section containing xrefs to another section
+
+For more information, see <<mark-terms-test>>
+
+For this next link we are going to use a marked term in the link text.
+For more information, see <<Cypher>>
+In the same paragraph, to verify that we only mark the first usage, this link goes to a section where the ID is a marked term: <<Cypher>>.
+And this is just a plain text instance of the term Cypher.
+
+We can also test links where the link text is specified, for example <<Cypher, test term>>.
+
+
+[[Cypher]]
+== The ID of this section is Cypher
+
+Lorem ipsum dolor sit etc.
+
 
 [role=label--enterprise-edition]
 == A table with footnote
@@ -54,17 +128,17 @@ A footnote that is not in a table footnote:[Footnote not in a table.]
 | Col 1
 | Col 2
 | Col 3
-| Col 4
+| Col 4 footnote:1[A footnote in the table header.]
 | Col 5
-
-| Lorem Ipsum footnote:[Footnote 1 in the table.]
-| The footnote footer row cell will span the full table width
-|
-|
-|
 
 | Lorem Ipsum footnote:[Footnote 2 in the table.]
 | The footnote footer row cell will span the full table width
+|
+|
+|
+
+| Lorem Ipsum 
+| The footnote footer row cell will span the full table width footnote:[Footnote 3 in the table.]
 |
 |
 |
@@ -121,3 +195,28 @@ This section is marked with the Aura Graph Analytics label.
 
 - label:aura-graph-analytics[] list item with label
 - List item without label
+
+I like cypher, Cypher, neo4j, and Neo4j.
+
+
+[role=label--infinigraph]
+== Infinigraph label
+
+This section is marked with the Infinigraph label.
+
+- label:infinigraph[] list item with label
+- List item without label
+
+
+[role=label--breaking]
+== Breaking change label (no version)
+
+=== Changes in version X.Y.Z
+- label:breaking[] This single feature is a breaking change.
+
+
+[role=label--breaking-2026.06]
+== Breaking change label (with version)
+
+=== Changes
+- label:breaking[Breaking change in 2026.01] This single feature is a breaking change.

@@ -26,11 +26,21 @@ on:
         description: 'The Node.js version to use'
         required: false
         type: string
-        default: '20'
+        default: '24'
+      antora-version:
+        description: 'The Antora version to install'
+        required: false
+        type: string
+        default: '3.1.15'
       package-script:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'verify:preview'
+      publish-env:
+        description: "The publish environment to build docs for: staging or prod"
+        required: false
+        type: string
+        default: 'staging'
       antora-attributes:
         description: 'Antora attributes to pass to the build script'
         required: false
@@ -96,32 +106,51 @@ jobs:
     outputs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
+    # Only scope to an environment (and its branch protection rules) for actual
+    # publish builds, which are the only ones that need DOCS_PUBLISH_URL. Ordinary
+    # preview builds (e.g. PR checks) don't need it and shouldn't be blocked by
+    # environment branch-protection rules meant for publishing.
+    environment:
+      name: ${{ inputs.package-script == 'verify:publish' && inputs.publish-env || '' }}
+      deployment: false
+
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       NODE_VERSION: ${{ inputs.node-version }}
+      ANTORA_VERSION: ${{ inputs.antora-version }}
       DEPLOY_ID: ${{ inputs.deploy-id }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
-      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
-      ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
-      ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
-      ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
+      # Publish builds use the real published URL. TEMPORARY: hardcoded rather than read
+      # from a secret, because reusable workflows never get the caller's secrets (org,
+      # repo, or environment) unless the caller adds `secrets: inherit` - no caller of
+      # this workflow does, anywhere, so secrets.* has always resolved empty here. See
+      # memory note project_reusable_workflow_secrets_inherit for the proper fix (roll
+      # out secrets: inherit to every caller); deferred since we're only testing in a
+      # sandbox right now. Everything else - including PR previews - derives the surge.sh
+      # URL it's about to be deployed to (see docs-deploy-surge.yml, which computes the
+      # same $ORG-$REPO-$DEPLOYID.surge.sh pattern), so nav links depending on an
+      # absolute site URL still resolve.
+      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', inputs.publish-env == 'staging' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs') || format(' --url https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id) }}"
+      ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
+      ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot' || '' }}"
+      ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
 
     steps:
 
     # Checkout the whole repo
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       if: ${{ env.DOCS_DIR == '.' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
     # Checkout the docs dir
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       if: ${{ env.DOCS_DIR != '.' }}
       with:
         ref: ${{ env.BUILD_REF }}
@@ -147,7 +176,7 @@ jobs:
         echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
 
     - name: Use Node.js version ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -163,8 +192,8 @@ jobs:
         npm install $ANTORA_FILTERED_EXTENSIONS
         
         # Ensure a correct version of sitemaps extension
-        printf "\n\n<!---- Ensure correct sitemaps extension version -->"
-        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
+        # Ensure tabbed-nav extension is installed (it cannot be excluded)
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2 @neo4j-antora/tabbed-nav
 
         # Update extensions
         printf "\n\n<!---- Update extensions -->"
@@ -173,15 +202,27 @@ jobs:
         # Ensure correct version of Antora
         printf "\n\n<!---- Ensure correct version of Antora -->"
         npm uninstall @antora/cli @antora/site-generator-default
-        npm install antora@3.1.14
+        npm install antora@$ANTORA_VERSION
         
         # List installed packages
         printf "\n\n<!---- Installed packages -->\n"
         npm list
 
     - name: Run package script
+      id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
+      continue-on-error: true
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+
+    - name: Print Antora log
+      if: steps.run-package-script.outcome == 'failure'
+      working-directory: ${{ env.DOCS_DIR }}
+      run: |
+        if [ -f build/log/log.json ]; then
+          cat build/log/log.json
+        else
+          echo "No log file found at build/log/log.json"
+        fi
 
     - name: Get the dir that contains the HTML
       working-directory: ${{ env.DOCS_DIR }}
@@ -201,7 +242,7 @@ jobs:
 
     # we could set include-hidden-files to true to include the .etc and .meta dirs
     - name: Upload HTML artifact
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: docs
         path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}
@@ -209,7 +250,8 @@ jobs:
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      if: always()
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: antora-log
         path: ${{ env.DOCS_DIR }}/build/log
@@ -218,7 +260,7 @@ jobs:
     - name: Upload Page List artifact
       id: page-list-artifact
       if: ${{ inputs.page-list }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: page-list
         path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}/.meta/pageList
@@ -229,10 +271,14 @@ jobs:
     - name: Upload Redirects artifact
       id: redirects-artifact
       if: ${{ !contains(inputs.antora-extensions-exclude, '@neo4j-antora/aliases-redirects') }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: redirects
         path: ${{ env.DOCS_DIR }}/build/${{ steps.get-site-dir.outputs.site-dir }}/.etc/**
         if-no-files-found: ignore
         include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}
+
+    - name: Fail job if package script failed
+      if: always() && steps.run-package-script.outcome == 'failure'
+      run: exit 1

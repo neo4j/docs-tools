@@ -2,7 +2,7 @@ name: Validate roles.json
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: none
 
 on:
   pull_request:
@@ -18,14 +18,14 @@ jobs:
     
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
         sparse-checkout: ./extensions/antora/roles-labels
     
-    - name: Use Node.js version 20
-      uses: actions/setup-node@v4
+    - name: Use Node.js version 24
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
-        node-version: 20
+        node-version: 24
 
     - name: Install dependencies
       run: npm install -D

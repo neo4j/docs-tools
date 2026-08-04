@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/xref-hash-validator",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Validate xrefs in the source that target a section of a page in the same docset",
   "main": "xref-hash-validator.js",
   "scripts": {
@@ -12,6 +12,6 @@
   "author": "Neo4j",
   "license": "MIT",
   "dependencies": {
-    "node-html-parser": "^7.0.0"
+    "node-html-parser": "7.1.0"
   }
 }

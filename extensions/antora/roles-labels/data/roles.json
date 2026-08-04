@@ -13,7 +13,15 @@
         "auradb-virtual-dedicated-cloud": "aura-db-dedicated",
         "auradb-professional": "aura-db-professional",
         "aurads-enterprise": "aura-ds-enterprise",
-        "aurads-professional": "aura-ds-professional"        
+        "aurads-professional": "aura-ds-professional",
+        "neo4j-ce": "community-edition",
+        "neo4j-ee": "enterprise-edition",
+        "aura-dbf": "aura-db-free",
+        "aura-dbp": "aura-db-professional",
+        "aura-dbc": "aura-db-business-critical",
+        "aura-dbe": "aura-db-enterprise",
+        "aura-dsp": "aura-ds-professional",
+        "aura-dse": "aura-ds-enterprise"
     },
     "labels": {
         "featured": {
@@ -134,6 +142,23 @@
                 ]
             }
         },
+        "community-edition":{
+            "description": "Function available in Community Edition",
+            "labelCategory": "product",
+            "product": "Neo4j Community Edition",
+            "displayText": "Community Edition",
+            "usage": {
+                "page-role": [
+                    ":page-role: community-edition"
+                ],
+                "role": [
+                    "[role=label--community-edition]"
+                ],
+                "inline": [
+                    "label:community-edition[]"
+                ]
+            }
+        },
         "enterprise-edition":{
             "description": "Function available in Enterprise Edition only",
             "labelCategory": "product",
@@ -165,6 +190,23 @@
                 ],
                 "inline": [
                     "label:enterprise-only[]"
+                ]
+            }
+        },
+        "infinigraph":{
+            "description": "Feature available in Infinigraph",
+            "labelCategory": "product",
+            "product": "Infinigraph",
+            "displayText": "Infinigraph",
+            "usage": {
+                "page-role": [
+                    ":page-role: infinigraph"
+                ],
+                "role": [
+                    "[role=label--infinigraph]"
+                ],
+                "inline": [
+                    "label:infinigraph[]"
                 ]
             }
         },
@@ -1148,6 +1190,27 @@
                 ]
             },
             "notes": "This label is for internal documentation purposes only and should not appear in published docs."
+        },
+        "breaking":{
+            "description": "Introduces a breaking change",
+            "labelCategory": "version",
+            "canBeVersionless": true,
+            "displayText": "Breaking change",
+            "eventOrder": 1,
+            "usage": {
+                "page-role": [
+                    ":page-role: breaking",
+                    ":page-role: breaking-2026.01"
+                ],
+                "role": [
+                    "[role=label--breaking]",
+                    "[role=label--breaking-2026.01]"
+                ],
+                "inline": [
+                    "label:breaking[]",
+                    "label:breaking[Breaking change in 2026.01]"
+                ]
+            }
         }
     }
 }

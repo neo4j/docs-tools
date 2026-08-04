@@ -27,12 +27,13 @@ output:
 
 antora:
   extensions:
-  # - "./extensions/antora/table-footnotes"
+  - "./extensions/antora/table-footnotes"
   - "./extensions/antora/roles-labels"
 
 asciidoc:
   extensions:
   - "@neo4j-documentation/macros"
+  - "./extensions/asciidoc/mark-terms/mark-terms"
   attributes:
     page-theme: docs
     page-type: Docs
@@ -47,3 +48,7 @@ asciidoc:
     includePDF: false
     nonhtmloutput: ""
     neo4j-docs-base-uri: https://neo4j.com/docs
+    page-terms-to-mark: Neo4j, Cypher, test term
+    # tabs
+    page-tabs: tools
+    page-tabs-index: 2
