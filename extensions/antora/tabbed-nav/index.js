@@ -105,6 +105,8 @@ module.exports.register = function ({ config }) {
 
             for (const nav of navigation) {
 
+              nav.items = groupFlatNavSections(nav.items)
+
               // Url-less leaf items (section headers, or link items Antora didn't
               // parse a url out of) awaiting backfill once a later sibling resolves
               // a real tab. Kept as a list, not a single slot - two such items in a
@@ -114,22 +116,6 @@ module.exports.register = function ({ config }) {
 
               for (const item of nav.items) {
 
-                // Some external-link AsciiDoc syntax (e.g. the `link:` macro) leaves
-                // Antora's nav builder without a parsed .url - the href only shows up
-                // baked into .content as a raw <a> tag. Promote it to a real .url/.content
-                // pair so this item flows through the same "resolved link" handling as
-                // every other nav link below, instead of falling into the leaf/section-header
-                // path and losing its nav-link styling (indentation, hover state, etc.) in
-                // the nav-tree template's raw-content fallback.
-                if (!item.url && item.content) {
-                  const linkMatch = /^\s*<a\s+href="([^"]+)"[^>]*>(.*)<\/a>\s*$/s.exec(item.content)
-                  if (linkMatch) {
-                    item.url = linkMatch[1]
-                    item.urlType = 'external'
-                    item.content = linkMatch[2]
-                  }
-                }
-
                 if (!item.url) {
                   if (!item.items || item.items.length === 0) {
                     addTabInfoToNavItem(item, component, version, 'provisional-tab', 99999, latest.title, pagesByUrl)
@@ -137,14 +123,19 @@ module.exports.register = function ({ config }) {
                     continue
                   }
 
-                  // Determine the section's tab from the first child that has one
+                  // Determine the section's tab from the first child that has one -
+                  // either its own page attribute, or (for a child with no page at
+                  // all, e.g. an external GraphAcademy/API-docs link) the same
+                  // component-wide fallback used for flat resolved links below.
                   for (const ci of item.items) {
                     const p = pagesByUrl.get(ci.url)
-                    if (p && p.asciidoc && p.asciidoc.attributes['page-tabs']) {
-                      item.pageTabs = p.asciidoc.attributes['page-tabs']
-                      item.tabIndex = p.asciidoc.attributes['page-tabs-index']
+                    const ciPageTabs = (p && p.asciidoc && p.asciidoc.attributes['page-tabs']) ||
+                      (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs'] && asciidoc.attributes['page-tabs'].replace(/@$/, ''))
+                    if (ciPageTabs) {
+                      item.pageTabs = ciPageTabs
+                      item.tabIndex = (p && p.asciidoc && p.asciidoc.attributes['page-tabs-index'])
                         ? parseInt(p.asciidoc.attributes['page-tabs-index'])
-                        : 99999
+                        : (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-index']) || 99999
                       item.component = component
                       item.componentTitle = latest.title
                       item.componentVersion = version
@@ -154,27 +145,25 @@ module.exports.register = function ({ config }) {
 
                   for (const childItem of item.items) {
                     const page = pagesByUrl.get(childItem.url)
-                    if (!page || !page.asciidoc) continue
-
-                    const childTab = page.asciidoc.attributes['page-tabs']
+                    const childTab = page && page.asciidoc && page.asciidoc.attributes['page-tabs']
 
                     if (item.pageTabs) {
-                      if (childTab && childTab !== item.pageTabs) {
+                      if (page && childTab && childTab !== item.pageTabs) {
                         logger.warn(
                           { file: page.src, source: page.src.origin },
                           `Navigation item "${childItem.content}" has page-tabs "${childTab}" but its section "${item.content}" is in tab "${item.pageTabs}" — overriding to match section`
                         )
-                      } else if (!childTab) {
+                      } else if (page && !childTab) {
                         logger.info(
                           { file: page.src, source: page.src.origin },
                           `Navigation item "${childItem.content}" has no page-tabs — inheriting section tab "${item.pageTabs}"`
                         )
                       }
-                      // All children inherit the section's tab, including those with no page-tabs attribute
+                      // All children inherit the section's tab, including those with no page
+                      // (external links) or no page-tabs attribute of their own.
                       addTabInfoToNavItem(childItem, component, version, item.pageTabs, item.tabIndex, latest.title, pagesByUrl)
-                      logger.debug({file: page.src, source: page.src.origin}, `Navigation item: ${childItem.content} assigned tab "${item.pageTabs}"`)
                     } else {
-                      logger[logLevel]({file: page.src, source: page.src.origin}, `Navigation item: ${childItem.content} has no section tab — unassigned`)
+                      logger[logLevel](`Navigation item: ${childItem.content} has no section tab — unassigned`)
                     }
                   }
                   // Propagate navPromote from direct child pages up to the section item
@@ -584,6 +573,62 @@ function stripTags (str) {
     str = str.replace(/<[^>]+>/g, '')
   } while (str !== previous)
   return str
+}
+
+// Docs sources commonly write a section title as a flat, unlinked sibling bullet
+// (`* *Section heading*`) followed by flat sibling xrefs, rather than nesting them
+// (`** xref:...[]`) under it. Rebuild that flat run into a real parent/children
+// tree - a title item with an .items array - so it renders, and gets its tab
+// resolved, exactly as if the source had nested them. Mutates items in place and
+// returns the new top-level array.
+// `* *Heading*` renders to `<strong>Heading</strong>` - fine for the old plain-text
+// rendering, but once promoted to a real section toggle below it gets its own
+// heading treatment and the inline bold is no longer wanted.
+function unwrapBold (content) {
+  const m = /^<(strong|b)>([\s\S]*)<\/\1>$/.exec(content.trim())
+  return m ? m[2] : content
+}
+
+function groupFlatNavSections (items) {
+  const grouped = []
+  let currentHeader = null
+  for (const item of items) {
+    // Some external-link AsciiDoc syntax (e.g. the `link:` macro) leaves Antora's
+    // nav builder without a parsed .url - the href only shows up baked into
+    // .content as a raw <a> tag. Promote it to a real .url/.content pair so it's
+    // treated as a resolved link below, not mistaken for a section heading.
+    if (!item.url && item.content) {
+      const linkMatch = /^\s*<a\s+href="([^"]+)"[^>]*>(.*)<\/a>\s*$/s.exec(item.content)
+      if (linkMatch) {
+        item.url = linkMatch[1]
+        item.urlType = 'external'
+        item.content = linkMatch[2]
+      }
+    }
+
+    if (item.url) {
+      // A resolved link: falls under the section heading currently being
+      // collected, if any, otherwise it's a top-level item.
+      if (currentHeader) {
+        currentHeader.items.push(item)
+      } else {
+        grouped.push(item)
+      }
+    } else if (item.items && item.items.length) {
+      // Already properly nested by the source - respect it as its own
+      // boundary rather than folding it into a preceding flat heading.
+      grouped.push(item)
+      currentHeader = null
+    } else {
+      // A flat heading (bold text, no url, no pre-existing children) - starts
+      // a new section that absorbs the following flat siblings.
+      item.content = unwrapBold(item.content)
+      item.items = item.items || []
+      grouped.push(item)
+      currentHeader = item
+    }
+  }
+  return grouped
 }
 
 function getNavEntriesByUrl (items = [], accum = {}) {
