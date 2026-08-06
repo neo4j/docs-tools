@@ -225,8 +225,8 @@ jobs:
         npm install $ANTORA_FILTERED_EXTENSIONS
         
         # Ensure a correct version of sitemaps extension
-        printf "\n\n<!---- Ensure correct sitemaps extension version -->"
-        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2 @neo4j-antora/tabbed-nav@0.2.0-beta.8
+        # Ensure tabbed-nav extension is installed (it cannot be excluded)
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2 @neo4j-antora/tabbed-nav
 
         # Update extensions
         printf "\n\n<!---- Update extensions -->"
