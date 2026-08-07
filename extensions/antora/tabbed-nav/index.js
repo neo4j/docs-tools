@@ -589,6 +589,10 @@ function unwrapBold (content) {
   return m ? m[2] : content
 }
 
+function isBoldContent (content) {
+  return /^<(strong|b)>[\s\S]*<\/\1>$/.test((content || '').trim())
+}
+
 function groupFlatNavSections (items) {
   const grouped = []
   let currentHeader = null
@@ -606,26 +610,21 @@ function groupFlatNavSections (items) {
       }
     }
 
-    if (item.url) {
-      // A resolved link: falls under the section heading currently being
-      // collected, if any, otherwise it's a top-level item.
-      if (currentHeader) {
-        currentHeader.items.push(item)
-      } else {
-        grouped.push(item)
-      }
-    } else if (item.items && item.items.length) {
-      // Already properly nested by the source - respect it as its own
-      // boundary rather than folding it into a preceding flat heading.
-      grouped.push(item)
-      currentHeader = null
-    } else {
-      // A flat heading (bold text, no url, no pre-existing children) - starts
-      // a new section that absorbs the following flat siblings.
+    // Only a bold, linkless, childless bullet (`* *Heading*`) opens - or replaces
+    // - a section. Everything else (a resolved link, or an item the source
+    // already nested with `**` of its own, e.g. a sub-group with its own pages)
+    // is absorbed as a child of whatever section is currently open, without
+    // ending it - so a whole run of sibling sub-groups and links all end up
+    // nested one level deeper, until the next bold heading appears.
+    if (!item.url && (!item.items || !item.items.length) && isBoldContent(item.content)) {
       item.content = unwrapBold(item.content)
       item.items = item.items || []
       grouped.push(item)
       currentHeader = item
+    } else if (currentHeader) {
+      currentHeader.items.push(item)
+    } else {
+      grouped.push(item)
     }
   }
   return grouped
