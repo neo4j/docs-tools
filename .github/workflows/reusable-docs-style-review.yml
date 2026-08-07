@@ -186,7 +186,7 @@ jobs:
 
             ${{ env.PROMPT }}
           claude_args: |
-            --allowedTools "Read,Write(style-review-comment.md),WebFetch,Bash(git diff:*),Bash(git log:*)"
+            --allowedTools "Read,Write,WebFetch,Bash(git diff:*),Bash(git log:*)"
             --model ${{ inputs.model }}
             --max-turns ${{ inputs.max-turns }}
 
