@@ -195,7 +195,18 @@ jobs:
         playbook_path="${DOCS_DIR}/${ANTORA_PLAYBOOK}"
         playbook_branches=""
         if [ -f "$playbook_path" ]; then
-          playbook_branches=$(yq eval '[.content.sources[].branches] | flatten | map(select(. != "HEAD")) | unique | join(" ")' "$playbook_path")
+          # A playbook can declare multiple content sources, each from a different repo.
+          # We only checked out and can git-fetch branches for THIS repo, so only consider
+          # sources whose url is a relative/local path to it - not an absolute url (a
+          # scheme like https:// or git://, or scp-like git@host:path), which always means
+          # a different repo. Those are Antora's own problem to fetch, not ours.
+          playbook_branches=$(yq eval '
+            [.content.sources[] | select(((.url | test("^[a-zA-Z][a-zA-Z0-9+.-]*://")) or (.url | test("^[^/]+@[^:/]+:"))) | not) | .branches]
+            | flatten
+            | map(select(. != "HEAD"))
+            | unique
+            | join(" ")
+          ' "$playbook_path")
         else
           echo "::warning::Antora playbook not found at ${playbook_path}; skipping auto-detected branches"
         fi
