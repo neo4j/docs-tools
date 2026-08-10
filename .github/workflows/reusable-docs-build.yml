@@ -229,9 +229,21 @@ jobs:
         for branch in $branches; do
           refspecs+=("+refs/heads/${branch}:refs/remotes/origin/${branch}")
         done
+
+        # fetch-depth: 0 makes actions/checkout do a blobless partial clone
+        # (--filter=blob:none) - commits and trees only, no file contents. Real git
+        # transparently lazy-fetches a missing blob on demand (e.g. from `git cat-file`),
+        # but antora's isomorphic-git has no concept of that and just fails outright -
+        # this is the actual NotFoundError root cause, not --fetch. A plain fetch here
+        # inherits that same filter from the remote config, so clear it and use
+        # --refetch to force these branches' blobs down for real, not just their commits
+        # and trees. The unsets are harmless no-ops (exit 5) when there was no partial
+        # clone filter to begin with, hence `|| true`.
+        git config --unset remote.origin.partialclonefilter 2>/dev/null || true
+        git config --unset remote.origin.promisor 2>/dev/null || true
         # no --depth: a shallow/grafted commit here seems to confuse antora's own
         # isomorphic-git fetch when it later tries to resolve these same branches
-        git fetch --no-tags origin "${refspecs[@]}"
+        git fetch --no-tags --refetch origin "${refspecs[@]}"
 
     - name: Remove excluded extensions
       run: |
