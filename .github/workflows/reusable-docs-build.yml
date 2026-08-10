@@ -76,10 +76,15 @@ on:
         type: string
         default: 'na'
       antora-fetch-branches:
-        description: 'Space-separated list of additional branches to fetch (e.g. other versions referenced by a multi-version Antora playbook). Fetched with git before the build, so Antora does not have to rely on its own --fetch (isomorphic-git), which is less reliable for this.'
+        description: 'Space-separated list of additional branches to fetch, on top of whatever is auto-detected from antora-playbook (e.g. a branch needed for a one-off reason that is not itself a playbook content source). Fetched with git before the build, so Antora does not have to rely on its own --fetch (isomorphic-git), which is less reliable for this.'
         required: false
         type: string
         default: ''
+      antora-playbook:
+        description: 'Antora playbook file, relative to docs-dir, to read multi-version branches from (content.sources[].branches). Every branch listed there - other than HEAD, which is whatever build-ref already checked out - is fetched automatically before the build, so this input does not need manual upkeep as versions are added or removed. Override only if a repo names its playbook something other than publish.yml.'
+        required: false
+        type: string
+        default: 'publish.yml'
       sparse-checkout:
         description: 'Whether to sparse-checkout only docs-dir (plus sparse-checkout-extra-paths) instead of the whole repo. Only relevant when docs-dir is not ".". Set to false to check out the whole repo, e.g. if docs-dir needs to reference sibling paths elsewhere in the repo.'
         required: false
@@ -155,6 +160,7 @@ jobs:
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
       ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
+      ANTORA_PLAYBOOK: ${{ inputs.antora-playbook }}
       SPARSE_CHECKOUT: ${{ inputs.sparse-checkout }}
       SPARSE_CHECKOUT_EXTRA_PATHS: ${{ inputs.sparse-checkout-extra-paths }}
 
@@ -178,13 +184,31 @@ jobs:
           ${{ env.SPARSE_CHECKOUT_EXTRA_PATHS }}
         sparse-checkout-cone-mode: false
 
-    # fetch any additional branches a multi-version Antora playbook needs, using real git
-    # (more reliable than relying on antora --fetch, which uses isomorphic-git)
-    - name: Fetch additional Antora playbook branches
-      if: ${{ env.ANTORA_FETCH_BRANCHES != '' }}
+    # Fetch every branch a multi-version Antora playbook needs, using real git (more
+    # reliable than relying on antora --fetch, which uses isomorphic-git). Branches come
+    # from two places, unioned: content.sources[].branches in antora-playbook (read
+    # automatically - HEAD is excluded, since that's whatever build-ref already checked
+    # out, not a separate branch to fetch) and the antora-fetch-branches input (a manual
+    # escape hatch for a branch needed for some other reason).
+    - name: Fetch Antora playbook branches
       run: |
+        playbook_path="${DOCS_DIR}/${ANTORA_PLAYBOOK}"
+        playbook_branches=""
+        if [ -f "$playbook_path" ]; then
+          playbook_branches=$(yq eval '[.content.sources[].branches] | flatten | map(select(. != "HEAD")) | unique | join(" ")' "$playbook_path")
+        else
+          echo "::warning::Antora playbook not found at ${playbook_path}; skipping auto-detected branches"
+        fi
+
+        branches=$(printf '%s\n' $playbook_branches $ANTORA_FETCH_BRANCHES | sort -u | tr '\n' ' ')
+        if [ -z "$(echo "$branches" | tr -d '[:space:]')" ]; then
+          echo "No additional branches to fetch"
+          exit 0
+        fi
+        echo "Fetching branches: ${branches}"
+
         refspecs=()
-        for branch in $ANTORA_FETCH_BRANCHES; do
+        for branch in $branches; do
           refspecs+=("+refs/heads/${branch}:refs/remotes/origin/${branch}")
         done
         # no --depth: a shallow/grafted commit here seems to confuse antora's own
