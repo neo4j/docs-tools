@@ -17,16 +17,19 @@ jobs:
     uses: ./.github/workflows/reusable-docs-build.yml
     with:
       deploy-id: ${{ github.event.number }}
+      docs-dir: 'docs'
+      antora-fetch-branches: 'test/add-branches'
+      sparse-checkout: false
       antora-extensions: '
-          ./extensions/antora/aliases-redirects
-          ./extensions/antora/antora-modify-sitemaps
-          ./extensions/antora/antora-page-list
-          ./extensions/antora/antora-unlisted-pages
-          ./extensions/antora/roles-labels
-          ./extensions/antora/selector-labels
-          ./extensions/antora/table-footnotes
-          ./extensions/antora/xref-hash-validator
-          ./extensions/asciidoc/mark-terms
+          ../extensions/antora/aliases-redirects
+          ../extensions/antora/antora-modify-sitemaps
+          ../extensions/antora/antora-page-list
+          ../extensions/antora/antora-unlisted-pages
+          ../extensions/antora/roles-labels
+          ../extensions/antora/selector-labels
+          ../extensions/antora/table-footnotes
+          ../extensions/antora/xref-hash-validator
+          ../extensions/asciidoc/mark-terms
           '
       antora-ui-bundle-url: 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'
 

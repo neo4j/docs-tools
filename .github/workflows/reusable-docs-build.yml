@@ -75,6 +75,21 @@ on:
         required: false
         type: string
         default: 'na'
+      antora-fetch-branches:
+        description: 'Space-separated list of additional branches to fetch (e.g. other versions referenced by a multi-version Antora playbook). Fetched with git before the build, so Antora does not have to rely on its own --fetch (isomorphic-git), which is less reliable for this.'
+        required: false
+        type: string
+        default: ''
+      sparse-checkout:
+        description: 'Whether to sparse-checkout only docs-dir (plus sparse-checkout-extra-paths) instead of the whole repo. Only relevant when docs-dir is not ".". Set to false to check out the whole repo, e.g. if docs-dir needs to reference sibling paths elsewhere in the repo.'
+        required: false
+        type: boolean
+        default: true
+      sparse-checkout-extra-paths:
+        description: 'Extra repo-relative paths to include in the sparse checkout alongside docs-dir (newline-separated), e.g. a sibling extensions folder referenced by local-path antora-extensions. Only relevant when docs-dir is not "." and sparse-checkout is true.'
+        required: false
+        type: string
+        default: ''
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: false
@@ -139,24 +154,42 @@ jobs:
       ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
+      ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
+      SPARSE_CHECKOUT: ${{ inputs.sparse-checkout }}
+      SPARSE_CHECKOUT_EXTRA_PATHS: ${{ inputs.sparse-checkout-extra-paths }}
 
     steps:
 
     # Checkout the whole repo
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      if: ${{ env.DOCS_DIR == '.' }}
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      if: ${{ env.DOCS_DIR == '.' || env.SPARSE_CHECKOUT == 'false' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
-    # Checkout the docs dir
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      if: ${{ env.DOCS_DIR != '.' }}
+    # Checkout the docs dir only (sparse)
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      if: ${{ env.DOCS_DIR != '.' && env.SPARSE_CHECKOUT != 'false' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
-        sparse-checkout: ${{ env.DOCS_DIR }}
+        sparse-checkout: |
+          ${{ env.DOCS_DIR }}
+          ${{ env.SPARSE_CHECKOUT_EXTRA_PATHS }}
         sparse-checkout-cone-mode: false
+
+    # fetch any additional branches a multi-version Antora playbook needs, using real git
+    # (more reliable than relying on antora --fetch, which uses isomorphic-git)
+    - name: Fetch additional Antora playbook branches
+      if: ${{ env.ANTORA_FETCH_BRANCHES != '' }}
+      run: |
+        refspecs=()
+        for branch in $ANTORA_FETCH_BRANCHES; do
+          refspecs+=("+refs/heads/${branch}:refs/remotes/origin/${branch}")
+        done
+        # no --depth: a shallow/grafted commit here seems to confuse antora's own
+        # isomorphic-git fetch when it later tries to resolve these same branches
+        git fetch --no-tags origin "${refspecs[@]}"
 
     - name: Remove excluded extensions
       run: |
@@ -212,6 +245,12 @@ jobs:
       id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
       continue-on-error: true
+      env:
+        # antora requires local-path extensions (e.g. a sibling extensions/ dir) directly by their
+        # real filesystem path, bypassing node_modules resolution entirely. NODE_PATH gives Node an
+        # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
+        # only installed under docs/node_modules.
+        NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Print Antora log
