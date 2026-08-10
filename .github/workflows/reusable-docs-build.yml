@@ -200,7 +200,14 @@ jobs:
           echo "::warning::Antora playbook not found at ${playbook_path}; skipping auto-detected branches"
         fi
 
-        branches=$(printf '%s\n' $playbook_branches $ANTORA_FETCH_BRANCHES | sort -u | tr '\n' ' ')
+        # Filter HEAD from the combined list too, not just the playbook-derived part -
+        # it's not a real remote branch, so a git fetch refspec for it fails outright
+        # (and fails the whole multi-refspec fetch, not just that one ref) if it ever
+        # reaches here via antora-fetch-branches instead. The `|| true` guards against
+        # grep's own exit 1 when it filters out every line (e.g. input was only "HEAD")
+        # - that's not an error, it's exactly the "nothing to fetch" case the next check
+        # handles, but bash's errexit would otherwise abort the script right here first.
+        branches=$(printf '%s\n' $playbook_branches $ANTORA_FETCH_BRANCHES | grep -v '^HEAD$' | sort -u | tr '\n' ' ' || true)
         if [ -z "$(echo "$branches" | tr -d '[:space:]')" ]; then
           echo "No additional branches to fetch"
           exit 0
