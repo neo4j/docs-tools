@@ -18,7 +18,6 @@ jobs:
     with:
       deploy-id: ${{ github.event.number }}
       docs-dir: 'docs'
-      antora-fetch-branches: 'test/add-branches'
       sparse-checkout: false
       antora-extensions: '
           ../extensions/antora/aliases-redirects
