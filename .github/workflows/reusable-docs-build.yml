@@ -81,10 +81,10 @@ on:
         type: string
         default: ''
       antora-playbook:
-        description: 'Antora playbook file, relative to docs-dir, to read multi-version branches from (content.sources[].branches). Every branch listed there - other than HEAD, which is whatever build-ref already checked out - is fetched automatically before the build, so this input does not need manual upkeep as versions are added or removed. Override only if a repo names its playbook something other than publish.yml.'
+        description: 'Antora playbook file, relative to docs-dir, to read multi-version branches from (content.sources[].branches). Every branch listed there - other than HEAD, which is whatever build-ref already checked out - is fetched automatically before the build, so this input does not need manual upkeep as versions are added or removed. Defaults to publish.yml for verify:publish builds and preview.yml otherwise, matching the convention every repo already follows - override only if a repo names its playbook something else.'
         required: false
         type: string
-        default: 'publish.yml'
+        default: ''
       sparse-checkout:
         description: 'Whether to sparse-checkout only docs-dir (plus sparse-checkout-extra-paths) instead of the whole repo. Only relevant when docs-dir is not ".". Set to false to check out the whole repo, e.g. if docs-dir needs to reference sibling paths elsewhere in the repo.'
         required: false
@@ -160,7 +160,7 @@ jobs:
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
       ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
-      ANTORA_PLAYBOOK: ${{ inputs.antora-playbook }}
+      ANTORA_PLAYBOOK: "${{ inputs.antora-playbook || (inputs.package-script == 'verify:publish' && 'publish.yml' || 'preview.yml') }}"
       SPARSE_CHECKOUT: ${{ inputs.sparse-checkout }}
       SPARSE_CHECKOUT_EXTRA_PATHS: ${{ inputs.sparse-checkout-extra-paths }}
 
