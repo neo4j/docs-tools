@@ -283,16 +283,12 @@ jobs:
         printf "\n\n<!---- Installed packages -->\n"
         npm list
 
-    - name: Run package script
-      id: run-package-script
+    # A missing script name is a genuine config error - not something to tolerate the way
+    # the run step's continue-on-error tolerates antora itself failing - so this step gets
+    # no continue-on-error and fails the job outright.
+    - name: Resolve package script command
+      id: resolve-command
       working-directory: ${{ env.DOCS_DIR }}
-      continue-on-error: true
-      env:
-        # antora requires local-path extensions (e.g. a sibling extensions/ dir) directly by their
-        # real filesystem path, bypassing node_modules resolution entirely. NODE_PATH gives Node an
-        # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
-        # only installed under docs/node_modules.
-        NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
       run: |
         raw_cmd=$(node -e "process.stdout.write(require('./package.json').scripts['$PACKAGE_SCRIPT'] || '')")
         if [ -z "$raw_cmd" ]; then
@@ -308,10 +304,21 @@ jobs:
         # options-from-convict.js), so strip it from whatever the script would have run,
         # rather than editing --fetch out of every consumer's package.json by hand.
         cmd=$(echo "$raw_cmd" | sed -E 's/(^|[[:space:]])--fetch([[:space:]]|$)/\1\2/g')
+        echo "cmd=${cmd}" >> "$GITHUB_OUTPUT"
 
-        # npm run puts node_modules/.bin on PATH for the script it runs; npx resolves the
-        # locally-installed binary the same way without needing that.
-        bash -c "npx $cmd --ui-bundle-url=\"$ANTORA_UI_BUNDLE_URL\" $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK"
+    - name: Run package script
+      id: run-package-script
+      working-directory: ${{ env.DOCS_DIR }}
+      continue-on-error: true
+      env:
+        # antora requires local-path extensions (e.g. a sibling extensions/ dir) directly by their
+        # real filesystem path, bypassing node_modules resolution entirely. NODE_PATH gives Node an
+        # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
+        # only installed under docs/node_modules.
+        NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
+      # npm run puts node_modules/.bin on PATH for the script it runs; npx resolves the
+      # locally-installed binary the same way without needing that.
+      run: npx ${{ steps.resolve-command.outputs.cmd }} --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Print Antora log
       if: steps.run-package-script.outcome == 'failure'
