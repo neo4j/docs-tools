@@ -283,6 +283,29 @@ jobs:
         printf "\n\n<!---- Installed packages -->\n"
         npm list
 
+    # A missing script name is a genuine config error - not something to tolerate the way
+    # the run step's continue-on-error tolerates antora itself failing - so this step gets
+    # no continue-on-error and fails the job outright.
+    - name: Resolve package script command
+      id: resolve-command
+      working-directory: ${{ env.DOCS_DIR }}
+      run: |
+        raw_cmd=$(node -e "process.stdout.write(require('./package.json').scripts['$PACKAGE_SCRIPT'] || '')")
+        if [ -z "$raw_cmd" ]; then
+          echo "::error::No script named '$PACKAGE_SCRIPT' in package.json"
+          exit 1
+        fi
+
+        # We've already fetched (with real git) every branch a same-repo playbook source
+        # needs, so antora's own --fetch (isomorphic-git) is unnecessary - and unreliable
+        # even when everything's already fetched (seen a NotFoundError from isomorphic-git
+        # reading a blob that real git had just fetched fine). Antora's CLI has no --no-fetch
+        # to countermand an earlier --fetch (deliberately disabled in its own source - see
+        # options-from-convict.js), so strip it from whatever the script would have run,
+        # rather than editing --fetch out of every consumer's package.json by hand.
+        cmd=$(echo "$raw_cmd" | sed -E 's/(^|[[:space:]])--fetch([[:space:]]|$)/\1\2/g')
+        echo "cmd=${cmd}" >> "$GITHUB_OUTPUT"
+
     - name: Run package script
       id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
@@ -293,7 +316,9 @@ jobs:
         # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
         # only installed under docs/node_modules.
         NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
-      run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+      # npm run puts node_modules/.bin on PATH for the script it runs; npx resolves the
+      # locally-installed binary the same way without needing that.
+      run: npx ${{ steps.resolve-command.outputs.cmd }} --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Print Antora log
       if: steps.run-package-script.outcome == 'failure'
