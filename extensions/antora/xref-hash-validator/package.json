@@ -12,6 +12,6 @@
   "author": "Neo4j",
   "license": "MIT",
   "dependencies": {
-    "node-html-parser": "^7.0.0"
+    "node-html-parser": "7.1.0"
   }
 }

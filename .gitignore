@@ -116,3 +116,7 @@ vale/styles/Google
 package-lock.json
 node_modules/
 .env
+
+# Claude — ignore everything except the shared slash commands
+.claude/*
+!.claude/commands/

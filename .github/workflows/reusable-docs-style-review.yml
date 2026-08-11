@@ -1,0 +1,202 @@
+name: "Reusable: docs style review (advisory)"
+
+# Advisory, non-blocking style-guide review for docs PRs, using headless Claude Code.
+# Called by a thin per-repo workflow — the trigger (on: pull_request + paths) lives in
+# the caller; this reusable workflow defines the job.
+#
+# The base prompt lives in this repo at prompts/docs-style-review.md and is read by
+# checking out docs-tools at the exact version the caller pinned. A consumer repo MAY
+# add .github/prompts/docs-style-review.md, which is APPENDED as repo-specific guidance.
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: "Claude model to use."
+        type: string
+        default: "claude-sonnet-4-5"
+      max-turns:
+        description: "Max agent turns (runaway guard)."
+        type: number
+        default: 8
+      max-files:
+        description: "Skip the AI review (post a note instead) above this many changed files."
+        type: number
+        default: 25
+      comment-header:
+        description: "Sticky-comment header; identifies the one comment to update in place."
+        type: string
+        default: "docs-style-review"
+      changed-files-globs:
+        description: "Newline-separated globs of files to review."
+        type: string
+        default: |
+          **/modules/**/pages/**/*.adoc
+          **/modules/**/partials/**/*.adoc
+    secrets:
+      DOCS_STYLE_GUIDE_ANTHROPIC_API_KEY:
+        required: true
+      DOCS_STYLE_GUIDE_LLMS_URL:
+        required: true
+      DOCS_PR_COMMENT_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write   # for the sticky comment (token below) and PR context
+  id-token: write        # claude-code-action requires an OIDC token
+
+jobs:
+  style-review:
+    # Skip drafts, and skip non-team authors / bots (dependabot, renovate, …): they report
+    # NONE / FIRST_TIME_CONTRIBUTOR and are skipped without spending minutes or tokens.
+    # CONTRIBUTOR is included because the org keeps membership private, so the event
+    # reports real members/collaborators as CONTRIBUTOR.
+    if: >-
+      github.event.pull_request.draft == false &&
+      contains(fromJSON('["MEMBER","OWNER","COLLABORATOR","CONTRIBUTOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0   # full history so Claude can diff against the base branch
+
+      - name: Get changed files
+        id: changes
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47
+        with:
+          separator: '\n'
+          files: ${{ inputs.changed-files-globs }}
+
+      - name: Verify required secrets
+        if: steps.changes.outputs.any_changed == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.DOCS_STYLE_GUIDE_ANTHROPIC_API_KEY }}
+          STYLE_GUIDE_LLMS_URL: ${{ secrets.DOCS_STYLE_GUIDE_LLMS_URL }}
+        run: |
+          [ -n "$ANTHROPIC_API_KEY" ]    || { echo "::error::ANTHROPIC_API_KEY secret not set"; exit 1; }
+          [ -n "$STYLE_GUIDE_LLMS_URL" ] || { echo "::error::STYLE_GUIDE_LLMS_URL secret not set"; exit 1; }
+          echo "Required secrets present"
+
+      # Cost guard: skip the AI review on very large PRs and leave a note instead.
+      # Written to the same file as the review so it surfaces in the one sticky comment.
+      - name: Skip note (too many files)
+        if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count > inputs.max-files
+        env:
+          CHANGED_COUNT: ${{ steps.changes.outputs.all_changed_files_count }}
+          MAX_FILES: ${{ inputs.max-files }}
+        run: |
+          echo "::warning::Skipping automated style review: ${CHANGED_COUNT} changed files (limit ${MAX_FILES})."
+          {
+            printf 'ℹ️ **Automated style-guide review skipped** — this PR changes %s files (limit %s). Request a manual style review if needed.\n' "$CHANGED_COUNT" "$MAX_FILES"
+          } > style-review-comment.md
+
+      # docs-tools is public, so the default GITHUB_TOKEN can check it out. Pin to the exact
+      # version the caller used (job_workflow_sha) so the prompt matches this workflow.
+      - name: Checkout docs-tools (base prompt)
+        if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: neo4j/docs-tools
+          ref: ${{ github.job_workflow_sha }}
+          path: .docs-tools
+          fetch-depth: 1
+
+      - name: Assemble review prompt (base + optional per-repo)
+        if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
+        run: |
+          # Random delimiter so untrusted per-repo prompt content can't close the
+          # heredoc early and inject extra variables into $GITHUB_ENV.
+          delimiter="PROMPT_EOF_$(openssl rand -hex 12)"
+          {
+            echo "PROMPT<<${delimiter}"
+            cat .docs-tools/prompts/docs-style-review.md
+            if [ -f .github/prompts/docs-style-review.md ]; then
+              echo
+              echo '## Repository-specific guidance'
+              echo
+              cat .github/prompts/docs-style-review.md
+            fi
+            echo "${delimiter}"
+          } >> "$GITHUB_ENV"
+
+      # The changed-file list and base ref come from PR-controlled data (a PR author
+      # picks which files to touch, and forks can target arbitrary base branches), so
+      # neither is safe to interpolate straight into the prompt below - a crafted
+      # filename could smuggle extra "instructions" into what Claude reads. Validate
+      # both against a strict allowlist and hand them to Claude as files to read
+      # instead, so the prompt text itself stays fully static.
+      - name: Prepare validated review inputs
+        if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
+        env:
+          CHANGED_FILES: ${{ steps.changes.outputs.all_changed_files }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          mkdir -p review-input
+
+          if ! [[ "$BASE_REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "::error::Base ref '${BASE_REF}' contains unexpected characters; refusing to proceed"
+            exit 1
+          fi
+          printf '%s' "$BASE_REF" > review-input/base-ref.txt
+
+          : > review-input/changed-files.txt
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            if [[ "$file" == -* ]]; then
+              echo "::warning::Skipping changed file starting with '-': ${file}"
+              continue
+            fi
+            if [[ "$file" == *..* ]]; then
+              echo "::warning::Skipping changed file containing '..': ${file}"
+              continue
+            fi
+            if ! [[ "$file" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+              echo "::warning::Skipping changed file with unexpected characters: ${file}"
+              continue
+            fi
+            printf '%s\n' "$file" >> review-input/changed-files.txt
+          done <<< "$CHANGED_FILES"
+
+          echo "Validated inputs:"
+          cat review-input/base-ref.txt
+          cat review-input/changed-files.txt
+
+      - name: Style review
+        if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
+        uses: anthropics/claude-code-action@d5726de019ec4498aa667642bc3a80fca83aa102 # v1
+        with:
+          anthropic_api_key: ${{ secrets.DOCS_STYLE_GUIDE_ANTHROPIC_API_KEY }}
+          # Default GITHUB_TOKEN for the action's GitHub auth, so it does NOT require the
+          # Claude GitHub App. Claude only writes a file; the sticky step posts it.
+          github_token: ${{ github.token }}
+          prompt: |
+            ## Context
+            Changed files to review (review ONLY these) are listed one per line in
+            review-input/changed-files.txt - read that file first.
+
+            To focus on ADDED or CHANGED lines, diff each file against the base branch.
+            Read the validated base ref from review-input/base-ref.txt, then run:
+              git diff origin/<base-ref>...HEAD -- <file>
+
+            Style guide URL (fetch this single file as your reference):
+            ${{ secrets.DOCS_STYLE_GUIDE_LLMS_URL }}
+
+            ${{ env.PROMPT }}
+          claude_args: |
+            --allowedTools "Read,Write,WebFetch,Bash(git diff:*),Bash(git log:*)"
+            --model ${{ inputs.model }}
+            --max-turns ${{ inputs.max-turns }}
+
+      # One sticky comment, updated in place across runs (matched by `header`). Posted as
+      # neo4j-docops-agent via the org token, consistent with other docs PR comments.
+      - name: Post sticky review comment
+        if: steps.changes.outputs.any_changed == 'true' && hashFiles('style-review-comment.md') != ''
+        uses: marocchino/sticky-pull-request-comment@70d2764d1a7d5d9560b100cbea0077fc8f633987 # v3
+        with:
+          header: ${{ inputs.comment-header }}
+          number: ${{ github.event.pull_request.number }}
+          path: style-review-comment.md
+          GITHUB_TOKEN: ${{ secrets.DOCS_PR_COMMENT_TOKEN }}
