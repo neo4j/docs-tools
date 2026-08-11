@@ -14,12 +14,18 @@ module.exports.register = function ({ config }) {
   const {
     logLevel = 'info',
     tabNavFile = 'nav/tabs.json',
-    // All stages default to true so the canonical writer workflow ("antora preview
-    // --extension nav.js") gets the full pipeline with no extra config. Actors
-    // that need a subset (per-docset CI publish, central aggregator job, docs-home
-    // build) opt out of the stages they don't want.
+    // generateNav/aggregateNav/consumeNav default to true so the canonical writer
+    // workflow ("antora preview --extension nav.js") gets the full local-content
+    // pipeline with no extra config. Actors that need a subset (central aggregator
+    // job, docs-home build) opt out of the stages they don't want.
     generateNav = true,
-    fetchNav = true,
+    // fetchNav defaults to false, unlike the other stages: reaching out to a remote
+    // tabs.json is the one thing that should never happen just because a docset
+    // referenced this extension - it has to be requested. Can be enabled via config
+    // or the DOCS_FETCH_NAV env var (see the check below), the latter so a shared CI
+    // workflow can flip it for publish builds without every docset's playbook
+    // carrying the flag - the same pattern emitLocalManifest uses below.
+    fetchNav = false,
     aggregateNav = true,
     consumeNav = true,
     // emitLocalManifest: when true, write a /local-manifest.json listing the
@@ -234,7 +240,7 @@ module.exports.register = function ({ config }) {
           ? playbook.site.url.replace(/\/+$/, '') + '/nav/tabs.json'
           : null)
 
-      if (fetchNav && resolvedNavUrl) {
+      if ((fetchNav || process.env.DOCS_FETCH_NAV) && resolvedNavUrl) {
         try {
           const res = await fetch(resolvedNavUrl)
           if (!res.ok) throw new Error('HTTP ' + res.status)

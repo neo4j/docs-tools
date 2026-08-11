@@ -161,6 +161,11 @@ jobs:
       # rather than issuing a request that's guaranteed to 404.
       ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-chatbot=/docs/assets/chatbot --attribute page-no-local-manifest=true' || '' }}"
       ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
+      # tabbed-nav's fetchNav defaults to false (a docset referencing it locally
+      # shouldn't silently reach out to a remote tabs.json) - publish builds need the
+      # real cross-repo aggregation, so opt in via its env-var override rather than
+      # every consumer's playbook needing to carry fetchNav: true as extension config.
+      DOCS_FETCH_NAV: "${{ inputs.package-script == 'verify:publish' && 'true' || '' }}"
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
       ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
