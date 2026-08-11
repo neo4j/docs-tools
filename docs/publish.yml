@@ -5,12 +5,9 @@ site:
 
 content:
   sources:
-  - url: ./
+  - url: ../
+    start_path: docs
     branches: ['HEAD']
-    exclude:
-    - '!**/_includes/*'
-    - '!**/readme.adoc'
-    - '!**/README.adoc'
 
 ui:
   bundle:
