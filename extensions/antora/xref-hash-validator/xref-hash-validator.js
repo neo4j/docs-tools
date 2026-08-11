@@ -130,7 +130,15 @@ module.exports.register = function ({ config }) {
                     return
                 }
 
-                const siteURLRoot = (playbook.site && playbook.site.url) ? playbook.site.url : 'http://example.com'
+                const rawSiteURLRoot = (playbook.site && playbook.site.url) ? playbook.site.url : 'http://example.com'
+                // A trailing slash is required here: new URL(relativePath, base) treats
+                // base's last path segment as a filename to discard when there's no
+                // trailing slash (same as a browser resolving a relative link) - so
+                // 'https://neo4j.com/docs' as a base silently drops "docs", resolving
+                // e.g. 'aura/foo' to 'https://neo4j.com/aura/foo' instead of
+                // 'https://neo4j.com/docs/aura/foo'. That previously caused every
+                // legitimate link to be wrongly rejected as "resolves outside site url".
+                const siteURLRoot = rawSiteURLRoot.endsWith('/') ? rawSiteURLRoot : rawSiteURLRoot + '/'
                 // what is the full url of each link?
                 const testThisURL = new URL(path.join('.', file.pub.url, link), siteURLRoot)
 
