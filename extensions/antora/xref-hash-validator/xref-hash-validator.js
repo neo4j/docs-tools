@@ -105,16 +105,70 @@ module.exports.register = function ({ config }) {
         // by verifying that for an internal link to a section, the hash does actually exist in the target page
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
+
+            // console.log(file.pub)
     
             // check the internal links in the file
             file.xrefChecker.internalLinks.forEach((link) => {
 
+                const linkPath = path.normalize(path.join(path.dirname(file.pub.url), link.split('#')[0]))
+
+                // in the sitecatalog can we get all the components?
+                const components = contentCatalog.getComponents().map( (component) => {
+                    return component.name
+                })
+
+                // can we check that the linkPath starts with one of the components?
+                const targetFileCheck = components.some( (component) => {
+                    return linkPath.startsWith(`/${component}`)
+                })
+
+                // if the linkPath tries to escape the site root, log a warning and skip validation for this link
+                // I don't know how it would, but anyway...
+                if (!targetFileCheck) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: %s does not resolve to a valid page in the site', link)
+                    return
+                }
+
+                const siteURLRoot = (playbook.site && playbook.site.url) ? playbook.site.url : 'http://example.com'
                 // what is the full url of each link?
-                searchForThisURL = new URL(path.join(file.pub.url, link), (playbook.site && playbook.site.url) ? playbook.site.url : 'https://example.com')
+                const testThisURL = new URL(path.join('.', file.pub.url, link), siteURLRoot)
+
+                // if searchForThisURL is outside the site url, something is up and we should not try to validate it
+                // remember: we are validating only xrefs to files that are in the contentCatalog
+                let siteRootUrl
+                try {
+                    siteRootUrl = new URL(siteURLRoot)
+                } catch (e) {
+                    // if the configured site URL is invalid, log and skip validation for this link
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: invalid site url %s', siteURLRoot)
+                    return
+                }
+
+                // and now for some semgrep or CodeQL suggested checks that I'm not sure are needed
+                const sameOrigin =
+                    testThisURL.protocol === siteRootUrl.protocol &&
+                    testThisURL.hostname === siteRootUrl.hostname &&
+                    testThisURL.port === siteRootUrl.port
+
+                // Ensure the target path is under the site root path
+                const siteRootPath = siteRootUrl.pathname.endsWith('/')
+                    ? siteRootUrl.pathname
+                    : siteRootUrl.pathname + '/'
+                const targetPath = testThisURL.pathname
+
+                if (!sameOrigin || !targetPath.startsWith(siteRootPath)) {
+                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: %s resolves outside site url %s', testThisURL.href, siteURLRoot)
+                    return
+                }
+
+                const searchForThisURL = new URL(path.join(file.pub.url, link), siteURLRoot)
 
                 // if there's no hash the xref is already checked by Antora
                 // this check shouldn't ever match anyway because we should have already filtered out links without hashes
                 if (!searchForThisURL.hash) return
+
+                // We should be safe now!
                 
                 // Find the file in the contentcatalog that has a file.pub.url value that matches the pathname of the link target
                 // where the pathname is a relative path from the site root, which is also what pub.url represents
@@ -125,7 +179,8 @@ module.exports.register = function ({ config }) {
                     return f.pub.url === searchForThisURL.pathname
                 })[0]
 
-                // we shouldn't generate this log message, but just in case...
+                // we shouldn't be able to generate this log message now
+                // if target file is not found, Antora should have already logged an error, but just in case...
                 if (!targetFile) {
                     logger[logLevel]({ file: file.src, source: file.src.origin }, 'target file %s not found for link %s', searchForThisURL.pathname, link)
                     return
