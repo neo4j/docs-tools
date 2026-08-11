@@ -59,7 +59,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout PR repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0   # full history so Claude can diff against the base branch
 
@@ -97,7 +97,7 @@ jobs:
       # version the caller used (job_workflow_sha) so the prompt matches this workflow.
       - name: Checkout docs-tools (base prompt)
         if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: neo4j/docs-tools
           ref: ${{ github.job_workflow_sha }}

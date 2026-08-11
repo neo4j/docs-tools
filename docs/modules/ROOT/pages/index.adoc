@@ -5,11 +5,11 @@
 Use these docs to test workflows and extensions.
 
 
-== Style check
+// == Style check
 
-We should ensure the behaviour of the style guide checker is absolutely magnificent and the best.
-I don't know whether we check certain usages eg OLPS (in case you don't know, that stands for one line per sentence). Maybe we do, maybe we don't.
-Inter alia, latin phrases should be avoided at all costs.
+// We need to ensure the behaviour of the style guide checker is absolutely magnificent and the best.
+// I don't know whether we check certain usages eg OLPS (in case you don't know, that stands for one line per sentence). Maybe we do, maybe we don't.
+// Inter alia, latin phrases should be avoided at all costs.
 
 
 == Admonition with footnote
@@ -50,9 +50,6 @@ Table inside a table?
 
 ====
 
-== Admonition with table, with footnotes
-
-[NOTE]
 
 == Include test
 
