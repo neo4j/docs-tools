@@ -34,9 +34,17 @@ const fs = require('fs')
 const path = require('path')
 const express = require('express')
 
+// docsUrl is a factory parameter, not request input, but a plain loop sidesteps any
+// question of regex backtracking cost entirely rather than relying on /\/+$/ being safe.
+function stripTrailingSlashes (str) {
+  let end = str.length
+  while (end > 0 && str[end - 1] === '/') end--
+  return str.slice(0, end)
+}
+
 module.exports = function ({ buildDir, docsUrl, noLocalTabs, localNavOnly } = {}) {
   const resolvedBuildDir = path.resolve(buildDir || './build/site')
-  const resolvedDocsUrl = (docsUrl || 'https://neo4j.com/docs').replace(/\/+$/, '')
+  const resolvedDocsUrl = stripTrailingSlashes(docsUrl || 'https://neo4j.com/docs')
   const suppressLocalTabs = !!noLocalTabs
   const localNavOnlyFlag = !!localNavOnly
 

@@ -647,6 +647,11 @@ function generateTabNavFile (tabNavData, tabNavFile = 'nav/tabs.json') {
 // nav shards into a single tabs.json.
 function deepMerge (target, source) {
   for (const key of Object.keys(source)) {
+    // source is parsed JSON from a fetched URL or S3 shard - Object.keys() includes a
+    // literal "__proto__" key if the JSON had one, and target[key] = val for that key
+    // really does set the prototype. Skip it (and the other dangerous keys) rather than
+    // trust the data source never gets tampered with.
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
     const sourceVal = source[key]
     const targetVal = target[key]
     if (

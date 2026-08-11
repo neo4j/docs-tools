@@ -77,6 +77,11 @@ async function putJson (Key, data) {
 
 function deepMerge (target, source) {
   for (const key of Object.keys(source)) {
+    // source is parsed JSON from a fetched S3 shard - Object.keys() includes a literal
+    // "__proto__" key if the JSON had one, and target[key] = val for that key really does
+    // set the prototype. Skip it (and the other dangerous keys) rather than trust the
+    // bucket contents never get tampered with.
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
     const sourceVal = source[key]
     const targetVal = target[key]
     if (
