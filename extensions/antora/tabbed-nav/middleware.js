@@ -42,6 +42,46 @@ function stripTrailingSlashes (str) {
   return str.slice(0, end)
 }
 
+// buildDir's directory structure is fixed for the lifetime of this process - it only
+// changes when a new antora build runs, and the standard dev workflow (nodemon watching
+// a rebuild, whose postbuild starts a fresh server) always restarts the process when
+// that happens. So there's nothing to gain by re-scanning it on every request - one
+// scan, shared by both handlers below, replaces what would otherwise be repeated
+// synchronous fs calls per request (the actual substance behind the "missing
+// rate-limiting" findings: request volume driving real per-request I/O cost). Not
+// cached on failure, so a server started before the first build still picks it up
+// once a request arrives after that build completes.
+let cachedListing = null
+
+function scanBuildDir (buildDir) {
+  const components = {}
+  const topLevelDirs = new Set()
+  for (const compEntry of fs.readdirSync(buildDir, { withFileTypes: true })) {
+    if (!compEntry.isDirectory()) continue
+    topLevelDirs.add(compEntry.name)
+    const compPath = path.join(buildDir, compEntry.name)
+    const entries = fs.readdirSync(compPath, { withFileTypes: true })
+    // Versioned component → has version subdirs and no .html at root.
+    // Unversioned component → has .html files directly. Record '' for
+    // unversioned so it matches the empty-string version key in tabs.json.
+    const hasHtmlAtRoot = entries.some((e) => e.isFile() && e.name.endsWith('.html'))
+    components[compEntry.name] = hasHtmlAtRoot
+      ? ['']
+      : entries.filter((e) => e.isDirectory()).map((e) => e.name)
+  }
+  return { components, topLevelDirs }
+}
+
+function getBuildDirListing (buildDir) {
+  if (cachedListing) return cachedListing
+  try {
+    return (cachedListing = scanBuildDir(buildDir))
+  } catch (e) {
+    // <buildDir> doesn't exist yet (pre-first-build) - don't cache the failure.
+    return { components: {}, topLevelDirs: new Set() }
+  }
+}
+
 module.exports = function ({ buildDir, docsUrl, noLocalTabs, localNavOnly } = {}) {
   const resolvedBuildDir = path.resolve(buildDir || './build/site')
   const resolvedDocsUrl = stripTrailingSlashes(docsUrl || 'https://neo4j.com/docs')
@@ -54,25 +94,7 @@ module.exports = function ({ buildDir, docsUrl, noLocalTabs, localNavOnly } = {}
 
   router.get('/local-manifest.json', (_req, res) => {
     if (suppressLocalTabs) return res.status(404).end()
-    const components = {}
-    try {
-      for (const compEntry of fs.readdirSync(resolvedBuildDir, { withFileTypes: true })) {
-        if (!compEntry.isDirectory()) continue
-        const compPath = path.join(resolvedBuildDir, compEntry.name)
-        const entries = fs.readdirSync(compPath, { withFileTypes: true })
-        // Versioned component → has version subdirs and no .html at root.
-        // Unversioned component → has .html files directly. Record '' for
-        // unversioned so it matches the empty-string version key in tabs.json.
-        const hasHtmlAtRoot = entries.some((e) => e.isFile() && e.name.endsWith('.html'))
-        if (hasHtmlAtRoot) {
-          components[compEntry.name] = ['']
-        } else {
-          components[compEntry.name] = entries.filter((e) => e.isDirectory()).map((e) => e.name)
-        }
-      }
-    } catch (e) {
-      // <buildDir> doesn't exist yet (pre-first-build); return empty object
-    }
+    const { components } = getBuildDirListing(resolvedBuildDir)
     res.json({ components, localNavOnly: localNavOnlyFlag })
   })
 
@@ -84,7 +106,7 @@ module.exports = function ({ buildDir, docsUrl, noLocalTabs, localNavOnly } = {}
     // req.path is relative to the mount point (no /docs prefix). The first
     // path segment is the component directory.
     const componentDir = (req.path.match(/^\/([^/]+)/) || [])[1]
-    const componentBuilt = componentDir && fs.existsSync(path.join(resolvedBuildDir, componentDir))
+    const componentBuilt = componentDir && getBuildDirListing(resolvedBuildDir).topLevelDirs.has(componentDir)
 
     if (componentBuilt) {
       res.status(404).send(renderPage({
