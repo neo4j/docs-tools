@@ -5,14 +5,9 @@ site:
 
 content:
   sources:
-  - url: https://@gitlab.com/antora/demo/demo-component-a.git
-    branches: HEAD
-  - url: ./
-    branches: HEAD
-    exclude:
-    - '!**/_includes/*'
-    - '!**/readme.adoc'
-    - '!**/README.adoc'
+  - url: ../
+    start_path: docs
+    branches: [ 'HEAD' , 'test/add-branches' ]
 
 ui:
   bundle:
@@ -25,15 +20,7 @@ urls:
 output:
   dir: ./build/site
 
-antora:
-  extensions:
-  # - "./extensions/antora/table-footnotes"
-  - "./extensions/antora/roles-labels"
-
 asciidoc:
-  extensions:
-  - "@neo4j-documentation/macros"
-  - "./extensions/asciidoc/mark-terms/mark-terms"
   attributes:
     page-theme: docs
     page-type: Docs
@@ -49,3 +36,6 @@ asciidoc:
     nonhtmloutput: ""
     neo4j-docs-base-uri: https://neo4j.com/docs
     page-terms-to-mark: Neo4j, Cypher, test term
+    # tabs
+    page-tabs: tools
+    page-tabs-index: 2

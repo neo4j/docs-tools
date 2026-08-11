@@ -117,5 +117,6 @@ package-lock.json
 node_modules/
 .env
 
-# claude
-.claude/settings.json
+# Claude — ignore everything except the shared slash commands
+.claude/*
+!.claude/commands/

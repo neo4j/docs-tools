@@ -4,6 +4,11 @@ const rolesData = require('./data/roles.json')
 
 const lowercaseProducts = rolesData.products.map((p) => p.toLowerCase())
 
+// synonyms can be applied as bare roles (eg [.neo4j-ee.aura-dbe]) without the label-- prefix
+// build a selector so these are picked up alongside label-- classes
+const synonymSelector = Object.keys(rolesData.synonyms).map((k) => `.${k}`).join(', ')
+const roleSelector = synonymSelector ? `[class*="label--"], ${synonymSelector}` : '[class*="label--"]'
+
 module.exports.register = function ({ config }) {
 
     const {defaultLogLevel = 'info', replaceInlineLabelText = false } = config
@@ -248,7 +253,7 @@ module.exports.register = function ({ config }) {
 
             const parsed = parseHTML(file.contents.toString())
             const headings = ['H2', 'H3', 'H4', 'H5', 'H6', 'CAPTION']
-            const roleDivs = parsed.querySelectorAll('[class*="label--"]')
+            const roleDivs = parsed.querySelectorAll(roleSelector)
             var labelCount = 0
             roleDivs.forEach(function (roleDiv) {
 
@@ -259,8 +264,12 @@ module.exports.register = function ({ config }) {
                 // - discrete headers
                 if (rolesClassList.contains('discrete')) return
 
+                // - the body element: page-role values render as bare classes on <body>,
+                //   but labels belong on headings/blocks, so never build a label div here
+                if (roleDiv.tagName === 'BODY') return
+
                 roles = rolesClassList.value.sort().filter(function (c) {
-                    return (c.startsWith('label--'))
+                    return (c.startsWith('label--') || rolesData.synonyms[c])
                 })
 
                 if (roles.length === 0) return
