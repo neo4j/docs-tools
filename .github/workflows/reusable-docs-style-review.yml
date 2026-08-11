@@ -122,6 +122,48 @@ jobs:
             echo "${delimiter}"
           } >> "$GITHUB_ENV"
 
+      # The changed-file list and base ref come from PR-controlled data (a PR author
+      # picks which files to touch, and forks can target arbitrary base branches), so
+      # neither is safe to interpolate straight into the prompt below - a crafted
+      # filename could smuggle extra "instructions" into what Claude reads. Validate
+      # both against a strict allowlist and hand them to Claude as files to read
+      # instead, so the prompt text itself stays fully static.
+      - name: Prepare validated review inputs
+        if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
+        env:
+          CHANGED_FILES: ${{ steps.changes.outputs.all_changed_files }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          mkdir -p review-input
+
+          if ! [[ "$BASE_REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "::error::Base ref '${BASE_REF}' contains unexpected characters; refusing to proceed"
+            exit 1
+          fi
+          printf '%s' "$BASE_REF" > review-input/base-ref.txt
+
+          : > review-input/changed-files.txt
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            if [[ "$file" == -* ]]; then
+              echo "::warning::Skipping changed file starting with '-': ${file}"
+              continue
+            fi
+            if [[ "$file" == *..* ]]; then
+              echo "::warning::Skipping changed file containing '..': ${file}"
+              continue
+            fi
+            if ! [[ "$file" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+              echo "::warning::Skipping changed file with unexpected characters: ${file}"
+              continue
+            fi
+            printf '%s\n' "$file" >> review-input/changed-files.txt
+          done <<< "$CHANGED_FILES"
+
+          echo "Validated inputs:"
+          cat review-input/base-ref.txt
+          cat review-input/changed-files.txt
+
       - name: Style review
         if: steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
         uses: anthropics/claude-code-action@d5726de019ec4498aa667642bc3a80fca83aa102 # v1
@@ -132,11 +174,12 @@ jobs:
           github_token: ${{ github.token }}
           prompt: |
             ## Context
-            Changed files to review (review ONLY these):
-            ${{ steps.changes.outputs.all_changed_files }}
+            Changed files to review (review ONLY these) are listed one per line in
+            review-input/changed-files.txt - read that file first.
 
-            To focus on ADDED or CHANGED lines, diff each file against the base branch:
-              git diff origin/${{ github.base_ref }}...HEAD -- <file>
+            To focus on ADDED or CHANGED lines, diff each file against the base branch.
+            Read the validated base ref from review-input/base-ref.txt, then run:
+              git diff origin/<base-ref>...HEAD -- <file>
 
             Style guide URL (fetch this single file as your reference):
             ${{ secrets.DOCS_STYLE_GUIDE_LLMS_URL }}
