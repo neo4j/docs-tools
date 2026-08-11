@@ -149,7 +149,11 @@ module.exports.register = function ({ config }) {
 
                     if (item.pageTabs) {
                       if (page && childTab && childTab !== item.pageTabs) {
-                        logger.warn(
+                        // Expected, not a problem: a page can have its own page-tabs for
+                        // when it's viewed standalone, but the enclosing section's tab
+                        // always wins once nested under it - same info-level treatment as
+                        // every other routine nav-assignment message in this file.
+                        logger[logLevel](
                           { file: page.src, source: page.src.origin },
                           `Navigation item "${childItem.content}" has page-tabs "${childTab}" but its section "${item.content}" is in tab "${item.pageTabs}" — overriding to match section`
                         )
