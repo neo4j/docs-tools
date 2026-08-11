@@ -76,7 +76,12 @@ on:
         type: string
         default: 'na'
       antora-fetch-branches:
-        description: 'Space-separated list of additional branches to fetch (e.g. other versions referenced by a multi-version Antora playbook). Fetched with git before the build, so Antora does not have to rely on its own --fetch (isomorphic-git), which is less reliable for this.'
+        description: 'Space-separated list of additional branches to fetch, on top of whatever is auto-detected from antora-playbook (e.g. a branch needed for a one-off reason that is not itself a playbook content source). Fetched with git before the build, so Antora does not have to rely on its own --fetch (isomorphic-git), which is less reliable for this.'
+        required: false
+        type: string
+        default: ''
+      antora-playbook:
+        description: 'Antora playbook file, relative to docs-dir, to read multi-version branches from (content.sources[].branches). Every branch listed there - other than HEAD, which is whatever build-ref already checked out - is fetched automatically before the build, so this input does not need manual upkeep as versions are added or removed. Defaults to publish.yml for verify:publish builds and preview.yml otherwise, matching the convention every repo already follows - override only if a repo names its playbook something else.'
         required: false
         type: string
         default: ''
@@ -159,6 +164,7 @@ jobs:
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
       ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
+      ANTORA_PLAYBOOK: "${{ inputs.antora-playbook || (inputs.package-script == 'verify:publish' && 'publish.yml' || 'preview.yml') }}"
       SPARSE_CHECKOUT: ${{ inputs.sparse-checkout }}
       SPARSE_CHECKOUT_EXTRA_PATHS: ${{ inputs.sparse-checkout-extra-paths }}
 
@@ -182,18 +188,66 @@ jobs:
           ${{ env.SPARSE_CHECKOUT_EXTRA_PATHS }}
         sparse-checkout-cone-mode: false
 
-    # fetch any additional branches a multi-version Antora playbook needs, using real git
-    # (more reliable than relying on antora --fetch, which uses isomorphic-git)
-    - name: Fetch additional Antora playbook branches
-      if: ${{ env.ANTORA_FETCH_BRANCHES != '' }}
+    # Fetch every branch a multi-version Antora playbook needs, using real git (more
+    # reliable than relying on antora --fetch, which uses isomorphic-git). Branches come
+    # from two places, unioned: content.sources[].branches in antora-playbook (read
+    # automatically - HEAD is excluded, since that's whatever build-ref already checked
+    # out, not a separate branch to fetch) and the antora-fetch-branches input (a manual
+    # escape hatch for a branch needed for some other reason).
+    - name: Fetch Antora playbook branches
       run: |
+        playbook_path="${DOCS_DIR}/${ANTORA_PLAYBOOK}"
+        playbook_branches=""
+        if [ -f "$playbook_path" ]; then
+          # A playbook can declare multiple content sources, each from a different repo.
+          # We only checked out and can git-fetch branches for THIS repo, so only consider
+          # sources whose url is a relative/local path to it - not an absolute url (a
+          # scheme like https:// or git://, or scp-like git@host:path), which always means
+          # a different repo. Those are Antora's own problem to fetch, not ours.
+          playbook_branches=$(yq eval '
+            [.content.sources[] | select(((.url | test("^[a-zA-Z][a-zA-Z0-9+.-]*://")) or (.url | test("^[^/]+@[^:/]+:"))) | not) | .branches]
+            | flatten
+            | map(select(. != "HEAD"))
+            | unique
+            | join(" ")
+          ' "$playbook_path")
+        else
+          echo "::warning::Antora playbook not found at ${playbook_path}; skipping auto-detected branches"
+        fi
+
+        # Filter HEAD from the combined list too, not just the playbook-derived part -
+        # it's not a real remote branch, so a git fetch refspec for it fails outright
+        # (and fails the whole multi-refspec fetch, not just that one ref) if it ever
+        # reaches here via antora-fetch-branches instead. The `|| true` guards against
+        # grep's own exit 1 when it filters out every line (e.g. input was only "HEAD")
+        # - that's not an error, it's exactly the "nothing to fetch" case the next check
+        # handles, but bash's errexit would otherwise abort the script right here first.
+        branches=$(printf '%s\n' $playbook_branches $ANTORA_FETCH_BRANCHES | grep -v '^HEAD$' | sort -u | tr '\n' ' ' || true)
+        if [ -z "$(echo "$branches" | tr -d '[:space:]')" ]; then
+          echo "No additional branches to fetch"
+          exit 0
+        fi
+        echo "Fetching branches: ${branches}"
+
         refspecs=()
-        for branch in $ANTORA_FETCH_BRANCHES; do
+        for branch in $branches; do
           refspecs+=("+refs/heads/${branch}:refs/remotes/origin/${branch}")
         done
+
+        # fetch-depth: 0 makes actions/checkout do a blobless partial clone
+        # (--filter=blob:none) - commits and trees only, no file contents. Real git
+        # transparently lazy-fetches a missing blob on demand (e.g. from `git cat-file`),
+        # but antora's isomorphic-git has no concept of that and just fails outright -
+        # this is the actual NotFoundError root cause, not --fetch. A plain fetch here
+        # inherits that same filter from the remote config, so clear it and use
+        # --refetch to force these branches' blobs down for real, not just their commits
+        # and trees. The unsets are harmless no-ops (exit 5) when there was no partial
+        # clone filter to begin with, hence `|| true`.
+        git config --unset remote.origin.partialclonefilter 2>/dev/null || true
+        git config --unset remote.origin.promisor 2>/dev/null || true
         # no --depth: a shallow/grafted commit here seems to confuse antora's own
         # isomorphic-git fetch when it later tries to resolve these same branches
-        git fetch --no-tags origin "${refspecs[@]}"
+        git fetch --no-tags --refetch origin "${refspecs[@]}"
 
     - name: Remove excluded extensions
       run: |
@@ -245,6 +299,9 @@ jobs:
         printf "\n\n<!---- Installed packages -->\n"
         npm list
 
+    # A missing script name is a genuine config error - not something to tolerate the way
+    # the run step's continue-on-error tolerates antora itself failing - so this step gets
+    # no continue-on-error and fails the job outright.
     - name: Run package script
       id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
