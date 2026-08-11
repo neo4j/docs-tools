@@ -167,7 +167,10 @@ module.exports.register = function ({ config }) {
                       // (external links) or no page-tabs attribute of their own.
                       addTabInfoToNavItem(childItem, component, version, item.pageTabs, item.tabIndex, latest.title, pagesByUrl)
                     } else {
-                      logger[logLevel](`Navigation item: ${childItem.content} has no section tab — unassigned`)
+                      // Unlike the two cases above, this one isn't benign: the section got
+                      // no tab at all, so every child under it - this one included - never
+                      // lands in any tab and is invisible in the aggregated nav.
+                      logger.warn(`Navigation item: ${childItem.content} has no section tab — unassigned`)
                     }
                   }
                   // Propagate navPromote from direct child pages up to the section item
