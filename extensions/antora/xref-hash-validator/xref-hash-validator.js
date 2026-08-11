@@ -111,64 +111,23 @@ module.exports.register = function ({ config }) {
             // check the internal links in the file
             file.xrefChecker.internalLinks.forEach((link) => {
 
-                const linkPath = path.normalize(path.join(path.dirname(file.pub.url), link.split('#')[0]))
-
-                // in the sitecatalog can we get all the components?
-                const components = contentCatalog.getComponents().map( (component) => {
-                    return component.name
-                })
-
-                // can we check that the linkPath starts with one of the components?
-                const targetFileCheck = components.some( (component) => {
-                    return linkPath.startsWith(`/${component}`)
-                })
-
-                // if the linkPath tries to escape the site root, log a warning and skip validation for this link
-                // I don't know how it would, but anyway...
-                if (!targetFileCheck) {
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: %s does not resolve to a valid page in the site', link)
-                    return
-                }
-
+                // internalLinks (built above, in documentsConverted) only ever contains
+                // hrefs Antora's own xref resolution already resolved to a real page -
+                // anything unresolved is filtered out before we see it, and Antora logs
+                // that separately. So the target file is guaranteed to exist by
+                // construction; there's nothing to gain by independently re-deriving and
+                // re-validating "is this URL within the site" from file.pub.url + link,
+                // and two different bugs in that derivation (a path.dirname off-by-one
+                // dropping the component prefix, and new URL() dropping site.url's last
+                // path segment when it lacked a trailing slash) each caused entirely valid
+                // links to be wrongly rejected. All that's actually still worth checking
+                // is whether the #hash anchor exists on that (already-confirmed-real) page.
                 const rawSiteURLRoot = (playbook.site && playbook.site.url) ? playbook.site.url : 'http://example.com'
-                // A trailing slash is required here: new URL(relativePath, base) treats
-                // base's last path segment as a filename to discard when there's no
-                // trailing slash (same as a browser resolving a relative link) - so
-                // 'https://neo4j.com/docs' as a base silently drops "docs", resolving
-                // e.g. 'aura/foo' to 'https://neo4j.com/aura/foo' instead of
-                // 'https://neo4j.com/docs/aura/foo'. That previously caused every
-                // legitimate link to be wrongly rejected as "resolves outside site url".
+                // Still need a trailing slash: new URL(relativePath, base) treats base's
+                // last path segment as a filename to discard when there's no trailing
+                // slash (same as a browser resolving a relative link), so without this,
+                // 'https://neo4j.com/docs' as a base would silently drop "docs".
                 const siteURLRoot = rawSiteURLRoot.endsWith('/') ? rawSiteURLRoot : rawSiteURLRoot + '/'
-                // what is the full url of each link?
-                const testThisURL = new URL(path.join('.', file.pub.url, link), siteURLRoot)
-
-                // if searchForThisURL is outside the site url, something is up and we should not try to validate it
-                // remember: we are validating only xrefs to files that are in the contentCatalog
-                let siteRootUrl
-                try {
-                    siteRootUrl = new URL(siteURLRoot)
-                } catch (e) {
-                    // if the configured site URL is invalid, log and skip validation for this link
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: invalid site url %s', siteURLRoot)
-                    return
-                }
-
-                // and now for some semgrep or CodeQL suggested checks that I'm not sure are needed
-                const sameOrigin =
-                    testThisURL.protocol === siteRootUrl.protocol &&
-                    testThisURL.hostname === siteRootUrl.hostname &&
-                    testThisURL.port === siteRootUrl.port
-
-                // Ensure the target path is under the site root path
-                const siteRootPath = siteRootUrl.pathname.endsWith('/')
-                    ? siteRootUrl.pathname
-                    : siteRootUrl.pathname + '/'
-                const targetPath = testThisURL.pathname
-
-                if (!sameOrigin || !targetPath.startsWith(siteRootPath)) {
-                    logger[logLevel]({ file: file.src, source: file.src.origin }, 'link configuration error: %s resolves outside site url %s', testThisURL.href, siteURLRoot)
-                    return
-                }
 
                 const searchForThisURL = new URL(path.join(file.pub.url, link), siteURLRoot)
 
