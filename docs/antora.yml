@@ -4,3 +4,7 @@ version: 'dev'
 start_page: ROOT:index.adoc
 nav:
 - modules/ROOT/content-nav.adoc
+asciidoc:
+  attributes:
+    page-tabs: get-started@
+    page-tabs-index: 100

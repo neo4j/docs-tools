@@ -20,22 +20,38 @@ urls:
 output:
   dir: ./build/site
 
+antora:
+  extensions:
+   - require: "../extensions/antora/tabbed-nav"
+    #  fetchNav: false
+
 asciidoc:
   attributes:
+    # tabs
+    page-tabs: tools@
+    page-tabs-index: 100
+    # page-attributes are used by the ui-bundle and by extensions
     page-theme: docs
     page-type: Docs
     page-search-type: Docs
     page-search-site: Reference Docs
     page-canonical-root: /docs
+    page-terms-to-mark: Neo4j, Cypher, test term
     page-pagination: true
     page-no-canonical: true
-    page-origin-private: true
+    page-origin-private: true # change to false to display 'Raise an issue' links
     page-hide-toc: false
     page-mixpanel: 4bfb2414ab973c741b6f067bf06d5575
+    # legacy attributes - do not change these
     includePDF: false
     nonhtmloutput: ""
-    neo4j-docs-base-uri: https://neo4j.com/docs
-    page-terms-to-mark: Neo4j, Cypher, test term
-    # tabs
-    page-tabs: tools
-    page-tabs-index: 2
+    experimental: ''
+    # update the copyright value with the first commit in a new year
+    copyright: 2026
+    # icon attributes 
+    check-mark: icon:check[]
+    cross-mark: icon:times[]
+    # neo4j.com attributes. Always use when linking to neo4j.com URLs
+    neo4j-base-uri: https://neo4j.com
+    neo4j-docs-base-uri: '{neo4j-base-uri}/docs'
+    common-license-page-uri: '{neo4j-docs-base-uri}/license'

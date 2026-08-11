@@ -1,1 +1,6 @@
 * xref:index.adoc[]
+
+* *Administration section*
+
+* xref:administration.adoc[]
+* xref:administration-advanced.adoc[]
