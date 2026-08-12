@@ -21,10 +21,10 @@ module.exports.register = function ({ config }) {
     generateNav = true,
     // fetchNav defaults to false, unlike the other stages: reaching out to a remote
     // tabs.json is the one thing that should never happen just because a docset
-    // referenced this extension - it has to be requested. Can be enabled via config
-    // or the DOCS_FETCH_NAV env var (see the check below), the latter so a shared CI
-    // workflow can flip it for publish builds without every docset's playbook
-    // carrying the flag - the same pattern emitLocalManifest uses below.
+    // referenced this extension - it has to be requested. That request can be this
+    // flag, a truthy DOCS_FETCH_NAV env var, or simply pointing at an explicit nav
+    // source (navUrl config, DOCS_NAV_URL/DOCS_URL env) - see the resolution logic
+    // below, near where resolvedNavUrl/shouldFetchNav are computed.
     fetchNav = false,
     aggregateNav = true,
     consumeNav = true,
@@ -230,17 +230,31 @@ module.exports.register = function ({ config }) {
       //   2. DOCS_NAV_URL env var (explicit per-invocation override of just the nav URL)
       //   3. DOCS_URL + /nav/tabs.json (derived from the writer's single "where docs live" var)
       //   4. <playbook.site.url>/nav/tabs.json (last-resort fallback — usually points at prod)
-      const resolvedNavUrl =
+      const explicitNavUrl =
         navUrl ||
         process.env.DOCS_NAV_URL ||
         (process.env.DOCS_URL
           ? process.env.DOCS_URL.replace(/\/+$/, '') + '/nav/tabs.json'
-          : null) ||
+          : null)
+
+      const resolvedNavUrl =
+        explicitNavUrl ||
         (playbook.site && playbook.site.url
           ? playbook.site.url.replace(/\/+$/, '') + '/nav/tabs.json'
           : null)
 
-      if ((fetchNav || process.env.DOCS_FETCH_NAV) && resolvedNavUrl) {
+      // Fetching is on when explicitly requested (fetchNav config, truthy
+      // DOCS_FETCH_NAV) or implied by an explicit nav source (navUrl config,
+      // DOCS_NAV_URL/DOCS_URL env) - setting one of those to point at a nav file is
+      // itself the opt-in, no extra flag needed. Falling back to playbook.site.url
+      // alone never implies fetching (that's the "silently hits prod" case this gate
+      // exists to prevent). DOCS_FETCH_NAV can still be set to 'false'/'0' to force
+      // fetching off even when an explicit nav source is present.
+      const fetchNavEnv = process.env.DOCS_FETCH_NAV
+      const fetchNavExplicitlyDisabled = fetchNavEnv === 'false' || fetchNavEnv === '0'
+      const shouldFetchNav = !fetchNavExplicitlyDisabled && (fetchNav || fetchNavEnv || !!explicitNavUrl)
+
+      if (shouldFetchNav && resolvedNavUrl) {
         try {
           const res = await fetch(resolvedNavUrl)
           if (!res.ok) throw new Error('HTTP ' + res.status)
