@@ -109,6 +109,11 @@ module.exports.register = function ({ config }) {
                 .map(p => [p.pub.url, p])
             )
 
+            // Docset-wide equivalent of page-nav-promote: set once in antora.yml so every
+            // top-level section becomes its own promoted top-level block, instead of
+            // hand-tagging page-nav-promote on every section's landing page individually.
+            const promoteAllSections = !!(asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-promote-sections'] !== undefined)
+
             for (const nav of navigation) {
 
               nav.items = groupFlatNavSections(nav.items)
@@ -179,8 +184,10 @@ module.exports.register = function ({ config }) {
                       logger.warn(`Navigation item: ${childItem.content} has no section tab — unassigned`)
                     }
                   }
-                  // Propagate navPromote from direct child pages up to the section item
-                  if (item.items.some(ci => ci.navPromote && ci.url)) {
+                  // Propagate navPromote from direct child pages up to the section item -
+                  // or force it regardless, when the whole docset opted into promoting
+                  // every top-level section (see promoteAllSections above).
+                  if (promoteAllSections || item.items.some(ci => ci.navPromote && ci.url)) {
                     item.navPromote = true
                   }
                 } else {
