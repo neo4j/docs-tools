@@ -443,6 +443,15 @@ module.exports.register = function ({ config }) {
               // render that shape as a plain section header.
               const normalItems = versionData.items.filter(item => !item.navPromote && (item.url || item.content || (item.items && item.items.length)))
 
+              // How many top-level blocks this component+version contributes to this tab -
+              // normally 1, but page-tabs-promote-sections (or several individually
+              // promoted sections) can split one docset into several sibling blocks that
+              // all share this component+version. soleBlock lets the UI tell "the one
+              // block for this docset" apart from "one of several" - see its use in
+              // nav-tree.hbs/09-nav-fetch.js, which only auto-expand a block on a
+              // component+version match when it's the only one.
+              const soleBlock = (promotedItems.length + (normalItems.length > 0 ? 1 : 0)) === 1
+
               for (const item of promotedItems) {
                 const sectionTitle = item.content ? stripTags(item.content).trim() : versionData.title
                 tabNav[0].items.push({
@@ -452,6 +461,7 @@ module.exports.register = function ({ config }) {
                   componentVersion: version,
                   componentTitle: sectionTitle,
                   componentHeader: true,
+                  soleBlock,
                   latest: versionData.latest,
                   ...(versionData.docsetGroup && { docsetGroup: versionData.docsetGroup }),
                   items: item.items || [],
@@ -466,6 +476,7 @@ module.exports.register = function ({ config }) {
                   componentVersion: version,
                   componentTitle: versionData.title,
                   componentHeader: true,
+                  soleBlock,
                   latest: versionData.latest,
                   ...(versionData.docsetGroup && { docsetGroup: versionData.docsetGroup }),
                   items: normalItems,
