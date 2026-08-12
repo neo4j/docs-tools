@@ -110,9 +110,10 @@ module.exports.register = function ({ config }) {
             )
 
             // Docset-wide equivalent of page-nav-promote: set once in antora.yml so every
-            // top-level section becomes its own promoted top-level block, instead of
-            // hand-tagging page-nav-promote on every section's landing page individually.
-            const promoteAllSections = !!(asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-promote-sections'] !== undefined)
+            // top-level thing in content-nav.adoc - section or flat standalone page -
+            // becomes its own promoted top-level block, instead of hand-tagging
+            // page-nav-promote on every section's landing page individually.
+            const promoteAll = !!(asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-promote-all'] !== undefined)
 
             for (const nav of navigation) {
 
@@ -186,8 +187,8 @@ module.exports.register = function ({ config }) {
                   }
                   // Propagate navPromote from direct child pages up to the section item -
                   // or force it regardless, when the whole docset opted into promoting
-                  // every top-level section (see promoteAllSections above).
-                  if (promoteAllSections || item.items.some(ci => ci.navPromote && ci.url)) {
+                  // every top-level thing (see promoteAll above).
+                  if (promoteAll || item.items.some(ci => ci.navPromote && ci.url)) {
                     item.navPromote = true
                   }
                 } else {
@@ -211,6 +212,19 @@ module.exports.register = function ({ config }) {
                   if (pageTabs) {
 
                     addTabInfoToNavItem(item, component, version, pageTabs, pageTabsIndex || 99999, latest.title, pagesByUrl)
+
+                    // promoteAll applies to every top-level linked item here, section or
+                    // not: a linked page with its own children (`* xref:security.adoc[Security]`
+                    // followed by nested `** xref:...`) is still a "section" for this
+                    // purpose, and a flat standalone page (no children at all, e.g. a bare
+                    // "* xref:virtual-graph.adoc[]" sibling) gets force-promoted too - it's
+                    // pushed through as its own plain top-level item further downstream
+                    // (see the promotedItems loop in consumeNav), not wrapped as a
+                    // componentHeader block. addTabInfoToNavItem already propagates
+                    // navPromote up from a promoted child; this forces it regardless.
+                    if (promoteAll) {
+                      item.navPromote = true
+                    }
 
                     if (provisionalItems.length) {
                       for (const pending of provisionalItems) {
@@ -443,16 +457,27 @@ module.exports.register = function ({ config }) {
               // render that shape as a plain section header.
               const normalItems = versionData.items.filter(item => !item.navPromote && (item.url || item.content || (item.items && item.items.length)))
 
+              // A promoted item with no children (a flat standalone page, e.g. a bare
+              // "* xref:virtual-graph.adoc[]" sibling) has nothing to wrap into a docset
+              // block - it's pushed through as-is below, already carrying url/content/
+              // pageTabs etc. from addTabInfoToNavItem. Only promoted sections (real
+              // parent items with children) become their own componentHeader block.
+              const promotedSectionCount = promotedItems.filter(item => item.items && item.items.length).length
+
               // How many top-level blocks this component+version contributes to this tab -
-              // normally 1, but page-tabs-promote-sections (or several individually
+              // normally 1, but page-tabs-promote-all (or several individually
               // promoted sections) can split one docset into several sibling blocks that
               // all share this component+version. soleBlock lets the UI tell "the one
               // block for this docset" apart from "one of several" - see its use in
               // nav-tree.hbs/09-nav-fetch.js, which only auto-expand a block on a
               // component+version match when it's the only one.
-              const soleBlock = (promotedItems.length + (normalItems.length > 0 ? 1 : 0)) === 1
+              const soleBlock = (promotedSectionCount + (normalItems.length > 0 ? 1 : 0)) === 1
 
               for (const item of promotedItems) {
+                if (!(item.items && item.items.length)) {
+                  tabNav[0].items.push(item)
+                  continue
+                }
                 const sectionTitle = item.content ? stripTags(item.content).trim() : versionData.title
                 tabNav[0].items.push({
                   content: sectionTitle,
@@ -464,7 +489,7 @@ module.exports.register = function ({ config }) {
                   soleBlock,
                   latest: versionData.latest,
                   ...(versionData.docsetGroup && { docsetGroup: versionData.docsetGroup }),
-                  items: item.items || [],
+                  items: item.items,
                 })
               }
 
