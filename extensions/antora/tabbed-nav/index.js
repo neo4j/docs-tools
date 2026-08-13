@@ -116,9 +116,23 @@ module.exports.register = function ({ config }) {
             // every section's landing page individually.
             const promoteAll = componentWideAttr('page-tabs-promote-all', asciidoc, playbook.asciidoc) !== undefined
 
-            for (const nav of navigation) {
+            // Antora can split one logical nav list into multiple separate
+            // "navigation" blocks - not just at module boundaries (separate nav:
+            // files), but also from a full-line comment inside a single
+            // content-nav.adoc (e.g. "// * xref:..[]"), which AsciiDoc treats as a
+            // block break, splitting what the writer sees as one continuous list
+            // into two independent ones. That severs the "top-level section + its
+            // flat sibling xrefs" relationship groupFlatNavSections depends on
+            // before this code ever sees it - a bold heading in one block never
+            // sees the xrefs that end up in the next, so they're never nested
+            // under it and never inherit its tab. Concatenating every block's
+            // items into one flat run before grouping, then putting the result
+            // back on the first block alone (emptying every other block), makes a
+            // comment-induced split behave exactly like an unbroken list.
+            navigation[0].items = groupFlatNavSections([].concat(...navigation.map((n) => n.items)))
+            for (let i = 1; i < navigation.length; i++) navigation[i].items = []
 
-              nav.items = groupFlatNavSections(nav.items)
+            for (const nav of navigation) {
 
               // Url-less leaf items (section headers, or link items Antora didn't
               // parse a url out of) awaiting backfill once a later sibling resolves
