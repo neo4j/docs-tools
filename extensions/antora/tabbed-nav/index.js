@@ -109,6 +109,13 @@ module.exports.register = function ({ config }) {
                 .map(p => [p.pub.url, p])
             )
 
+            // Docset-wide equivalent of page-nav-promote: set once in antora.yml (or the
+            // playbook, to apply to everything it builds) so every top-level thing in
+            // content-nav.adoc - section or flat standalone page - becomes its own
+            // promoted top-level block, instead of hand-tagging page-nav-promote on
+            // every section's landing page individually.
+            const promoteAll = componentWideAttr('page-tabs-promote-all', asciidoc, playbook.asciidoc) !== undefined
+
             for (const nav of navigation) {
 
               nav.items = groupFlatNavSections(nav.items)
@@ -135,13 +142,14 @@ module.exports.register = function ({ config }) {
                   // component-wide fallback used for flat resolved links below.
                   for (const ci of item.items) {
                     const p = pagesByUrl.get(ci.url)
+                    const ciPageTabsRaw = componentWideAttr('page-tabs', asciidoc, playbook.asciidoc)
                     const ciPageTabs = (p && p.asciidoc && p.asciidoc.attributes['page-tabs']) ||
-                      (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs'] && asciidoc.attributes['page-tabs'].replace(/@$/, ''))
+                      (ciPageTabsRaw && ciPageTabsRaw.replace(/@$/, ''))
                     if (ciPageTabs) {
                       item.pageTabs = ciPageTabs
                       item.tabIndex = (p && p.asciidoc && p.asciidoc.attributes['page-tabs-index'])
                         ? parseInt(p.asciidoc.attributes['page-tabs-index'])
-                        : (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-index']) || 99999
+                        : componentWideAttr('page-tabs-index', asciidoc, playbook.asciidoc) || 99999
                       item.component = component
                       item.componentTitle = latest.title
                       item.componentVersion = version
@@ -179,8 +187,10 @@ module.exports.register = function ({ config }) {
                       logger.warn(`Navigation item: ${childItem.content} has no section tab — unassigned`)
                     }
                   }
-                  // Propagate navPromote from direct child pages up to the section item
-                  if (item.items.some(ci => ci.navPromote && ci.url)) {
+                  // Propagate navPromote from direct child pages up to the section item -
+                  // or force it regardless, when the whole docset opted into promoting
+                  // every top-level thing (see promoteAll above).
+                  if (promoteAll || item.items.some(ci => ci.navPromote && ci.url)) {
                     item.navPromote = true
                   }
                 } else {
@@ -188,22 +198,39 @@ module.exports.register = function ({ config }) {
                   const page = pagesByUrl.get(item.url)
 
                   // A page-tabs value to use: prefer the specific page's own attribute,
-                  // but fall back to the component-wide default (set in antora.yml/the
-                  // playbook) for items whose url doesn't resolve to a page in this
-                  // component at all - e.g. an external link (GraphAcademy course, etc.),
-                  // which can never carry a per-page attribute since there's no page.
-                  // The component-wide fallback comes straight from antora.yml, unprocessed by
-                  // Asciidoctor - so a soft-set value like "drivers-apis@" still has its trailing
-                  // "@" (Asciidoctor strips this marker when it resolves a page's own attributes,
-                  // which is why the per-page value never needs this).
+                  // but fall back to the component-wide default (antora.yml, or the
+                  // playbook to apply it to everything the playbook builds - antora.yml
+                  // wins when both are set, same as Antora's own attribute precedence)
+                  // for items whose url doesn't resolve to a page in this component at
+                  // all - e.g. an external link (GraphAcademy course, etc.), which can
+                  // never carry a per-page attribute since there's no page. The
+                  // component-wide fallback comes straight from antora.yml/the playbook,
+                  // unprocessed by Asciidoctor - so a soft-set value like "drivers-apis@"
+                  // still has its trailing "@" (Asciidoctor strips this marker when it
+                  // resolves a page's own attributes, which is why the per-page value
+                  // never needs this).
+                  const pageTabsRaw = componentWideAttr('page-tabs', asciidoc, playbook.asciidoc)
                   const pageTabs = (page && page.asciidoc && page.asciidoc.attributes['page-tabs']) ||
-                    (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs'] && asciidoc.attributes['page-tabs'].replace(/@$/, ''))
+                    (pageTabsRaw && pageTabsRaw.replace(/@$/, ''))
                   const pageTabsIndex = (page && page.asciidoc && page.asciidoc.attributes['page-tabs-index']) ||
-                    (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-index'])
+                    componentWideAttr('page-tabs-index', asciidoc, playbook.asciidoc)
 
                   if (pageTabs) {
 
                     addTabInfoToNavItem(item, component, version, pageTabs, pageTabsIndex || 99999, latest.title, pagesByUrl)
+
+                    // promoteAll applies to every top-level linked item here, section or
+                    // not: a linked page with its own children (`* xref:security.adoc[Security]`
+                    // followed by nested `** xref:...`) is still a "section" for this
+                    // purpose, and a flat standalone page (no children at all, e.g. a bare
+                    // "* xref:virtual-graph.adoc[]" sibling) gets force-promoted too - it's
+                    // pushed through as its own plain top-level item further downstream
+                    // (see the promotedItems loop in consumeNav), not wrapped as a
+                    // componentHeader block. addTabInfoToNavItem already propagates
+                    // navPromote up from a promoted child; this forces it regardless.
+                    if (promoteAll) {
+                      item.navPromote = true
+                    }
 
                     if (provisionalItems.length) {
                       for (const pending of provisionalItems) {
@@ -284,7 +311,7 @@ module.exports.register = function ({ config }) {
 
             if (!navigation || !navigation.length) return
 
-            const docsetGroup = asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-group']
+            const docsetGroup = componentWideAttr('page-tabs-group', asciidoc, playbook.asciidoc)
 
             for (const nav of navigation) {
               for (const item of nav.items) {
@@ -436,8 +463,48 @@ module.exports.register = function ({ config }) {
               // render that shape as a plain section header.
               const normalItems = versionData.items.filter(item => !item.navPromote && (item.url || item.content || (item.items && item.items.length)))
 
+              // A promoted item with no children (a flat standalone page, e.g. a bare
+              // "* xref:virtual-graph.adoc[]" sibling) has nothing to wrap into a docset
+              // block - it's pushed through as-is below, already carrying url/content/
+              // pageTabs etc. from addTabInfoToNavItem. Only promoted sections (real
+              // parent items with children) become their own componentHeader block.
+              const promotedSectionCount = promotedItems.filter(item => item.items && item.items.length).length
+
+              // How many top-level blocks this component+version contributes to this tab -
+              // normally 1, but page-tabs-promote-all (or several individually
+              // promoted sections) can split one docset into several sibling blocks that
+              // all share this component+version. soleBlock lets the UI tell "the one
+              // block for this docset" apart from "one of several" - see its use in
+              // nav-tree.hbs/09-nav-fetch.js, which only auto-expand a block on a
+              // component+version match when it's the only one.
+              const soleBlock = (promotedSectionCount + (normalItems.length > 0 ? 1 : 0)) === 1
+
               for (const item of promotedItems) {
+                if (!(item.items && item.items.length)) {
+                  tabNav[0].items.push(item)
+                  continue
+                }
                 const sectionTitle = item.content ? stripTags(item.content).trim() : versionData.title
+                // A promoted item that is also its own linked page (e.g. a landing page
+                // like clauses/index.adoc with nested siblings, as opposed to a bare
+                // "* *Heading*" bullet with no url of its own) would otherwise vanish
+                // once wrapped into a section block below - only .content survives as
+                // the section title, and the page's own url is dropped. Keep it as the
+                // section's own first child instead, exactly matching what the source
+                // would produce if it had been written with an explicit bare heading:
+                // "* *Clauses*\n** xref:clauses/index.adoc[]\n** xref:clause-composition.adoc[]".
+                const sectionItems = item.url
+                  ? [{
+                      content: item.content,
+                      url: item.url,
+                      urlType: item.urlType,
+                      pageTabs: item.pageTabs,
+                      tabIndex: item.tabIndex,
+                      component: item.component,
+                      componentTitle: item.componentTitle,
+                      componentVersion: item.componentVersion,
+                    }, ...item.items]
+                  : item.items
                 tabNav[0].items.push({
                   content: sectionTitle,
                   tabIndex: item.tabIndex || versionData.tabIndex || 99999,
@@ -445,9 +512,10 @@ module.exports.register = function ({ config }) {
                   componentVersion: version,
                   componentTitle: sectionTitle,
                   componentHeader: true,
+                  soleBlock,
                   latest: versionData.latest,
                   ...(versionData.docsetGroup && { docsetGroup: versionData.docsetGroup }),
-                  items: item.items || [],
+                  items: sectionItems,
                 })
               }
 
@@ -459,6 +527,7 @@ module.exports.register = function ({ config }) {
                   componentVersion: version,
                   componentTitle: versionData.title,
                   componentHeader: true,
+                  soleBlock,
                   latest: versionData.latest,
                   ...(versionData.docsetGroup && { docsetGroup: versionData.docsetGroup }),
                   items: normalItems,
@@ -588,6 +657,24 @@ module.exports.register = function ({ config }) {
     // })
 
 
+}
+
+// Component-wide attribute defaults can be set in antora.yml (scoped to that one
+// component+version, e.g. so a driver manual's docs stay valid checked out and built
+// standalone) or in the playbook (applies to everything that playbook builds, useful
+// for a shared CI workflow that doesn't want to touch every docset's antora.yml).
+// antora.yml wins when both are set, matching Antora's own attribute precedence
+// (more specific source wins). Returns the raw value, unprocessed by Asciidoctor - a
+// soft-set value like "drivers-apis@" still has its trailing "@"; callers that need
+// the resolved form strip it themselves.
+function componentWideAttr (name, componentAsciidoc, playbookAsciidoc) {
+  if (componentAsciidoc && componentAsciidoc.attributes && componentAsciidoc.attributes[name] !== undefined) {
+    return componentAsciidoc.attributes[name]
+  }
+  if (playbookAsciidoc && playbookAsciidoc.attributes && playbookAsciidoc.attributes[name] !== undefined) {
+    return playbookAsciidoc.attributes[name]
+  }
+  return undefined
 }
 
 // A single-pass tag strip can be bypassed by a crafted string like
