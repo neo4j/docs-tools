@@ -65,16 +65,19 @@ const RESERVED_TOP_LEVEL_DIRS = new Set(['assets', 'nav'])
 // Real component+version data straight from nav.json, if this component produced
 // one (i.e. it has at least one page with a resolved tab). Returns null rather
 // than guessing when there's nothing to read from, so the caller falls back to
-// the directory-shape heuristic below. Takes buildDir + the raw component name
-// (rather than a pre-joined path) and re-sanitizes with basename() here, in the
-// same scope as the join it feeds - static analysis doesn't trace sanitization
-// applied one function up, even though scanBuildDir already does this exact
-// same basename() before ever calling in here.
-function versionsFromNavShard (buildDir, componentName) {
+// the directory-shape heuristic below.
+//
+// compPath is buildDir joined with a directory entry name straight from
+// buildDir's own readdir (scanBuildDir already applies path.basename() to it) -
+// never HTTP-request input. Restructuring this to re-join inside this function
+// (so the "sanitize in the same scope as the join" idiom applies) previously
+// just made Semgrep flag both parameters as tainted instead of one - false
+// positive either way, so suppressed here rather than chased further.
+function versionsFromNavShard (compPath) {
   let shard
   try {
-    const shardPath = path.join(buildDir, path.basename(componentName), NAV_SHARD_FILENAME)
-    shard = JSON.parse(fs.readFileSync(shardPath, 'utf8'))
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+    shard = JSON.parse(fs.readFileSync(path.join(compPath, NAV_SHARD_FILENAME), 'utf8'))
   } catch (e) {
     return null
   }
@@ -99,7 +102,7 @@ function scanBuildDir (buildDir) {
     // but it's the idiom static analysis recognizes as sanitizing a path.join input.
     const compPath = path.join(buildDir, path.basename(compEntry.name))
 
-    const shardVersions = versionsFromNavShard(buildDir, compEntry.name)
+    const shardVersions = versionsFromNavShard(compPath)
     if (shardVersions) {
       components[compEntry.name] = shardVersions
       continue
