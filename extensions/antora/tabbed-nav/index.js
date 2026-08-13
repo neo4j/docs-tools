@@ -109,11 +109,12 @@ module.exports.register = function ({ config }) {
                 .map(p => [p.pub.url, p])
             )
 
-            // Docset-wide equivalent of page-nav-promote: set once in antora.yml so every
-            // top-level thing in content-nav.adoc - section or flat standalone page -
-            // becomes its own promoted top-level block, instead of hand-tagging
-            // page-nav-promote on every section's landing page individually.
-            const promoteAll = !!(asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-promote-all'] !== undefined)
+            // Docset-wide equivalent of page-nav-promote: set once in antora.yml (or the
+            // playbook, to apply to everything it builds) so every top-level thing in
+            // content-nav.adoc - section or flat standalone page - becomes its own
+            // promoted top-level block, instead of hand-tagging page-nav-promote on
+            // every section's landing page individually.
+            const promoteAll = componentWideAttr('page-tabs-promote-all', asciidoc, playbook.asciidoc) !== undefined
 
             for (const nav of navigation) {
 
@@ -141,13 +142,14 @@ module.exports.register = function ({ config }) {
                   // component-wide fallback used for flat resolved links below.
                   for (const ci of item.items) {
                     const p = pagesByUrl.get(ci.url)
+                    const ciPageTabsRaw = componentWideAttr('page-tabs', asciidoc, playbook.asciidoc)
                     const ciPageTabs = (p && p.asciidoc && p.asciidoc.attributes['page-tabs']) ||
-                      (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs'] && asciidoc.attributes['page-tabs'].replace(/@$/, ''))
+                      (ciPageTabsRaw && ciPageTabsRaw.replace(/@$/, ''))
                     if (ciPageTabs) {
                       item.pageTabs = ciPageTabs
                       item.tabIndex = (p && p.asciidoc && p.asciidoc.attributes['page-tabs-index'])
                         ? parseInt(p.asciidoc.attributes['page-tabs-index'])
-                        : (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-index']) || 99999
+                        : componentWideAttr('page-tabs-index', asciidoc, playbook.asciidoc) || 99999
                       item.component = component
                       item.componentTitle = latest.title
                       item.componentVersion = version
@@ -196,18 +198,22 @@ module.exports.register = function ({ config }) {
                   const page = pagesByUrl.get(item.url)
 
                   // A page-tabs value to use: prefer the specific page's own attribute,
-                  // but fall back to the component-wide default (set in antora.yml/the
-                  // playbook) for items whose url doesn't resolve to a page in this
-                  // component at all - e.g. an external link (GraphAcademy course, etc.),
-                  // which can never carry a per-page attribute since there's no page.
-                  // The component-wide fallback comes straight from antora.yml, unprocessed by
-                  // Asciidoctor - so a soft-set value like "drivers-apis@" still has its trailing
-                  // "@" (Asciidoctor strips this marker when it resolves a page's own attributes,
-                  // which is why the per-page value never needs this).
+                  // but fall back to the component-wide default (antora.yml, or the
+                  // playbook to apply it to everything the playbook builds - antora.yml
+                  // wins when both are set, same as Antora's own attribute precedence)
+                  // for items whose url doesn't resolve to a page in this component at
+                  // all - e.g. an external link (GraphAcademy course, etc.), which can
+                  // never carry a per-page attribute since there's no page. The
+                  // component-wide fallback comes straight from antora.yml/the playbook,
+                  // unprocessed by Asciidoctor - so a soft-set value like "drivers-apis@"
+                  // still has its trailing "@" (Asciidoctor strips this marker when it
+                  // resolves a page's own attributes, which is why the per-page value
+                  // never needs this).
+                  const pageTabsRaw = componentWideAttr('page-tabs', asciidoc, playbook.asciidoc)
                   const pageTabs = (page && page.asciidoc && page.asciidoc.attributes['page-tabs']) ||
-                    (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs'] && asciidoc.attributes['page-tabs'].replace(/@$/, ''))
+                    (pageTabsRaw && pageTabsRaw.replace(/@$/, ''))
                   const pageTabsIndex = (page && page.asciidoc && page.asciidoc.attributes['page-tabs-index']) ||
-                    (asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-index'])
+                    componentWideAttr('page-tabs-index', asciidoc, playbook.asciidoc)
 
                   if (pageTabs) {
 
@@ -305,7 +311,7 @@ module.exports.register = function ({ config }) {
 
             if (!navigation || !navigation.length) return
 
-            const docsetGroup = asciidoc && asciidoc.attributes && asciidoc.attributes['page-tabs-group']
+            const docsetGroup = componentWideAttr('page-tabs-group', asciidoc, playbook.asciidoc)
 
             for (const nav of navigation) {
               for (const item of nav.items) {
@@ -631,6 +637,24 @@ module.exports.register = function ({ config }) {
     // })
 
 
+}
+
+// Component-wide attribute defaults can be set in antora.yml (scoped to that one
+// component+version, e.g. so a driver manual's docs stay valid checked out and built
+// standalone) or in the playbook (applies to everything that playbook builds, useful
+// for a shared CI workflow that doesn't want to touch every docset's antora.yml).
+// antora.yml wins when both are set, matching Antora's own attribute precedence
+// (more specific source wins). Returns the raw value, unprocessed by Asciidoctor - a
+// soft-set value like "drivers-apis@" still has its trailing "@"; callers that need
+// the resolved form strip it themselves.
+function componentWideAttr (name, componentAsciidoc, playbookAsciidoc) {
+  if (componentAsciidoc && componentAsciidoc.attributes && componentAsciidoc.attributes[name] !== undefined) {
+    return componentAsciidoc.attributes[name]
+  }
+  if (playbookAsciidoc && playbookAsciidoc.attributes && playbookAsciidoc.attributes[name] !== undefined) {
+    return playbookAsciidoc.attributes[name]
+  }
+  return undefined
 }
 
 // A single-pass tag strip can be bypassed by a crafted string like
