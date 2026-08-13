@@ -485,6 +485,26 @@ module.exports.register = function ({ config }) {
                   continue
                 }
                 const sectionTitle = item.content ? stripTags(item.content).trim() : versionData.title
+                // A promoted item that is also its own linked page (e.g. a landing page
+                // like clauses/index.adoc with nested siblings, as opposed to a bare
+                // "* *Heading*" bullet with no url of its own) would otherwise vanish
+                // once wrapped into a section block below - only .content survives as
+                // the section title, and the page's own url is dropped. Keep it as the
+                // section's own first child instead, exactly matching what the source
+                // would produce if it had been written with an explicit bare heading:
+                // "* *Clauses*\n** xref:clauses/index.adoc[]\n** xref:clause-composition.adoc[]".
+                const sectionItems = item.url
+                  ? [{
+                      content: item.content,
+                      url: item.url,
+                      urlType: item.urlType,
+                      pageTabs: item.pageTabs,
+                      tabIndex: item.tabIndex,
+                      component: item.component,
+                      componentTitle: item.componentTitle,
+                      componentVersion: item.componentVersion,
+                    }, ...item.items]
+                  : item.items
                 tabNav[0].items.push({
                   content: sectionTitle,
                   tabIndex: item.tabIndex || versionData.tabIndex || 99999,
@@ -495,7 +515,7 @@ module.exports.register = function ({ config }) {
                   soleBlock,
                   latest: versionData.latest,
                   ...(versionData.docsetGroup && { docsetGroup: versionData.docsetGroup }),
-                  items: item.items,
+                  items: sectionItems,
                 })
               }
 
