@@ -53,20 +53,62 @@ function stripTrailingSlashes (str) {
 // once a request arrives after that build completes.
 let cachedListing = null
 
+// Written by index.js's generateNav stage at <buildDir>/<component>/nav.json - must
+// match SHARD_FILENAME there. Its shape is the same as tabs.json, scoped to one
+// component: { tab: { component: { version: {...} } } }.
+const NAV_SHARD_FILENAME = 'nav.json'
+
+// Top-level directories under buildDir that are never Antora components -
+// asset/metadata output from Antora itself or this extension, not content.
+const RESERVED_TOP_LEVEL_DIRS = new Set(['assets', 'nav'])
+
+// Real component+version data straight from nav.json, if this component produced
+// one (i.e. it has at least one page with a resolved tab). Returns null rather
+// than guessing when there's nothing to read from, so the caller falls back to
+// the directory-shape heuristic below.
+function versionsFromNavShard (compPath) {
+  let shard
+  try {
+    shard = JSON.parse(fs.readFileSync(path.join(compPath, NAV_SHARD_FILENAME), 'utf8'))
+  } catch (e) {
+    return null
+  }
+  const versions = new Set()
+  for (const tab of Object.keys(shard)) {
+    for (const component of Object.keys(shard[tab])) {
+      Object.keys(shard[tab][component]).forEach((v) => versions.add(v))
+    }
+  }
+  return versions.size ? Array.from(versions) : null
+}
+
 function scanBuildDir (buildDir) {
   const components = {}
   const topLevelDirs = new Set()
   for (const compEntry of fs.readdirSync(buildDir, { withFileTypes: true })) {
     if (!compEntry.isDirectory()) continue
+    if (compEntry.name.startsWith('.') || RESERVED_TOP_LEVEL_DIRS.has(compEntry.name)) continue
     topLevelDirs.add(compEntry.name)
     // compEntry.name is a directory entry name straight from buildDir's own readdir,
     // not attacker-controlled - basename() here is belt-and-braces, not a real fix,
     // but it's the idiom static analysis recognizes as sanitizing a path.join input.
     const compPath = path.join(buildDir, path.basename(compEntry.name))
-    const entries = fs.readdirSync(compPath, { withFileTypes: true })
+
+    const shardVersions = versionsFromNavShard(compPath)
+    if (shardVersions) {
+      components[compEntry.name] = shardVersions
+      continue
+    }
+
+    // No nav.json for this component (e.g. generateNav is off, or none of its
+    // pages resolved a tab) - fall back to guessing from directory shape.
     // Versioned component → has version subdirs and no .html at root.
     // Unversioned component → has .html files directly. Record '' for
     // unversioned so it matches the empty-string version key in tabs.json.
+    // This guess is wrong for an unversioned component whose start page isn't
+    // literally index.adoc (nothing lands at the component root either way) -
+    // the nav.json path above is what actually handles that case correctly.
+    const entries = fs.readdirSync(compPath, { withFileTypes: true })
     const hasHtmlAtRoot = entries.some((e) => e.isFile() && e.name.endsWith('.html'))
     components[compEntry.name] = hasHtmlAtRoot
       ? ['']
