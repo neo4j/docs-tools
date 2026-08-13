@@ -65,11 +65,16 @@ const RESERVED_TOP_LEVEL_DIRS = new Set(['assets', 'nav'])
 // Real component+version data straight from nav.json, if this component produced
 // one (i.e. it has at least one page with a resolved tab). Returns null rather
 // than guessing when there's nothing to read from, so the caller falls back to
-// the directory-shape heuristic below.
-function versionsFromNavShard (compPath) {
+// the directory-shape heuristic below. Takes buildDir + the raw component name
+// (rather than a pre-joined path) and re-sanitizes with basename() here, in the
+// same scope as the join it feeds - static analysis doesn't trace sanitization
+// applied one function up, even though scanBuildDir already does this exact
+// same basename() before ever calling in here.
+function versionsFromNavShard (buildDir, componentName) {
   let shard
   try {
-    shard = JSON.parse(fs.readFileSync(path.join(compPath, NAV_SHARD_FILENAME), 'utf8'))
+    const shardPath = path.join(buildDir, path.basename(componentName), NAV_SHARD_FILENAME)
+    shard = JSON.parse(fs.readFileSync(shardPath, 'utf8'))
   } catch (e) {
     return null
   }
@@ -94,7 +99,7 @@ function scanBuildDir (buildDir) {
     // but it's the idiom static analysis recognizes as sanitizing a path.join input.
     const compPath = path.join(buildDir, path.basename(compEntry.name))
 
-    const shardVersions = versionsFromNavShard(compPath)
+    const shardVersions = versionsFromNavShard(buildDir, compEntry.name)
     if (shardVersions) {
       components[compEntry.name] = shardVersions
       continue
