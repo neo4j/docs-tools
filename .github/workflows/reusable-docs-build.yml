@@ -113,6 +113,11 @@ on:
         type: string
         default: ''
         required: false
+      fetch-nav-preview:
+        description: 'Whether a PR-preview/local verify:preview build should fetch the real aggregated nav (tabs.json) from the published prod site, so the cross-docset tab strip is fully populated instead of showing only this repo''s own docset(s). Off by default since it couples every PR-preview build to a live fetch against prod. Has no effect on verify:publish builds, which always fetch regardless (see DOCS_FETCH_NAV below).'
+        required: false
+        type: boolean
+        default: false
 
     outputs:
         pages-listed:
@@ -149,11 +154,16 @@ jobs:
       # this workflow does, anywhere, so secrets.* has always resolved empty here. See
       # memory note project_reusable_workflow_secrets_inherit for the proper fix (roll
       # out secrets: inherit to every caller); deferred since we're only testing in a
-      # sandbox right now. Everything else - including PR previews - derives the surge.sh
-      # URL it's about to be deployed to (see docs-deploy-surge.yml, which computes the
-      # same $ORG-$REPO-$DEPLOYID.surge.sh pattern), so nav links depending on an
-      # absolute site URL still resolve.
-      ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', inputs.publish-env == 'staging' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs') || format(' --url https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id) }}"
+      # sandbox right now.
+      #
+      # Resolved once here, not duplicated at each use: ANTORA_CLI_OPTIONS and
+      # DOCS_NAV_URL both need the staging-vs-prod split, but they read it via
+      # env.DOCS_PUBLISH_URL from the "Run package script" step's own env: block
+      # below rather than from here directly - a step's env CAN reference an
+      # already-resolved job-level env var, but two entries in this same job-level
+      # env: block can't reference each other (this one included), so they can't be
+      # defined here alongside it.
+      DOCS_PUBLISH_URL: "${{ inputs.publish-env == 'staging' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs' }}"
       ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
       # page-no-local-manifest: staging/prod never serve local-manifest.json (that's a
       # local-dev-only file - see the tabbed-nav extension's emitLocalManifest option and
@@ -166,6 +176,12 @@ jobs:
       # real cross-repo aggregation, so opt in via its env-var override rather than
       # every consumer's playbook needing to carry fetchNav: true as extension config.
       DOCS_FETCH_NAV: "${{ inputs.package-script == 'verify:publish' && 'true' || '' }}"
+      # emitLocalManifest defaults to false - only non-publish builds (PR-preview
+      # surge deploys, plain local verify:preview CI runs) need the static
+      # local-manifest.json so the UI bundle's local-tabs dots/href-rewrite have
+      # something to fetch on a static host with no dev middleware. Publish builds
+      # skip it entirely (see page-no-local-manifest above).
+      DOCS_EMIT_LOCAL_MANIFEST: "${{ inputs.package-script != 'verify:publish' && 'true' || '' }}"
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
       ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
@@ -317,6 +333,22 @@ jobs:
         # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
         # only installed under docs/node_modules.
         NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
+        # Both derive the staging/prod split from the single env.DOCS_PUBLISH_URL set
+        # at job level above - defined here, not there, because that's a job-level
+        # env: block and this one can read it; two entries in the SAME block can't
+        # read each other. Everything else - including PR previews - derives the
+        # surge.sh URL it's about to be deployed to (see docs-deploy-surge.yml, which
+        # computes the same $ORG-$REPO-$DEPLOYID.surge.sh pattern), so nav links
+        # depending on an absolute site URL still resolve.
+        ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', env.DOCS_PUBLISH_URL) || format(' --url https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id) }}"
+        # Opt-in only (fetch-nav-preview input, default false): a PR-preview build
+        # only generates this one repo's own nav shard, so without fetching, its
+        # cross-docset tab strip shows just that. Setting an explicit nav source is
+        # itself what turns fetching on for tabbed-nav (see DOCS_FETCH_NAV above and
+        # the extension's own shouldFetchNav gate) - publish builds already fetch
+        # unconditionally via DOCS_FETCH_NAV, so this only ever applies to the
+        # non-publish path, and is blank (no effect) otherwise.
+        DOCS_NAV_URL: "${{ inputs.package-script != 'verify:publish' && inputs.fetch-nav-preview && format('{0}/nav/tabs.json', env.DOCS_PUBLISH_URL) || '' }}"
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
 
     - name: Print Antora log
