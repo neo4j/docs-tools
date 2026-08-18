@@ -116,20 +116,42 @@ module.exports.register = function ({ config }) {
             // every section's landing page individually.
             const promoteAll = componentWideAttr('page-tabs-promote-all', asciidoc, playbook.asciidoc) !== undefined
 
-            // Antora can split one logical nav list into multiple separate
-            // "navigation" blocks - not just at module boundaries (separate nav:
-            // files), but also from a full-line comment inside a single
-            // content-nav.adoc (e.g. "// * xref:..[]"), which AsciiDoc treats as a
-            // block break, splitting what the writer sees as one continuous list
-            // into two independent ones. That severs the "top-level section + its
-            // flat sibling xrefs" relationship groupFlatNavSections depends on
-            // before this code ever sees it - a bold heading in one block never
-            // sees the xrefs that end up in the next, so they're never nested
-            // under it and never inherit its tab. Concatenating every block's
-            // items into one flat run before grouping, then putting the result
-            // back on the first block alone (emptying every other block), makes a
-            // comment-induced split behave exactly like an unbroken list.
-            navigation[0].items = groupFlatNavSections([].concat(...navigation.map((n) => n.items)))
+            // A full-line comment inside a content-nav.adoc (e.g. "// * xref:..[]")
+            // makes AsciiDoc split what the writer sees as one continuous list into
+            // two independent "navigation" blocks - severing the "top-level section
+            // + its flat sibling xrefs" relationship groupFlatNavSections depends
+            // on: a bold heading in one block never sees the xrefs that end up in
+            // the next, so they're never nested under it and never inherit its tab.
+            //
+            // Separately, when a component's antora.yml lists multiple nav: files
+            // (one per module), each file's blocks land in this same navigation
+            // array too. Those genuinely are separate top-level lists and must NOT
+            // be concatenated together before grouping - doing so lets
+            // groupFlatNavSections's currentHeader leak from one file into the
+            // next, silently absorbing another module's whole section as a child
+            // of the previous module's last section (stripping it of its own
+            // top-level status, and with it any promotion) whenever that module's
+            // first top-level item isn't itself a bare "* *Heading*" bullet.
+            //
+            // build-navigation.js's buildNavigation gives every nav file's first
+            // list an integer .order (that file's index in antora.yml's nav:
+            // list); a comment-induced extra list from the *same* file gets a
+            // fractional order instead. Flooring .order recovers which file a
+            // block came from, so blocks are merged only within a file (undoing
+            // the comment split) and grouped per file (preserving module
+            // boundaries) before the per-file results are concatenated in file
+            // order.
+            const fileGroups = new Map()
+            for (const nav of navigation) {
+              const fileIndex = Math.floor(nav.order)
+              if (!fileGroups.has(fileIndex)) fileGroups.set(fileIndex, [])
+              fileGroups.get(fileIndex).push(...nav.items)
+            }
+            navigation[0].items = [].concat(
+              ...Array.from(fileGroups.keys())
+                .sort((a, b) => a - b)
+                .map((fileIndex) => groupFlatNavSections(fileGroups.get(fileIndex)))
+            )
             for (let i = 1; i < navigation.length; i++) navigation[i].items = []
 
             for (const nav of navigation) {
