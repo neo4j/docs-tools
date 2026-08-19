@@ -232,8 +232,15 @@ module.exports.register = function ({ config }) {
                   }
                   // Propagate navPromote from direct child pages up to the section item -
                   // or force it regardless, when the whole docset opted into promoting
-                  // every top-level thing (see promoteAll above).
-                  if (promoteAll || item.items.some(ci => ci.navPromote && ci.url)) {
+                  // every top-level thing (see promoteAll above). A bare "* Heading"
+                  // section has no url/page of its own to carry an opt-out, so - same as
+                  // the tab-inference loop above already does for pageTabs - treat the
+                  // section's first child as its representative page: an explicit
+                  // `:page-nav-promote: false` there opts the whole section out of
+                  // promoteAll, the same as it would for a linked landing page.
+                  const firstChildPage = pagesByUrl.get(item.items[0] && item.items[0].url)
+                  if ((promoteAll && !isPageNavPromoteExplicitlyDisabled(firstChildPage)) ||
+                      item.items.some(ci => ci.navPromote && ci.url)) {
                     item.navPromote = true
                   }
                 } else {
@@ -253,10 +260,26 @@ module.exports.register = function ({ config }) {
                   // resolves a page's own attributes, which is why the per-page value
                   // never needs this).
                   const pageTabsRaw = componentWideAttr('page-tabs', asciidoc, playbook.asciidoc)
-                  const pageTabs = (page && page.asciidoc && page.asciidoc.attributes['page-tabs']) ||
+                  let pageTabs = (page && page.asciidoc && page.asciidoc.attributes['page-tabs']) ||
                     (pageTabsRaw && pageTabsRaw.replace(/@$/, ''))
-                  const pageTabsIndex = (page && page.asciidoc && page.asciidoc.attributes['page-tabs-index']) ||
+                  let pageTabsIndex = (page && page.asciidoc && page.asciidoc.attributes['page-tabs-index']) ||
                     componentWideAttr('page-tabs-index', asciidoc, playbook.asciidoc)
+
+                  // A section written as a linked landing page (`* xref:installation/index.adoc[]`
+                  // with nested `** xref:...` children) commonly leaves the landing page itself
+                  // without its own page-tabs - it's just a nesting container, the tab lives on
+                  // its descendants (or arrives here via promoteAll without a page-tabs default at
+                  // all). Unlike the bare-heading section case above, which already walks its
+                  // children hunting for a resolvable tab, this branch had no such fallback - so
+                  // the whole section, landing page and every descendant, silently vanished from
+                  // the aggregated nav. Search descendants the same way before giving up.
+                  if (!pageTabs && item.items && item.items.length) {
+                    const inherited = findDescendantPageTabs(item.items, pagesByUrl)
+                    if (inherited) {
+                      pageTabs = inherited.pageTabs
+                      pageTabsIndex = pageTabsIndex || inherited.pageTabsIndex
+                    }
+                  }
 
                   if (pageTabs) {
 
@@ -270,8 +293,11 @@ module.exports.register = function ({ config }) {
                     // pushed through as its own plain top-level item further downstream
                     // (see the promotedItems loop in consumeNav), not wrapped as a
                     // componentHeader block. addTabInfoToNavItem already propagates
-                    // navPromote up from a promoted child; this forces it regardless.
-                    if (promoteAll) {
+                    // navPromote up from a promoted child; this forces it regardless -
+                    // unless the item's own landing page opts out with an explicit
+                    // `:page-nav-promote: false`, letting one section sit out a
+                    // docset-wide page-tabs-promote-all without disabling it for everyone else.
+                    if (promoteAll && !isPageNavPromoteExplicitlyDisabled(page)) {
                       item.navPromote = true
                     }
 
@@ -612,6 +638,25 @@ module.exports.register = function ({ config }) {
 
 
 
+      // Depth-first search for the first descendant whose own page carries a page-tabs
+      // attribute. Used to give a linked section-landing item (one with its own url and
+      // children) the tab of whichever descendant declares one, mirroring the fallback
+      // the bare-heading section case already has.
+      function findDescendantPageTabs (items, pagesByUrl) {
+        for (const child of items) {
+          const childPage = pagesByUrl.get(child.url)
+          const childPageTabs = childPage && childPage.asciidoc && childPage.asciidoc.attributes['page-tabs']
+          if (childPageTabs) {
+            return { pageTabs: childPageTabs, pageTabsIndex: childPage.asciidoc.attributes['page-tabs-index'] }
+          }
+          if (child.items && child.items.length) {
+            const found = findDescendantPageTabs(child.items, pagesByUrl)
+            if (found) return found
+          }
+        }
+        return null
+      }
+
       // add pageTabs to nav items
       // recurse where item has child items
       function addTabInfoToNavItem (item, component, version, tab, index=99999, title='', pagesByUrl=new Map()) {
@@ -637,7 +682,13 @@ module.exports.register = function ({ config }) {
           if (page.asciidoc.attributes['page-tab-overview'] !== undefined) {
             item.tabOverview = true
           }
-          if (page.asciidoc.attributes['page-nav-promote'] !== undefined) {
+          // Presence alone used to opt a page in, which meant `:page-nav-promote: false` -
+          // written to opt a page OUT of a docset-wide page-tabs-promote-all - was
+          // misread as "set, so opt in", the opposite of what it says. An explicit
+          // "false" no longer counts as opting in (isPageNavPromoteExplicitlyDisabled
+          // is what actually enforces the opt-out, in the promoteAll check below).
+          if (page.asciidoc.attributes['page-nav-promote'] !== undefined &&
+              !isPageNavPromoteExplicitlyDisabled(page)) {
             item.navPromote = true
           }
         }
@@ -712,6 +763,15 @@ module.exports.register = function ({ config }) {
 
 }
 
+// A page's own `:page-nav-promote: false` overrides a docset-wide page-tabs-promote-all
+// for that one page, letting a single section sit out of promotion without disabling it
+// for the whole docset. Asciidoctor has no unset-to-false idiom that survives as a
+// distinguishable value (`:!page-nav-promote:` just deletes the attribute, identical to
+// never having set it) - "false" has to be checked for as a literal string value instead.
+function isPageNavPromoteExplicitlyDisabled (page) {
+  return !!(page && page.asciidoc && page.asciidoc.attributes['page-nav-promote'] === 'false')
+}
+
 // Component-wide attribute defaults can be set in antora.yml (scoped to that one
 // component+version, e.g. so a driver manual's docs stay valid checked out and built
 // standalone) or in the playbook (applies to everything that playbook builds, useful
@@ -778,18 +838,35 @@ function groupFlatNavSections (items) {
     }
 
     // Only a bold, linkless, childless bullet (`* *Heading*`) opens - or replaces
-    // - a section. Everything else (a resolved link, or an item the source
-    // already nested with `**` of its own, e.g. a sub-group with its own pages)
-    // is absorbed as a child of whatever section is currently open, without
-    // ending it - so a whole run of sibling sub-groups and links all end up
-    // nested one level deeper, until the next bold heading appears.
+    // - a section. A flat sibling link (no `**` children of its own) is absorbed
+    // as a child of whatever section is currently open, without ending it - so a
+    // run of flat sibling links all end up nested one level deeper, until the
+    // next bold heading appears (the classic "* *Heading*" + flat xrefs pattern).
+    //
+    // An item the source already nested with `**` of its own (a landing page with
+    // real children, e.g. `* xref:kubernetes/index.adoc[]` followed by its own
+    // `** xref:...`) is a complete section in its own right - it's the thing the
+    // open heading was titling, not another flat member of it. Fold its own
+    // url/items straight into the heading (keeping only the heading's title, and
+    // any flat links already absorbed ahead of it) rather than nesting it as an
+    // extra wrapper level, and end the heading there - otherwise a later,
+    // unrelated already-nested item (e.g. `* xref:configuration/index.adoc[]`
+    // right after) would keep being swallowed into the same heading instead of
+    // starting its own promoted section.
     if (!item.url && (!item.items || !item.items.length) && isBoldContent(item.content)) {
       item.content = unwrapBold(item.content)
       item.items = item.items || []
       grouped.push(item)
       currentHeader = item
     } else if (currentHeader) {
-      currentHeader.items.push(item)
+      if (item.items && item.items.length) {
+        currentHeader.url = item.url
+        currentHeader.urlType = item.urlType
+        currentHeader.items = currentHeader.items.concat(item.items)
+        currentHeader = null
+      } else {
+        currentHeader.items.push(item)
+      }
     } else {
       grouped.push(item)
     }
