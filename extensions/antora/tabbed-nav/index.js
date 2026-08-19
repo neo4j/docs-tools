@@ -219,8 +219,15 @@ module.exports.register = function ({ config }) {
                     } else {
                       // Unlike the two cases above, this one isn't benign: the section got
                       // no tab at all, so every child under it - this one included - never
-                      // lands in any tab and is invisible in the aggregated nav.
-                      logger.warn(`Navigation item: ${childItem.content} has no section tab — unassigned`)
+                      // lands in any tab and is invisible in the aggregated nav. Antora's own
+                      // messages point writers at { file, source } rather than just a nav
+                      // label, so do the same here - fall back to component/version for a
+                      // child with no resolvable page (an external link, or a nested
+                      // sub-section heading with no url of its own).
+                      logger.warn(
+                        page ? { file: page.src, source: page.src.origin } : { component, version },
+                        `Navigation item "${stripTags(childItem.content)}" is nested under section "${stripTags(item.content)}", which has no page-tabs — it will not appear in any tab's aggregated navigation. Set page-tabs on the section's own first child, or on this page directly, to fix.`
+                      )
                     }
                   }
                   // Propagate navPromote from direct child pages up to the section item -
@@ -274,6 +281,16 @@ module.exports.register = function ({ config }) {
                       }
                       provisionalItems = []
                     }
+                  } else {
+                    // Previously silent: a top-level linked item with no page-tabs
+                    // anywhere in its resolution chain (own attribute, antora.yml,
+                    // playbook) never lands in any tab and is invisible in the
+                    // aggregated nav - same "isn't benign" case as the section-child
+                    // one above, just for a flat top-level page instead of a nested one.
+                    logger.warn(
+                      page ? { file: page.src, source: page.src.origin } : { component, version },
+                      `Navigation item "${stripTags(item.content)}" has no page-tabs (checked the page's own attribute, antora.yml, and the playbook) — it will not appear in any tab's aggregated navigation. Set page-tabs on the page, in antora.yml, or in the playbook to fix.`
+                    )
                   }
 
                 }
