@@ -560,6 +560,14 @@ module.exports.register = function ({ config }) {
 
               for (const item of promotedItems) {
                 if (!(item.items && item.items.length)) {
+                  // Unlike every other branch here, this item is pushed through
+                  // unwrapped - so it also needs docsetGroup attached directly, or it
+                  // never enters the docsetGroup version-selection logic downstream
+                  // (client nav-fetch and the SSR nav-aggregate helper both skip an
+                  // item with no docsetGroup entirely) and every version's copy of a
+                  // flat promoted page (e.g. a promoteAll'd component index or
+                  // introduction page with no children) shows up simultaneously.
+                  if (versionData.docsetGroup) item.docsetGroup = versionData.docsetGroup
                   tabNav[0].items.push(item)
                   continue
                 }
