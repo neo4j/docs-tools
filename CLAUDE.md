@@ -5,3 +5,6 @@
   Claude/Anthropic co-author credit or attribution anywhere (commits, PR description, PR comments).
 - When updating an Antora extension (`extensions/antora/*`), remember to bump its
   `package.json` version. It's usually a patch bump, but ask every time rather than assuming.
+- When updating an Antora extension (`extensions/antora/*`), also check whether that
+  extension's documentation in `~/Projects/github/neo4j/docs-playbook` needs updating
+  (e.g. `modules/reference/pages/antora/extensions/<name>.adoc`) and update it if so.
