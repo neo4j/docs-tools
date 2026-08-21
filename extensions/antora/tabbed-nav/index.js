@@ -109,10 +109,10 @@ module.exports.register = function ({ config }) {
                 .map(p => [p.pub.url, p])
             )
 
-            // Docset-wide equivalent of page-nav-promote: set once in antora.yml (or the
+            // Docset-wide equivalent of page-tabs-promote: set once in antora.yml (or the
             // playbook, to apply to everything it builds) so every top-level thing in
             // content-nav.adoc - section or flat standalone page - becomes its own
-            // promoted top-level block, instead of hand-tagging page-nav-promote on
+            // promoted top-level block, instead of hand-tagging page-tabs-promote on
             // every section's landing page individually.
             const promoteAll = componentWideAttr('page-tabs-promote-all', asciidoc, playbook.asciidoc) !== undefined
 
@@ -695,7 +695,7 @@ module.exports.register = function ({ config }) {
           // misread as "set, so opt in", the opposite of what it says. An explicit
           // "false" no longer counts as opting in (isPageNavPromoteExplicitlyDisabled
           // is what actually enforces the opt-out, in the promoteAll check below).
-          if (page.asciidoc.attributes['page-nav-promote'] !== undefined &&
+          if (pageNavPromoteAttr(page) !== undefined &&
               !isPageNavPromoteExplicitlyDisabled(page)) {
             item.navPromote = true
           }
@@ -771,13 +771,25 @@ module.exports.register = function ({ config }) {
 
 }
 
-// A page's own `:page-nav-promote: false` overrides a docset-wide page-tabs-promote-all
-// for that one page, letting a single section sit out of promotion without disabling it
-// for the whole docset. Asciidoctor has no unset-to-false idiom that survives as a
-// distinguishable value (`:!page-nav-promote:` just deletes the attribute, identical to
-// never having set it) - "false" has to be checked for as a literal string value instead.
+// `page-nav-promote` was the original name for this attribute; `page-tabs-promote` is
+// the preferred name going forward, matching the `page-tabs`/`page-tabs-index`/
+// `page-tabs-promote-all` family instead of standing out as the odd one. Existing
+// content already uses `page-nav-promote`, so both are read - the new name wins if a
+// page somehow sets both.
+function pageNavPromoteAttr (page) {
+  if (!page || !page.asciidoc) return undefined
+  const attrs = page.asciidoc.attributes
+  return attrs['page-tabs-promote'] !== undefined ? attrs['page-tabs-promote'] : attrs['page-nav-promote']
+}
+
+// A page's own `:page-tabs-promote: false` (or the legacy `:page-nav-promote: false`)
+// overrides a docset-wide page-tabs-promote-all for that one page, letting a single
+// section sit out of promotion without disabling it for the whole docset. Asciidoctor
+// has no unset-to-false idiom that survives as a distinguishable value (`:!page-tabs-promote:`
+// just deletes the attribute, identical to never having set it) - "false" has to be
+// checked for as a literal string value instead.
 function isPageNavPromoteExplicitlyDisabled (page) {
-  return !!(page && page.asciidoc && page.asciidoc.attributes['page-nav-promote'] === 'false')
+  return pageNavPromoteAttr(page) === 'false'
 }
 
 // Component-wide attribute defaults can be set in antora.yml (scoped to that one
