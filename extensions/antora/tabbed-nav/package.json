@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/tabbed-nav",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Antora extension, Express middleware, S3 aggregator, and turnkey dev server for tabbed cross-docset navigation across Neo4j docs repos.",
   "main": "index.js",
   "exports": {
