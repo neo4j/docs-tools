@@ -256,19 +256,32 @@ jobs:
         done
 
         # fetch-depth: 0 makes actions/checkout do a blobless partial clone
-        # (--filter=blob:none) - commits and trees only, no file contents. Real git
-        # transparently lazy-fetches a missing blob on demand (e.g. from `git cat-file`),
-        # but antora's isomorphic-git has no concept of that and just fails outright -
-        # this is the actual NotFoundError root cause, not --fetch. A plain fetch here
-        # inherits that same filter from the remote config, so clear it and use
-        # --refetch to force these branches' blobs down for real, not just their commits
-        # and trees. The unsets are harmless no-ops (exit 5) when there was no partial
-        # clone filter to begin with, hence `|| true`.
-        git config --unset remote.origin.partialclonefilter 2>/dev/null || true
-        git config --unset remote.origin.promisor 2>/dev/null || true
-        # no --depth: a shallow/grafted commit here seems to confuse antora's own
-        # isomorphic-git fetch when it later tries to resolve these same branches
-        git fetch --no-tags --refetch origin "${refspecs[@]}"
+        # (--filter=blob:none) - commits and trees only, no file contents. antora reads
+        # each branch from the git object store via isomorphic-git, which (a) can't
+        # lazy-fetch a missing blob the way real git does, and (b) loads a whole packfile
+        # into memory to read it, so it chokes on a very large pack (readSlice -> null,
+        # "Cannot read properties of null (reading 'slice')"). `git fetch --refetch` here
+        # avoided (a) but caused (b): it re-downloads the FULL history and ALL blobs of
+        # every branch (gigabytes on big repos) into one pack isomorphic-git can't read.
+        #
+        # Instead, get the branches' commits/trees (cheap, still blobless) so the refs
+        # resolve, then hydrate ONLY the blobs antora needs by checking out each branch
+        # tip. Because actions/checkout above set sparse-checkout to DOCS_DIR, each
+        # checkout batch-fetches just DOCS_DIR's blobs for that tip from the promisor
+        # remote - keeping the object store small (tens of MB) and isomorphic-git-readable.
+        # Finally restore the worktree/HEAD to the ref we built from.
+        #
+        # NOTE: this assumes every LOCAL content source's start_path is within the
+        # sparse-checkout set (DOCS_DIR / SPARSE_CHECKOUT_EXTRA_PATHS). A local source
+        # outside it would not be hydrated. Remote-url sources are antora's to fetch.
+        git config core.commitGraph false  # avoid commit-graph/promisor desync during hydration
+        git fetch --no-tags origin "${refspecs[@]}"
+
+        build_ref_head="$(git rev-parse HEAD)"
+        for branch in $branches; do
+          git checkout -q --detach "refs/remotes/origin/${branch}"
+        done
+        git checkout -q --detach "$build_ref_head"
 
     - name: Remove excluded extensions
       run: |
