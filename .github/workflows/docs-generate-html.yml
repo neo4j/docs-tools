@@ -23,18 +23,16 @@ on:
 
 jobs:
 
-  # Resolves both dispatch-env (dev/prod, docs-publish's vocabulary) and publish-env
-  # (staging/prod, reusable-docs-build.yml's vocabulary) once, so neither docs-build nor
-  # publish-html duplicates the override-or-derive logic - and so an explicit
-  # dispatch-env override also correctly overrides publish-env, not just one of them.
+  # Resolves dispatch-env (dev/prod) once, so neither docs-build nor publish-html
+  # duplicates the override-or-derive logic. Also reusable-docs-build.yml's publish-env
+  # input, now that both speak the same dev/prod vocabulary.
   resolve-env:
     name: Resolve environment
     runs-on: ubuntu-latest
     outputs:
       dispatch-env: ${{ steps.resolve.outputs.dispatch-env }}
-      publish-env: ${{ steps.resolve.outputs.publish-env }}
     steps:
-      - name: Resolve dispatch-env and publish-env
+      - name: Resolve dispatch-env
         id: resolve
         env:
           DISPATCH_ENV_OVERRIDE: ${{ inputs.dispatch-env }}
@@ -49,14 +47,7 @@ jobs:
             dispatch_env="dev"
           fi
 
-          if [[ "${dispatch_env}" == "prod" ]]; then
-            publish_env="prod"
-          else
-            publish_env="staging"
-          fi
-
           echo "dispatch-env=${dispatch_env}" >> $GITHUB_OUTPUT
-          echo "publish-env=${publish_env}" >> $GITHUB_OUTPUT
 
   docs-build:
     name: Generate HTML
@@ -67,7 +58,7 @@ jobs:
       package-script: 'verify:publish'
       build-ref: ${{ inputs.build-ref }}
       fetch-depth: 0
-      publish-env: ${{ needs.resolve-env.outputs.publish-env }}
+      publish-env: ${{ needs.resolve-env.outputs.dispatch-env }}
 
   docs-verify:
     name: Verify HTML
@@ -77,9 +68,7 @@ jobs:
       failOnWarnings: true
 
   # Hand off to docs-publish (a separate repo) to actually publish this run's "docs"
-  # artifact. publish_env here is dispatch-env (dev/prod), not publish-env
-  # (staging/prod) - docs-publish's own check-build-branch step expects dev/prod, to
-  # match its DOCS_DEV_BRANCH/DOCS_PROD_BRANCH vars lookup.
+  # artifact.
   publish-html:
     name: Publish HTML
     needs: [docs-verify, resolve-env]
