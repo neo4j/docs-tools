@@ -15,10 +15,6 @@ on:
         description: 'The git ref to build from'
         type: string
         required: true
-      publish-env:
-        description: 'staging or prod - passed through to reusable-docs-build.yml, which uses it to resolve DOCS_PUBLISH_URL'
-        type: string
-        required: true
       dispatch-env:
         description: 'dev or prod - the environment label used for the docs-publish dispatch payload'
         type: string
@@ -34,7 +30,7 @@ jobs:
       package-script: 'verify:publish'
       build-ref: ${{ inputs.build-ref }}
       fetch-depth: 0
-      publish-env: ${{ inputs.publish-env }}
+      publish-env: ${{ inputs.build-ref == vars.DOCS_PROD_BRANCH && 'prod' || 'staging' }}
 
   docs-verify:
     name: Verify HTML
