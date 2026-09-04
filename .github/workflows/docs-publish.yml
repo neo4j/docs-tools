@@ -28,9 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # JSON array of {buildRef, dispatchEnv} - one entry per independent
-      # docs-generate-html.yml run to trigger. publish-env (staging/prod) isn't part of
-      # this - docs-generate-html.yml derives that itself from build-ref against its own
-      # vars.DOCS_PROD_BRANCH, rather than trusting a value passed in here.
+      # docs-generate-html.yml run to trigger. dispatchEnv is left '' except in the one
+      # case where it's genuinely ambiguous (see below) - docs-generate-html.yml derives
+      # both dispatch-env and publish-env itself from build-ref against its own
+      # vars.DOCS_PROD_BRANCH whenever dispatchEnv is blank.
       builds: ${{ steps.set-ref-env.outputs.builds }}
     steps:
       - name: Set builds
@@ -54,16 +55,19 @@ jobs:
           #   know for certain doesn't affect prod.
           if [[ -z "${prod_branch}" ]]; then
             builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{buildRef:$dev,dispatchEnv:"dev"}]')
+              '[{buildRef:$dev,dispatchEnv:""}]')
           elif [[ "${dev_branch}" == "${prod_branch}" ]]; then
+            # build-ref alone can't distinguish these two - same branch - so dispatchEnv
+            # has to be passed explicitly here, or docs-generate-html.yml's derivation
+            # would resolve both to the same environment.
             builds=$(jq -nc --arg b "$dev_branch" \
               '[{buildRef:$b,dispatchEnv:"dev"},{buildRef:$b,dispatchEnv:"prod"}]')
           elif [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
             builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{buildRef:$dev,dispatchEnv:"dev"}]')
+              '[{buildRef:$dev,dispatchEnv:""}]')
           else
             builds=$(jq -nc --arg dev "$dev_branch" --arg prod "$prod_branch" \
-              '[{buildRef:$dev,dispatchEnv:"dev"},{buildRef:$prod,dispatchEnv:"prod"}]')
+              '[{buildRef:$dev,dispatchEnv:""},{buildRef:$prod,dispatchEnv:""}]')
           fi
 
           echo "builds=${builds}" >> $GITHUB_OUTPUT
