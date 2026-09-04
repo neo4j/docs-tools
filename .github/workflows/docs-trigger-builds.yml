@@ -109,6 +109,7 @@ jobs:
         with:
           script: |
             const builds = JSON.parse(process.env.BUILDS)
+            const lines = []
             for (const build of builds) {
               await github.rest.actions.createWorkflowDispatch({
                 owner: context.repo.owner,
@@ -120,4 +121,11 @@ jobs:
                   'publish-env': build.publishEnv,
                 },
               })
+              const envNote = build.publishEnv ? ` (publish-env override: \`${build.publishEnv}\`)` : ''
+              lines.push(`- \`docs-generate-html.yml\` for build-ref \`${build.buildRef}\`${envNote}`)
             }
+
+            await core.summary
+              .addHeading('Triggered builds')
+              .addRaw(lines.join('\n'))
+              .write()
