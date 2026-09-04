@@ -11,6 +11,11 @@ on:
     branches:
     - 'dev'
   workflow_dispatch:
+    inputs:
+      build-both:
+        description: 'Build and publish both staging and prod in this run, regardless of which branch triggered it. Only has an effect when PROD_BRANCH is set and differs from DEV_BRANCH.'
+        type: boolean
+        default: false
 
 # Set DEV_BRANCH to your staging branch.
 # Set PROD_BRANCH if you also publish to neo4j.com/docs; omit it for staging-only repos.
@@ -21,65 +26,70 @@ env:
 jobs:
 
   prepare-ref-env:
-    name: Set build branch and environments
+    name: Set builds to trigger
     runs-on: ubuntu-latest
     outputs:
-      build-ref: ${{ steps.set-ref-env.outputs.build-ref }}
-      environments: ${{ steps.set-ref-env.outputs.environments }}
+      # JSON array of {buildRef, dispatchEnv, publishEnv} - one entry per independent
+      # docs-generate-html.yml run to trigger (normally one, two when build-both is set).
+      builds: ${{ steps.set-ref-env.outputs.builds }}
     steps:
-      - name: Set Build Ref
+      - name: Set builds
         id: set-ref-env
+        env:
+          BUILD_BOTH: ${{ github.event_name == 'workflow_dispatch' && inputs.build-both || false }}
         run: |
           dev_branch="${{ env.DEV_BRANCH }}"
           prod_branch="${{ env.PROD_BRANCH }}"
 
-          if [[ -z "${prod_branch}" ]]; then
-            build_from="${dev_branch}"
-            environments='["dev"]'
+          if [[ "${BUILD_BOTH}" == "true" && -n "${prod_branch}" && "${dev_branch}" != "${prod_branch}" ]]; then
+            # Explicitly requested, and dev/prod are genuinely different branches - two
+            # independent builds, each with its own real build-ref.
+            builds=$(jq -nc --arg dev "$dev_branch" --arg prod "$prod_branch" \
+              '[{buildRef:$dev,dispatchEnv:"dev",publishEnv:"staging"},{buildRef:$prod,dispatchEnv:"prod",publishEnv:"prod"}]')
+          elif [[ -z "${prod_branch}" ]]; then
+            builds=$(jq -nc --arg dev "$dev_branch" \
+              '[{buildRef:$dev,dispatchEnv:"dev",publishEnv:"staging"}]')
+          elif [[ "${dev_branch}" == "${prod_branch}" ]]; then
+            builds=$(jq -nc --arg b "$dev_branch" \
+              '[{buildRef:$b,dispatchEnv:"dev",publishEnv:"staging"},{buildRef:$b,dispatchEnv:"prod",publishEnv:"prod"}]')
           elif [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
-            build_from="${dev_branch}"
-            environments='["dev"]'
+            builds=$(jq -nc --arg dev "$dev_branch" \
+              '[{buildRef:$dev,dispatchEnv:"dev",publishEnv:"staging"}]')
           else
-            build_from="${prod_branch}"
-            environments='["prod"]'
+            builds=$(jq -nc --arg prod "$prod_branch" \
+              '[{buildRef:$prod,dispatchEnv:"prod",publishEnv:"prod"}]')
           fi
 
-          if [[ -n "${prod_branch}" && "${dev_branch}" == "${prod_branch}" ]]; then
-            environments='["dev","prod"]'
-          fi
+          echo "builds=${builds}" >> $GITHUB_OUTPUT
 
-          echo "build-ref=${build_from}" >> $GITHUB_OUTPUT
-          echo "environments=${environments}" >> $GITHUB_OUTPUT
-
-  # Trigger docs-generate-html.yml as its own separate run, once per environment that
-  # applies - not a workflow_call (which would keep both in this one run) - so dev and
-  # prod are fully independent runs: if dev's run fails, prod's run is unaffected, and
-  # each ends up with a plain "docs" artifact exactly like a run does today.
+  # Trigger docs-generate-html.yml as its own separate run, once per build - not a
+  # workflow_call (which would keep them all in this one run) - so each is fully
+  # independent: if one run fails, the others are unaffected, and each ends up with a
+  # plain "docs" artifact exactly like a run does today (no name collisions, since
+  # they're separate runs, not jobs sharing one run).
   trigger-generate-html:
-    name: Trigger per-environment builds
+    name: Trigger builds
     needs: prepare-ref-env
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch docs-generate-html.yml for each environment
+      - name: Dispatch docs-generate-html.yml for each build
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          BUILD_REF: ${{ needs.prepare-ref-env.outputs.build-ref }}
-          ENVIRONMENTS: ${{ needs.prepare-ref-env.outputs.environments }}
+          BUILDS: ${{ needs.prepare-ref-env.outputs.builds }}
           DISPATCH_REF: ${{ github.ref_name }}
         with:
           script: |
-            const environments = JSON.parse(process.env.ENVIRONMENTS)
-            const publishEnvFor = { dev: 'staging', prod: 'prod' }
-            for (const dispatchEnv of environments) {
+            const builds = JSON.parse(process.env.BUILDS)
+            for (const build of builds) {
               await github.rest.actions.createWorkflowDispatch({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'docs-generate-html.yml',
                 ref: process.env.DISPATCH_REF,
                 inputs: {
-                  'build-ref': process.env.BUILD_REF,
-                  'publish-env': publishEnvFor[dispatchEnv],
-                  'dispatch-env': dispatchEnv,
+                  'build-ref': build.buildRef,
+                  'publish-env': build.publishEnv,
+                  'dispatch-env': build.dispatchEnv,
                 },
               })
             }
