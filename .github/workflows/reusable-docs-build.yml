@@ -37,10 +37,10 @@ on:
         type: string
         default: 'verify:preview'
       publish-env:
-        description: "The publish environment to build docs for: staging or prod"
+        description: "The publish environment to build docs for: dev or prod"
         required: false
         type: string
-        default: 'staging'
+        default: 'dev'
       antora-attributes:
         description: 'Antora attributes to pass to the build script'
         required: false
@@ -157,15 +157,15 @@ jobs:
       # sandbox right now.
       #
       # Resolved once here, not duplicated at each use: ANTORA_CLI_OPTIONS and
-      # DOCS_NAV_URL both need the staging-vs-prod split, but they read it via
+      # DOCS_NAV_URL both need the dev-vs-prod split, but they read it via
       # env.DOCS_PUBLISH_URL from the "Run package script" step's own env: block
       # below rather than from here directly - a step's env CAN reference an
       # already-resolved job-level env var, but two entries in this same job-level
       # env: block can't reference each other (this one included), so they can't be
       # defined here alongside it.
-      DOCS_PUBLISH_URL: "${{ inputs.publish-env == 'staging' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs' }}"
+      DOCS_PUBLISH_URL: "${{ inputs.publish-env == 'dev' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs' }}"
       ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
-      # page-no-local-manifest: staging/prod never serve local-manifest.json (that's a
+      # page-no-local-manifest: dev/prod never serve local-manifest.json (that's a
       # local-dev-only file - see the tabbed-nav extension's emitLocalManifest option and
       # its middleware). Stamped so the UI bundle can skip fetching it there entirely,
       # rather than issuing a request that's guaranteed to 404.
@@ -346,7 +346,7 @@ jobs:
         # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
         # only installed under docs/node_modules.
         NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
-        # Both derive the staging/prod split from the single env.DOCS_PUBLISH_URL set
+        # Both derive the dev/prod split from the single env.DOCS_PUBLISH_URL set
         # at job level above - defined here, not there, because that's a job-level
         # env: block and this one can read it; two entries in the SAME block can't
         # read each other. Everything else - including PR previews - derives the
