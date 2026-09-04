@@ -1,10 +1,11 @@
-name: "Publish docs"
+name: "Trigger docs builds"
 
 # This workflow's job is dispatching docs-generate-html.yml with the right build-ref(s)
 # for whatever just happened - it is NOT the only valid way to wire this up, and isn't
-# always the right choice.
+# always the right choice. It doesn't publish anything itself - docs-generate-html.yml
+# hands off to the (separate) docs-publish repo for that.
 #
-# Use this (docs-publish.yml -> docs-generate-html.yml) when a single trigger might
+# Use this (docs-trigger-builds.yml -> docs-generate-html.yml) when a single trigger might
 # legitimately need to build more than one environment - e.g. a manual "rebuild
 # everything" workflow_dispatch, or a repo where DOCS_DEV_BRANCH == DOCS_PROD_BRANCH (one
 # branch serving both, so every push to it always means both).
