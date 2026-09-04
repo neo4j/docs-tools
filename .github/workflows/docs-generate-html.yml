@@ -15,7 +15,7 @@ on:
         description: 'The git ref to build from'
         type: string
         required: true
-      dispatch-env:
+      publish-env:
         description: 'Override for dev/prod. Leave blank to derive it from build-ref against vars.DOCS_PROD_BRANCH - only needs setting explicitly when DOCS_DEV_BRANCH == DOCS_PROD_BRANCH, where build-ref alone cannot tell the two builds apart.'
         type: string
         required: false
@@ -23,31 +23,30 @@ on:
 
 jobs:
 
-  # Resolves dispatch-env (dev/prod) once, so neither docs-build nor publish-html
-  # duplicates the override-or-derive logic. Also reusable-docs-build.yml's publish-env
-  # input, now that both speak the same dev/prod vocabulary.
+  # Resolves publish-env (dev/prod) once, so neither docs-build nor publish-html
+  # duplicates the override-or-derive logic.
   resolve-env:
     name: Resolve environment
     runs-on: ubuntu-latest
     outputs:
-      dispatch-env: ${{ steps.resolve.outputs.dispatch-env }}
+      publish-env: ${{ steps.resolve.outputs.publish-env }}
     steps:
-      - name: Resolve dispatch-env
+      - name: Resolve publish-env
         id: resolve
         env:
-          DISPATCH_ENV_OVERRIDE: ${{ inputs.dispatch-env }}
+          PUBLISH_ENV_OVERRIDE: ${{ inputs.publish-env }}
           BUILD_REF: ${{ inputs.build-ref }}
           PROD_BRANCH: ${{ vars.DOCS_PROD_BRANCH }}
         run: |
-          if [[ -n "${DISPATCH_ENV_OVERRIDE}" ]]; then
-            dispatch_env="${DISPATCH_ENV_OVERRIDE}"
+          if [[ -n "${PUBLISH_ENV_OVERRIDE}" ]]; then
+            publish_env="${PUBLISH_ENV_OVERRIDE}"
           elif [[ "${BUILD_REF}" == "${PROD_BRANCH}" ]]; then
-            dispatch_env="prod"
+            publish_env="prod"
           else
-            dispatch_env="dev"
+            publish_env="dev"
           fi
 
-          echo "dispatch-env=${dispatch_env}" >> $GITHUB_OUTPUT
+          echo "publish-env=${publish_env}" >> $GITHUB_OUTPUT
 
   docs-build:
     name: Generate HTML
@@ -58,7 +57,7 @@ jobs:
       package-script: 'verify:publish'
       build-ref: ${{ inputs.build-ref }}
       fetch-depth: 0
-      publish-env: ${{ needs.resolve-env.outputs.dispatch-env }}
+      publish-env: ${{ needs.resolve-env.outputs.publish-env }}
 
   docs-verify:
     name: Verify HTML
@@ -74,7 +73,7 @@ jobs:
     needs: [docs-verify, resolve-env]
     runs-on: ubuntu-latest
     steps:
-      - name: Publish to ${{ needs.resolve-env.outputs.dispatch-env }}
+      - name: Publish to ${{ needs.resolve-env.outputs.publish-env }}
         uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 #v4
         with:
           token: ${{ secrets.DOCS_DISPATCH_TOKEN }}
@@ -85,5 +84,5 @@ jobs:
               "org": "${{ github.repository_owner }}",
               "repo": "${{ github.event.repository.name }}",
               "run_id": "${{ github.run_id }}",
-              "publish_env": "${{ needs.resolve-env.outputs.dispatch-env }}"
+              "publish_env": "${{ needs.resolve-env.outputs.publish-env }}"
             }
