@@ -6,7 +6,7 @@ permissions:
 
 # Builds, verifies, and publishes docs for ONE environment, as a run entirely independent
 # of any other environment's run. Triggered (via the API, not a workflow_call) by
-# docs-publish.yml, once per environment that applies to a given push (dev, prod, or both) -
+# docs-trigger-builds.yml, once per environment that applies to a given push (dev, prod, or both) -
 # so if dev's run fails, prod's run is completely unaffected, and vice versa.
 on:
   workflow_dispatch:
