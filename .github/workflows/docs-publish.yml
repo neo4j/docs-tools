@@ -1,5 +1,23 @@
 name: "Publish docs"
 
+# This workflow's job is dispatching docs-generate-html.yml with the right build-ref(s)
+# for whatever just happened - it is NOT the only valid way to wire this up, and isn't
+# always the right choice.
+#
+# Use this (docs-publish.yml -> docs-generate-html.yml) when a single trigger might
+# legitimately need to build more than one environment - e.g. a manual "rebuild
+# everything" workflow_dispatch, or a repo where DOCS_DEV_BRANCH == DOCS_PROD_BRANCH (one
+# branch serving both, so every push to it always means both).
+#
+# If your repo instead has clean, separate dev/prod branches (e.g. dev and main), you
+# almost certainly do NOT want this: a commit to dev should only ever build staging, and
+# a commit to main should only ever build prod - never both from one commit, since
+# they're different content on different branches. For that shape, skip this file
+# entirely and give docs-generate-html.yml its own direct `on: push: branches: [...]`
+# trigger per environment instead (see docs-aura's docs-generate-html.yml for that
+# pattern) - simpler, and structurally can't build the wrong branch's content into the
+# wrong environment.
+
 permissions:
   contents: read
   actions: write
