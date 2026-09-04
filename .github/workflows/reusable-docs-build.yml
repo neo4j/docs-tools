@@ -191,17 +191,6 @@ jobs:
 
     steps:
 
-    # TEMPORARY debug step - never prints the secret itself, just whether it's non-empty.
-    - name: DEBUG check environment secret access
-      env:
-        SECRET_VAL: ${{ secrets.DOCS_PUBLISH_URL }}
-      run: |
-        if [ -n "$SECRET_VAL" ]; then
-          echo "DOCS_PUBLISH_URL environment secret IS accessible here (non-empty)"
-        else
-          echo "DOCS_PUBLISH_URL environment secret is EMPTY / not accessible here"
-        fi
-
     # Checkout the whole repo
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       if: ${{ env.DOCS_DIR == '.' || env.SPARSE_CHECKOUT == 'false' }}

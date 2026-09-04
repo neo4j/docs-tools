@@ -21,7 +21,7 @@ on:
 # Set PROD_BRANCH if you also publish to neo4j.com/docs; omit it for staging-only repos.
 env:
   DEV_BRANCH: 'dev'
-  PROD_BRANCH: 'main'
+  # PROD_BRANCH: 'main'
 
 jobs:
 
