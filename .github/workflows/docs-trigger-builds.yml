@@ -105,7 +105,6 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           BUILDS: ${{ needs.prepare-ref-env.outputs.builds }}
-          DISPATCH_REF: ${{ github.ref_name }}
         with:
           script: |
             const builds = JSON.parse(process.env.BUILDS)
@@ -115,7 +114,17 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'docs-generate-html.yml',
-                ref: process.env.DISPATCH_REF,
+                // Dispatch from build.buildRef itself, NOT the branch that triggered
+                // this workflow - this run's ref becomes its real head_branch, which is
+                // exactly what docs-publish's check-build-branch inspects. Using a
+                // single fixed ref for every build here would make every dispatched
+                // run's head_branch equal whatever branch triggered THIS workflow,
+                // regardless of which environment it's actually building for - so a
+                // trigger from any branch other than build.buildRef (e.g. a versioned
+                // content branch, or the "other" branch when both are built) would
+                // always fail that check downstream, even for an otherwise-legitimate
+                // build.
+                ref: build.buildRef,
                 inputs: {
                   'build-ref': build.buildRef,
                   'publish-env': build.publishEnv,
