@@ -548,15 +548,24 @@ module.exports.register = function ({ config }) {
               // pageTabs etc. from addTabInfoToNavItem. Only promoted sections (real
               // parent items with children) become their own componentHeader block.
               const promotedSectionCount = promotedItems.filter(item => item.items && item.items.length).length
+              // Flat promoted pages are pushed as their own sibling top-level entries too
+              // (see the promotedItems loop below) - they count toward "how many top-level
+              // blocks does this component+version contribute" just as much as a promoted
+              // section does, even though they don't get their own componentHeader wrapper.
+              const flatPromotedCount = promotedItems.length - promotedSectionCount
 
               // How many top-level blocks this component+version contributes to this tab -
               // normally 1, but page-tabs-promote-all (or several individually
-              // promoted sections) can split one docset into several sibling blocks that
-              // all share this component+version. soleBlock lets the UI tell "the one
-              // block for this docset" apart from "one of several" - see its use in
-              // nav-tree.hbs/09-nav-fetch.js, which only auto-expand a block on a
-              // component+version match when it's the only one.
-              const soleBlock = (promotedSectionCount + (normalItems.length > 0 ? 1 : 0)) === 1
+              // promoted sections, or a promoted section alongside flat promoted pages)
+              // can split one docset into several sibling blocks that all share this
+              // component+version. soleBlock lets the UI tell "the one block for this
+              // docset" apart from "one of several" - see its use in nav-tree.hbs/
+              // 09-nav-fetch.js, which only auto-expand a block on a component+version
+              // match when it's the only one. Without counting flat promoted pages here,
+              // a promoted section sharing a docset with a flat promoted page would wrongly
+              // look sole and auto-expand when the current page is actually the flat page,
+              // not inside the section.
+              const soleBlock = (promotedSectionCount + flatPromotedCount + (normalItems.length > 0 ? 1 : 0)) === 1
 
               for (const item of promotedItems) {
                 if (!(item.items && item.items.length)) {
