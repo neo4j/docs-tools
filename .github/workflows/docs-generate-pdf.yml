@@ -1,5 +1,4 @@
 name: "Generate PDF"
-run-name: "Generate PDF from ${{ inputs.build-ref }}"
 
 permissions:
   contents: read

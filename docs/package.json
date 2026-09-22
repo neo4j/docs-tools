@@ -23,6 +23,7 @@
   "author": "Neo4j",
   "license": "ISC",
   "dependencies": {
+    "@antora/pdf-extension": "^1.0.0",
     "@neo4j-antora/aliases-redirects": "^0.2.7",
     "@neo4j-antora/antora-add-notes": "^0.3.2",
     "@neo4j-antora/mark-terms": "^1.1.4",
@@ -32,7 +33,7 @@
     "@neo4j-antora/xref-hash-validator": "^0.1.4",
     "@neo4j-documentation/macros": "^1.0.4",
     "@neo4j-documentation/remote-include": "^1.0.0",
-    "antora": "3.1.14",
+    "antora": "^3.2.0",
     "node-html-parser": "9.0.0"
   },
   "devDependencies": {

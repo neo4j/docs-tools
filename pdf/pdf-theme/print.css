@@ -285,7 +285,11 @@ tr { break-inside: avoid; }
    here. Re-resolve from those two sources if this ever drifts. */
 .label {
   display: inline-block;
-  padding: 0.2rem 0.8rem;
+  /* Vertical padding trimmed from the copied 0.2rem: consecutive inline
+     labels on adjacent lines (e.g. label:x[] label:y[] each on their own
+     line) had no visible gap between them otherwise - line-height alone
+     isn't enough since the pills' padding pushed their edges flush. */
+  padding: 0.1rem 0.8rem;
   flex-shrink: 0;
   border-radius: 9999px;
   background: var(--brand-primary);   /* --label-default-background-color: --theme-light-color-primary-text */

@@ -12,8 +12,11 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@neo4j-antora/roles-labels": "^0.1.12",
     "@neo4j-documentation/macros": "^1.0.4",
-    "asciidoctor-pdf": "^1.0.2",
-    "patch-package": "^8.0.1"
+    "@neo4j-documentation/remote-include": "^1.0.0",
+    "asciidoctor-pdf": "1.0.2",
+    "node-html-parser": "9.0.4",
+    "patch-package": "8.0.1"
   }
 }

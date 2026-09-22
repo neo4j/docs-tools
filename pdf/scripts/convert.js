@@ -12,6 +12,9 @@ const path = require('node:path')
 
 const RENDERER = path.join(__dirname, '../renderer/node_modules/.bin/asciidoctor-web-pdf')
 const STYLESHEET = path.join(__dirname, '../pdf-theme/print.css')
+const ROLES_LABELS_POSTPROCESSOR = path.join(__dirname, '../renderer/extensions/roles-labels-postprocessor.js')
+const TABLE_FOOTNOTES_POSTPROCESSOR = path.join(__dirname, '../renderer/extensions/table-footnotes-postprocessor.js')
+const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../renderer/extensions/remote-include-adapter.js')
 
 const PAGE_BOUNDARY_RX = /(?=^:page-docname: .*$)/m
 const GLOSSARY_MARKER_RX = /^\[discrete\.glossary#.*\]$/m
@@ -75,7 +78,16 @@ const PUPPETEER_TIMEOUT_ENV = {
 // this can't just be a relative value in the playbook/assembler config.
 const args = process.argv.slice(2)
 const stdinMarkerIdx = args.lastIndexOf('-')
-const extraArgs = ['-a', `stylesheet=${STYLESHEET}`]
+// roles-labels-postprocessor.js and table-footnotes-postprocessor.js port the
+// essential parts of the Antora extensions of the same name (see those
+// files) - added here, __dirname-computed, for the same reason as the
+// stylesheet above.
+const extraArgs = [
+  '-a', `stylesheet=${STYLESHEET}`,
+  '--extension', ROLES_LABELS_POSTPROCESSOR,
+  '--extension', TABLE_FOOTNOTES_POSTPROCESSOR,
+  '--extension', REMOTE_INCLUDE_ADAPTER,
+]
 const finalArgs =
   stdinMarkerIdx === -1
     ? [...args, ...extraArgs]
