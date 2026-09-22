@@ -121,33 +121,6 @@ jobs:
         npm uninstall @antora/cli @antora/site-generator-default || true
         npm install "antora@${ANTORA_VERSION}" "@antora/pdf-extension@${PDF_EXTENSION_VERSION}"
 
-    # @neo4j-antora/roles-labels hooks pagesComposed and treats every file with a
-    # truthy `file.asciidoc` as HTML, guarded only by that flag - the assembler's
-    # exported PDF file still carries it from its pre-conversion assembly stage, so
-    # without this fix roles-labels mistakes the PDF's binary buffer for HTML and
-    # destroys it (see docs-tools/pdf/README, "Known limitations"). Patched here
-    # (rather than shipped as a patch-package patch in docs-tools, since it's a
-    # dependency of the calling docset, not of the shared PDF assets) with a plain
-    # idempotent string replace so it works regardless of which version resolved.
-    - name: Patch @neo4j-antora/roles-labels for PDF export compatibility
-      working-directory: ${{ env.DOCS_DIR }}
-      run: |
-        node -e '
-          const fs = require("fs")
-          const path = require.resolve("@neo4j-antora/roles-labels/roles-labels.js", { paths: [process.cwd()] })
-          const before = "if (!file.out || !file.asciidoc) return"
-          const after = "if (!file.out || !file.asciidoc || file.mediaType !== \"text/html\") return"
-          const src = fs.readFileSync(path, "utf8")
-          if (src.includes(after)) {
-            console.log("Already patched")
-          } else if (src.includes(before)) {
-            fs.writeFileSync(path, src.replace(before, after))
-            console.log("Patched", path)
-          } else {
-            throw new Error("Expected guard line not found - roles-labels internals changed, patch needs updating")
-          }
-        '
-
     - name: Run Antora PDF build
       id: run-pdf-build
       working-directory: ${{ env.DOCS_DIR }}
