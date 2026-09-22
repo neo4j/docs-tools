@@ -1,0 +1,70 @@
+= PDF generation assets
+
+Shared assets for generating a PDF export from any docset, via
+`@antora/assembler` + `@antora/pdf-extension` and `asciidoctor-web-pdf`
+(a Chrome/Puppeteer + CSS renderer) instead of the legacy Gradle +
+AsciidoctorJ mono-merge pipeline. See `reusable-pdf-build.yml` in
+`.github/workflows/` for the CI entry point that uses these.
+
+== Layout
+
+- `antora-assembler-pdf.yml` - Assembler config. A calling docset's own
+  `preview-pdf.yml` registers `@antora/pdf-extension` with this as its
+  `configFile`.
+- `scripts/convert.js` - wraps the real `asciidoctor-web-pdf` binary as the
+  assembler's `build.command`. Resolves the renderer and the real stylesheet
+  path from its own location (`__dirname`) at runtime, so nothing here is
+  hardcoded to a particular machine or checkout layout - only
+  `antora-assembler-pdf.yml`'s own `build.command` value encodes a fixed
+  path, and that's a checkout *convention* (see below), not a hardcode.
+  Also works around a real bug (`ifndef::backend-pdf[]` not evaluating
+  correctly under this pipeline) for docsets using that idiom - a no-op for
+  any docset that doesn't.
+- `pdf-theme/print.css` - print stylesheet targeting Asciidoctor's standard
+  HTML5 backend class names (`sect1`, `admonitionblock`, `listingblock`,
+  `tableblock`, `label`, ...), using colour/font tokens copied from
+  `docs-ui`'s `src/css/vars.css` (itself resolving to raw Needle design
+  system tokens in `@neo4j-ndl/base`'s `tokens/css/tokens.css`) and
+  `docs-ui`'s `src/css/labels.css`. Not a fork of the real site CSS wholesale
+  - Asciidoctor's default HTML5 output doesn't have Antora's `.doc` wrapper
+    markup most of the site CSS's selectors are written against, so most of
+    it wouldn't match anything here anyway. Fonts are vendored into
+    `pdf-theme/assets/fonts/` rather than read from a docset's own HTML
+    build output, so this theme has no dependency on that build having
+    already run.
+- `renderer/` - a **separate** npm project containing only `asciidoctor-pdf`
+  (npm package name for `asciidoctor-web-pdf`) plus a patched
+  `@neo4j-documentation/macros` (see `renderer/patches/`). Kept isolated
+  because it needs `@asciidoctor/core` 4.x while Antora needs 2.x, and both
+  packages `require()` it directly rather than through a wrapper - installing
+  both in one `node_modules` breaks one or the other via npm's hoisting.
+
+== The `.pdf-tools` checkout convention
+
+`antora-assembler-pdf.yml`'s `build.command` is the one place a path can't be
+`__dirname`-computed (nothing has run yet to compute it from), so it encodes
+a fixed, documented convention instead: whatever checks this repo out for a
+PDF build must check it out to `.pdf-tools` at the calling docset repo's own
+root. `reusable-pdf-build.yml` enforces this. If you're driving this by hand
+rather than through that workflow, replicate it yourself, e.g.:
+
+[source,shell]
+----
+git clone --depth 1 https://github.com/neo4j/docs-tools.git .pdf-tools
+(cd .pdf-tools/pdf/renderer && npm ci)
+----
+
+== Known limitations
+
+- `@neo4j-antora/roles-labels` needs the same local fix
+  (`file.mediaType !== 'text/html'`, not just `file.asciidoc`) applied to
+  each calling repo's own copy of the package - it isn't part of this shared
+  bundle, since it's a dependency of the docset repo, not of these PDF
+  assets. `reusable-pdf-build.yml` applies it as a build step.
+- `docs-tools/pdf/print.css`'s label colours are hand-resolved from
+  `docs-ui`'s source files, not read from them live - if the Needle tokens or
+  `docs-ui`'s `vars.css`/`labels.css` change, this drifts until someone
+  notices and re-syncs it by hand.
+- Other custom Antora/AsciiDoc extensions beyond `@neo4j-documentation/macros`
+  and `@neo4j-antora/roles-labels` haven't been audited for the same class of
+  Asciidoctor.js 2.x-vs-4.x API-compatibility bug the `macros` patch fixes.

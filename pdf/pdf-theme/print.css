@@ -1,0 +1,418 @@
+/* Print-specific stylesheet shared by every docset's PDF export (see
+   docs-tools/pdf/README - checked out into each repo's build by
+   reusable-pdf-build.yml). Reuses brand tokens read from the real site.css
+   (build/site/assets/css/site.css) rather than forking that file, since
+   Asciidoctor's HTML5 backend (used by asciidoctor-web-pdf) does not produce
+   Antora's `.doc` wrapper markup.
+
+   Every asset path below is relative to this file's own location, not to
+   whatever repo/cwd the build runs in - a browser resolves CSS url()s
+   against the stylesheet's own file:// location, so this stays correct
+   wherever docs-tools gets checked out. Font files are vendored into
+   assets/fonts/ here (not read from a docset's own build output) so this
+   theme has no dependency on that docset's HTML build having already run. */
+@font-face {
+  font-family: 'Roboto Mono';
+  font-weight: 400;
+  src: url('assets/fonts/roboto-mono-latin-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Roboto Mono';
+  font-weight: 500;
+  src: url('assets/fonts/roboto-mono-latin-500.woff2') format('woff2');
+}
+
+:root {
+  --brand-primary: #0a6190;
+  --brand-primary-strong: #02507b;
+  --brand-primary-weak: #e7fafb;
+  --brand-text: #1a1b1d;
+  --brand-text-weak: #4d5157;
+  --brand-text-weaker: #5e636a;
+  --brand-border: #e2e3e5;
+  --brand-border-strong: #bbbec3;
+  --brand-bg-weak: #fff;
+  --brand-bg-strong: #f5f6f6;
+  --brand-danger: #a6291f;
+  --brand-danger-bg: #fdf1ef;
+  --brand-warning: #8a5a00;
+  --brand-warning-bg: #fdf6e8;
+  --font-body: 'Public Sans', 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: 'Roboto Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+@page {
+  size: A4;
+  margin: 25mm 18mm 20mm 18mm;
+}
+/* Verso (even/left) pages: page number on the outer (left) edge */
+@page :left {
+  @bottom-left {
+    content: counter(page);
+    font-family: var(--font-body);
+    font-size: 9pt;
+    color: var(--brand-text-weaker);
+  }
+  @bottom-right {
+    content: string(doc-title) " " string(doc-version);
+    font-family: var(--font-body);
+    font-size: 9pt;
+    color: var(--brand-text-weaker);
+  }
+}
+/* Recto (odd/right) pages: page number on the outer (right) edge */
+@page :right {
+  @bottom-left {
+    content: string(doc-title) " " string(doc-version);
+    font-family: var(--font-body);
+    font-size: 9pt;
+    color: var(--brand-text-weaker);
+  }
+  @bottom-right {
+    content: counter(page);
+    font-family: var(--font-body);
+    font-size: 9pt;
+    color: var(--brand-text-weaker);
+  }
+}
+@page :first {
+  @bottom-left {
+    content: normal;
+  }
+  @bottom-right {
+    content: normal;
+  }
+}
+
+#cover.title-page h1 {
+  string-set: doc-title content();
+}
+#cover .details #revnumber {
+  string-set: doc-version content();
+}
+
+body.book {
+  font-family: var(--font-body);
+  color: var(--brand-text);
+  font-size: 10.5pt;
+  line-height: 1.5;
+}
+
+#cover.title-page {
+  text-align: left;
+  page-break-after: always;
+}
+#cover.title-page::before {
+  content: url('assets/neo4j-logo.svg');
+  display: block;
+  width: 110pt;
+}
+#cover.title-page h1 {
+  font-size: 32pt;
+  font-weight: 700;
+  color: var(--brand-primary-strong);
+  margin-top: 30%;
+  border-bottom: 2pt solid var(--brand-primary);
+  padding-bottom: 12pt;
+}
+#cover .details {
+  color: var(--brand-text-weak);
+  font-size: 11pt;
+  margin-top: 8pt;
+}
+#cover #revdate {
+  display: none;
+}
+
+/* Table of contents */
+#toc {
+  page-break-after: always;
+}
+#toctitle {
+  font-family: var(--font-body);
+  color: var(--brand-primary-strong);
+  font-size: 22pt;
+  font-weight: 700;
+  border-bottom: 2pt solid var(--brand-primary);
+  padding-bottom: 10pt;
+  margin-bottom: 18pt;
+}
+#toc ul {
+  font-family: var(--font-body);
+  list-style-type: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+#toc ul.sectlevel0 {
+  margin-left: 0;
+}
+#toc ul ul.sectlevel1 {
+  margin-left: 14pt;
+}
+#toc li {
+  margin-top: 6pt;
+  line-height: 1.4;
+}
+#toc a {
+  display: flex;
+  color: var(--brand-text);
+  text-decoration: none;
+  font-size: 10.5pt;
+}
+#toc ul.sectlevel0 > li > a {
+  font-weight: 600;
+  font-style: normal;
+  color: var(--brand-primary-strong);
+}
+#toc a::after {
+  content: leader('.') target-counter(attr(href), page);
+  color: var(--brand-text-weaker);
+  font-weight: 400;
+}
+
+.sect1 { break-before: page; }
+.sect1:first-child { break-before: avoid; }
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-body);
+  color: var(--brand-primary-strong);
+  font-weight: 700;
+  break-after: avoid;
+}
+h2 { font-size: 18pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 4pt; }
+h3 { font-size: 14pt; }
+h4 { font-size: 12pt; }
+
+a { color: var(--brand-primary); text-decoration: none; }
+
+/* code */
+pre, code, kbd, tt {
+  font-family: var(--font-mono);
+}
+.listingblock {
+  break-inside: avoid-page;
+  margin: 1em 0;
+}
+.listingblock pre {
+  background: var(--brand-bg-strong);
+  border: 0.5pt solid var(--brand-border);
+  border-radius: 3pt;
+  padding: 8pt 10pt;
+  font-size: 9pt;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.listingblock .title {
+  font-weight: 600;
+  color: var(--brand-text-weak);
+  font-size: 9.5pt;
+  margin-bottom: 4pt;
+}
+
+/* tables */
+table.tableblock {
+  border-collapse: collapse;
+  width: 100%;
+  break-inside: auto;
+  font-size: 9.5pt;
+}
+table.tableblock th, table.tableblock td {
+  border: 0.5pt solid var(--brand-border);
+  padding: 5pt 7pt;
+  vertical-align: top;
+}
+table.tableblock thead th {
+  background: var(--brand-bg-strong);
+  color: var(--brand-text);
+  font-weight: 600;
+}
+tr { break-inside: avoid; }
+
+/* admonitions */
+.admonitionblock { break-inside: avoid-page; margin: 1em 0; }
+.admonitionblock table { width: 100%; border: none; }
+.admonitionblock td.icon { display: none; }
+.admonitionblock td.content {
+  border-left: 3pt solid var(--brand-border-strong);
+  padding: 6pt 10pt;
+  background: var(--brand-bg-strong);
+}
+.admonitionblock .title {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 8.5pt;
+  letter-spacing: 0.03em;
+  color: var(--brand-text-weak);
+  display: block;
+  margin-bottom: 3pt;
+}
+.admonitionblock.warning td.content,
+.admonitionblock.caution td.content {
+  border-left-color: var(--brand-warning);
+  background: var(--brand-warning-bg);
+}
+.admonitionblock.warning .title,
+.admonitionblock.caution .title { color: var(--brand-warning); }
+.admonitionblock.important td.content {
+  border-left-color: var(--brand-danger);
+  background: var(--brand-danger-bg);
+}
+.admonitionblock.important .title { color: var(--brand-danger); }
+.admonitionblock.note td.content,
+.admonitionblock.tip td.content {
+  border-left-color: var(--brand-primary);
+  background: var(--brand-primary-weak);
+}
+.admonitionblock.note .title,
+.admonitionblock.tip .title { color: var(--brand-primary-strong); }
+
+/* lists */
+.ulist, .olist, .dlist { margin: 0.5em 0; }
+
+/* role labels (badges added by @neo4j-antora/roles-labels for label:x[] macros
+   and :page-role:/[role=label--x] roles).
+
+   This is `docs-ui/src/css/labels.css` (the *source* file the real site.css is
+   built from - github.com/neo4j-documentation/docs-ui) copied rule-for-rule,
+   minus the handful of selectors scoped under Antora's `.doc` wrapper (which
+   plain Asciidoctor HTML5 output, used for the PDF, never has - see file
+   header) - not hand-approximated values. Its `var(--label-*)`/`var(--deprecated-*)`/
+   `var(--alpha-beta-*)`/`var(--success-color)` custom properties are themselves
+   defined in `docs-ui/src/css/vars.css` in terms of raw design tokens from the
+   Needle design system (`@neo4j-ndl/base`'s `tokens/css/tokens.css`); resolved
+   to literal values below since neither of those files is otherwise pulled in
+   here. Re-resolve from those two sources if this ever drifts. */
+.label {
+  display: inline-block;
+  padding: 0.2rem 0.8rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--brand-primary);   /* --label-default-background-color: --theme-light-color-primary-text */
+  color: var(--brand-primary-weak);   /* --label-default-color: --palette-baltic-10 */
+  font-weight: 600;
+  font-size: calc(0.8 * 0.875rem);     /* --label-title-font-size: calc(0.8 * --typography-label-font-size) */
+  font-style: normal;
+}
+.tableblock .label {
+  margin-top: 0.2rem;
+  margin-bottom: 0.5rem;
+}
+span.label--added,
+span.label--changed,
+span.label--new,
+span.label--featured,
+span.label--renamed,
+span.label--updated,
+span.label--yes {
+  background: #3f7824; /* --label-success-color: --theme-light-color-success-bg-strong */
+  color: #e7fcd7;      /* --label-success-background-color: --theme-light-color-success-bg-weak */
+}
+span.label--admin-only,
+span.label--danger,
+span.label--discontinued,
+span.label--na,
+span.label--no,
+span.label--not-on-aura,
+span.label.not-available,
+span.label--removed,
+span.label--warning,
+span.label--breaking {
+  background: #bb2d00; /* --label-warning-background-color: --theme-light-color-danger-bg-strong */
+  color: #ffe9e7;      /* --label-warning-color: --theme-light-color-danger-bg-weak */
+}
+span.label--deprecated {
+  background: #ffd600; /* --deprecated-background-color: --palette-lemon-30 */
+  color: #251b00;      /* --deprecated-color: --palette-lemon-80 */
+}
+span.label--alpha,
+span.label--beta,
+span.label--beta-until {
+  background: #ba7a00; /* --alpha-beta-background-color: --palette-marigold-50 */
+  color: #fff0d2;      /* --alpha-beta-color: --palette-marigold-10 */
+}
+span.label--procedure,
+span.label--function,
+span.label--unix,
+span.label--mac-os,
+span.label--linux,
+span.label--windows,
+span.label--syntax,
+span.label--functionality,
+span.label--cypher,
+span.label--cluster-member-core,
+span.label--cluster-member-read-replica,
+span.label--cluster-member-single,
+span.label--core,
+span.label--apoc-core,
+span.label--full,
+span.label--apoc-full {
+  background: #8fe3e8; /* --label-os-background-color: --theme-dark-color-primary-text */
+  color: #081e2b;      /* --label-os-color: --palette-baltic-70 */
+}
+span.label--labs,
+span.label--labs-label {
+  color: var(--brand-primary-weak);  /* --label-labs-color: --palette-baltic-10 */
+  background: #5a34aa;               /* --label-labs-background-color: --palette-lavender-45 */
+}
+span.label--graph-academy {
+  background: #3f7824; /* --success-color: --theme-light-color-success-bg-strong */
+}
+
+div.labels {
+  display: flex;
+  align-self: center;
+  gap: 0.25rem;
+  line-height: 1.8;             /* --doc-line-height */
+  font-family: var(--font-body); /* --body-font-family */
+}
+.flex-labels-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-direction: row-reverse;
+}
+.header-label-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+.admonitionblock div.labels { padding: 0.5rem 0 1rem; }
+.exampleblock div.labels { padding: 0.5rem; }
+.header-label-container > div.labels {
+  justify-content: space-between;
+  margin-left: auto;
+}
+.header-label-container > div.labels.wrapped {
+  margin-left: 0;
+  margin-top: 0.5rem;
+}
+h1 > .header-label {
+  margin-top: 1.2rem;
+}
+.header-label-container > .header-label:first-of-type {
+  margin-left: auto;
+}
+.listing-block .content-labels,
+.example-block .content-labels,
+.content-labels {
+  margin-bottom: 0.2rem;
+}
+.paragraph.has-label {
+  padding-left: 0.4rem;
+  border-left: 2px solid var(--brand-border-strong); /* --palette-baltic-60, not otherwise used here */
+}
+.paragraph.has-label:has(> .labels > .label--new) {
+  border-left-color: #3f7824; /* --success-color */
+}
+.paragraph.has-label:has(> .labels > .label--deprecated) {
+  border-left-color: #251b00; /* --deprecated-color */
+}
+h2 > .flex-label {
+  float: inline-end;
+  line-height: 1.8;
+  margin-left: 0.2rem;
+  margin-top: 0.2rem;
+}
+
+/* TOC (hidden fixed div rendered separately by asciidoctor-web-pdf's own TOC mechanism) */
+.toc-entry a { color: var(--brand-text); text-decoration: none; }
