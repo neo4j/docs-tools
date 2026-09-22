@@ -152,6 +152,14 @@ jobs:
       id: run-pdf-build
       working-directory: ${{ env.DOCS_DIR }}
       continue-on-error: true
+      env:
+        # Same fix as reusable-docs-build.yml's "Run package script" step:
+        # antora requires local-path extensions (e.g. a sibling extensions/
+        # dir) directly by their real filesystem path, bypassing node_modules
+        # resolution entirely. NODE_PATH gives Node an extra place to look,
+        # so those extensions can still find hoisted deps (e.g. vinyl) that
+        # are only installed under docs-dir's node_modules.
+        NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
       run: npx antora "$PDF_PLAYBOOK" --stacktrace --log-format=pretty
 
     - name: Get the dir that contains the PDF
