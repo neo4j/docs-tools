@@ -40,3 +40,9 @@ jobs:
       docs-dir: 'docs'
       build-ref: ${{ inputs.build-ref || github.ref_name }}
       fetch-depth: 0
+      # docs-tools-ref defaults to 'v2' (the real, released tag), which
+      # doesn't have pdf/ yet - only this branch does, since this workflow
+      # only exists here too. Passing github.ref_name makes this self-test
+      # check out the exact same ref that's actually running, so it finds
+      # pdf/. Remove once this is merged and defaulting to a real tag works.
+      docs-tools-ref: ${{ github.ref_name }}
