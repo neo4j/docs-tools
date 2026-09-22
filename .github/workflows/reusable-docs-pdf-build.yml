@@ -106,7 +106,9 @@ jobs:
 
     - name: Install renderer (asciidoctor-web-pdf, isolated - see docs-tools/pdf/README)
       working-directory: .pdf-tools/pdf/renderer
-      run: npm ci
+      # npm ci requires a committed package-lock.json - docs-tools gitignores
+      # it repo-wide (no lockfiles committed anywhere here), so npm install.
+      run: npm install
 
     - name: Install docset dependencies and Antora + pdf-extension
       working-directory: ${{ env.DOCS_DIR }}
