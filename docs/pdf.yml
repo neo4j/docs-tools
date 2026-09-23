@@ -24,7 +24,7 @@ antora:
   extensions:
    - require: "../extensions/antora/tabbed-nav"
    - require: '@antora/pdf-extension'
-     config_file: '../.pdf-tools/pdf/antora-assembler-pdf.yml'
+     config_file: './node_modules/@neo4j-antora/pdf-generator/antora-assembler-pdf.yml'
 
 asciidoc:
   attributes:
