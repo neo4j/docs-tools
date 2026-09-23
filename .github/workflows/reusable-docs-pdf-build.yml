@@ -32,11 +32,11 @@ on:
         required: false
         type: string
         default: '3.2.0'
-      pdf-playbook:
-        description: 'Antora playbook file, relative to docs-dir, that registers @neo4j-antora/pdf-generator - a small repo-specific file alongside preview.yml/publish.yml (content sources/attributes differ per docset, so not shared).'
+      antora-playbook:
+        description: 'Antora playbook file, relative to docs-dir, to build the PDF from - @neo4j-antora/pdf-generator is passed as a one-off --extension flag rather than needing its own dedicated playbook, so this is the same playbook already used for a normal build (defaults to publish.yml, matching what a real PDF export should reflect - override to preview.yml or another playbook if a docset wants draft content instead).'
         required: false
         type: string
-        default: 'pdf.yml'
+        default: 'publish.yml'
       retain-artifacts:
         description: 'The number of days to retain artifacts'
         type: number
@@ -53,7 +53,7 @@ jobs:
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
-      PDF_PLAYBOOK: ${{ inputs.pdf-playbook }}
+      ANTORA_PLAYBOOK: ${{ inputs.antora-playbook }}
 
     steps:
 
@@ -95,16 +95,19 @@ jobs:
         # so those extensions can still find hoisted deps (e.g. vinyl) that
         # are only installed under docs-dir's node_modules.
         NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
-      run: npx antora "$PDF_PLAYBOOK" --stacktrace --log-format=pretty
+      run: npx antora "$ANTORA_PLAYBOOK" --extension @neo4j-antora/pdf-generator --stacktrace --log-format=pretty
 
     - name: Get the dir that contains the PDF
       if: steps.run-pdf-build.outcome == 'success'
       working-directory: ${{ env.DOCS_DIR }}
       id: get-pdf-path
       run: |
-        pdf_path=$(find build/site -iname '*.pdf' | head -1)
+        # Excludes build/assembler/ - the assembler's own intermediate working
+        # copy, not the real deliverable - since output.dir (where the real
+        # one lands) varies by playbook (e.g. build/site vs build/docs).
+        pdf_path=$(find build -path '*/assembler/*' -prune -o -iname '*.pdf' -print | head -1)
         if [ -z "$pdf_path" ]; then
-          echo "::error::No PDF found under build/site - check the Antora log above"
+          echo "::error::No PDF found under build/ - check the Antora log above"
           exit 1
         fi
         echo "pdf-path=$pdf_path" >> "$GITHUB_OUTPUT"
