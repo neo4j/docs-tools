@@ -122,6 +122,11 @@ node_modules/
 # to be committed
 .pdf-tools/
 
+# pdf-generator/scripts/setup-vendor.js writes this at install time (see its
+# own comment) - node_modules/ and package-lock.json above already cover the
+# rest of what that install produces
+pdf-generator/vendor/package.json
+
 # Claude — ignore everything except the shared slash commands
 .claude/*
 !.claude/commands/

@@ -1,0 +1,23 @@
+{
+  "name": "@neo4j-antora/pdf-generator",
+  "version": "0.1.0-rc.1",
+  "description": "Generates a PDF export from an Antora docset, styled to match the real Neo4j docs site, via @antora/assembler + @antora/pdf-extension and asciidoctor-web-pdf",
+  "main": "scripts/convert.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node scripts/setup-vendor.js"
+  },
+  "keywords": [
+    "antora",
+    "pdf"
+  ],
+  "author": "Neo4j",
+  "license": "MIT",
+  "dependencies": {
+    "@antora/pdf-extension": "1.0.0",
+    "@neo4j-antora/roles-labels": "0.1.14-rc.1",
+    "@neo4j-documentation/macros": "1.0.4",
+    "@neo4j-documentation/remote-include": "1.0.0",
+    "node-html-parser": "9.0.4"
+  }
+}
