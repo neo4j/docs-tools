@@ -29,7 +29,6 @@ on:
   push:
     branches:
       - pdf-generation-pilot
-      - pdf-generator-package
 
 jobs:
 
