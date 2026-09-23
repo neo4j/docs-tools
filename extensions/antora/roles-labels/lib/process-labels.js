@@ -254,9 +254,19 @@ function addDataset (el, labelDetails) {
 // `docRootSelector` is the one Antora-shaped assumption left: on the real
 // site, an H1's dataset attributes are written to the page's `article.doc`
 // wrapper rather than the H1 itself. Plain Asciidoctor HTML5 output (used by
-// the PDF pipeline) never has that wrapper, so callers without it should
-// pass a selector that resolves to something in their own tree (or nothing,
-// which falls back to `root` itself).
+// the PDF pipeline) never has that wrapper, so callers without it should pass
+// a selector that resolves to something in their own tree, and set
+// `docRootFallback: true` (see below).
+//
+// `docRootFallback` (default false, matching the real HTML site) controls
+// what happens when `docRootSelector` doesn't match anything. On the real
+// site this should never happen - a missing `article.doc` means the page is
+// malformed - so the default logs a warning (via the same "Unable to set
+// dataset attributes" path as a missing `datasetDiv` always has) and skips
+// setting the dataset, surfacing the bad AsciiDoc rather than hiding it. The
+// PDF pipeline has no `article.doc` wrapper at all, so failing to find one
+// there is normal, not a sign of malformed content - PDF callers should pass
+// `true` so it falls back to `root` instead of warning on every single page.
 //
 // `skipDiscrete` (default true, matching the real HTML site) skips a role on
 // a `class="discrete"` heading - on a real Antora page, `discrete` means an
@@ -268,7 +278,7 @@ function addDataset (el, labelDetails) {
 // applying the same skip there would silently drop every heading-level label
 // in the PDF, whether the role was ever valid or not. PDF callers should
 // pass `false` here so the same role gets the same label in both places.
-function processLabels (root, { src, attributes = {}, logger, defaultLogLevel = 'info', replaceInlineLabelText = false, docRootSelector = 'article.doc', skipDiscrete = true } = {}) {
+function processLabels (root, { src, attributes = {}, logger, defaultLogLevel = 'info', replaceInlineLabelText = false, docRootSelector = 'article.doc', docRootFallback = false, skipDiscrete = true } = {}) {
     const headings = HEADING_TAGS
     const roleDivs = root.querySelectorAll(roleSelector)
     let labelCount = 0
@@ -294,7 +304,9 @@ function processLabels (root, { src, attributes = {}, logger, defaultLogLevel = 
         const labels = []
 
         // decide which node to add the dataset to
-        var datasetDiv = (roleDiv.tagName === 'H1') ? (root.querySelector(docRootSelector) || root) : roleDiv
+        var datasetDiv = (roleDiv.tagName === 'H1')
+            ? (root.querySelector(docRootSelector) || (docRootFallback ? root : null))
+            : roleDiv
 
         roles.forEach(function (role) {
             const labelDetails = getLabelDetails(src, roleDiv, role, attributes, { logger, defaultLogLevel, replaceInlineLabelText })
