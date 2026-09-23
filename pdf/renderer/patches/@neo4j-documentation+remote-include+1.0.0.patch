@@ -1,0 +1,13 @@
+diff --git a/node_modules/@neo4j-documentation/remote-include/remote-include-processor.js b/node_modules/@neo4j-documentation/remote-include/remote-include-processor.js
+index abea965..e1b7457 100644
+--- a/node_modules/@neo4j-documentation/remote-include/remote-include-processor.js
++++ b/node_modules/@neo4j-documentation/remote-include/remote-include-processor.js
+@@ -167,7 +167,7 @@ function applyLineFiltering (contents, linesToInclude) {
+ 
+ module.exports = function () {
+     this.includeProcessor(function () {
+-        this.$option('position', '>>')
++        this.option('position', '>>')
+         this.handles((target) => target.startsWith('https://'))
+         this.process((doc, reader, target, attrs) => {
+             const contents = require('child_process').execFileSync('curl', ['--silent', '-L', target], { encoding: 'utf8' })

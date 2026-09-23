@@ -1,0 +1,22 @@
+component_version_filter:
+  names: '**'
+assembly:
+  attributes:
+    allow-uri-read: ''
+    toc: ''
+    toc-title: Table of Contents
+    toclevels: 2
+build:
+  # This relative path is rewritten to an absolute one by
+  # reusable-docs-pdf-build.yml right after it checks out docs-tools (see its
+  # "Resolve absolute path to convert.js" step) - a relative value here can't
+  # work for every caller, since build.cwd (what it'd resolve against)
+  # defaults to the *playbook's* directory (docs-dir), which varies in
+  # nesting depth per docset, while `.pdf-tools` is always checked out at the
+  # repo root. Once convert.js itself is running, it resolves everything else
+  # (the renderer, the real stylesheet) from its own location instead - see
+  # docs-tools/pdf/README. Driving this by hand rather than through that
+  # workflow means rewriting this line yourself first.
+  command: node ./.pdf-tools/pdf/scripts/convert.js --trace --extension @neo4j-documentation/macros
+  keep_source: true
+  qualify_exports: true
