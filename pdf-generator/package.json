@@ -1,8 +1,8 @@
 {
   "name": "@neo4j-antora/pdf-generator",
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0-rc.2",
   "description": "Generates a PDF export from an Antora docset, styled to match the real Neo4j docs site, via @antora/assembler + @antora/pdf-extension and asciidoctor-web-pdf",
-  "main": "scripts/convert.js",
+  "main": "extension.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "node scripts/setup-vendor.js"

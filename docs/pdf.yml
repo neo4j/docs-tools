@@ -23,8 +23,7 @@ output:
 antora:
   extensions:
    - require: "../extensions/antora/tabbed-nav"
-   - require: '@antora/pdf-extension'
-     config_file: './node_modules/@neo4j-antora/pdf-generator/antora-assembler-pdf.yml'
+   - require: '@neo4j-antora/pdf-generator'
 
 asciidoc:
   attributes:
