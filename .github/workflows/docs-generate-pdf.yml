@@ -1,0 +1,32 @@
+name: "Generate PDF"
+
+permissions:
+  contents: read
+
+# Mirrors docs-generate-html.yml's trigger shape (workflow_dispatch with a
+# build-ref input). Deliberately simpler for now: PDF export always builds
+# from pdf.yml regardless of environment (no publish-pdf.yml/dev-vs-prod
+# split yet - see reusable-docs-pdf-build.yml's pdf-playbook input), and
+# there's no publish hand-off step - it just uploads the PDF as a build
+# artifact until a real publish target exists. Uses a relative path (this
+# workflow lives in the same repo as reusable-docs-pdf-build.yml, testing it
+# against docs-tools' own docs/ as the fixture) rather than a versioned
+# `neo4j/docs-tools/...@v2`-style reference, the same way docs-generate-
+# html.yml does for reusable-docs-build.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      build-ref:
+        description: 'The git ref to build from'
+        type: string
+        required: true
+
+jobs:
+
+  docs-build-pdf:
+    name: Generate PDF
+    uses: ./.github/workflows/reusable-docs-pdf-build.yml
+    with:
+      docs-dir: 'docs'
+      build-ref: ${{ inputs.build-ref || github.ref_name }}
+      fetch-depth: 0
