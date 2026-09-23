@@ -32,21 +32,11 @@ on:
         required: false
         type: string
         default: '3.2.0'
-      pdf-extension-version:
-        description: 'The @antora/pdf-extension version to install'
-        required: false
-        type: string
-        default: '1.0.0'
       pdf-playbook:
-        description: 'Antora playbook file, relative to docs-dir, that registers @antora/pdf-extension (see docs-tools/pdf/README) - a small repo-specific file alongside preview.yml/publish.yml, not shared, since each docset''s content sources/attributes differ.'
+        description: 'Antora playbook file, relative to docs-dir, that registers @neo4j-antora/pdf-generator - a small repo-specific file alongside preview.yml/publish.yml (content sources/attributes differ per docset, so not shared).'
         required: false
         type: string
-        default: 'preview-pdf.yml'
-      docs-tools-ref:
-        description: 'The docs-tools ref (tag/branch) to check out for the shared PDF theme/renderer/scripts'
-        required: false
-        type: string
-        default: 'v2'
+        default: 'pdf.yml'
       retain-artifacts:
         description: 'The number of days to retain artifacts'
         type: number
@@ -60,7 +50,6 @@ jobs:
     env:
       NODE_VERSION: ${{ inputs.node-version }}
       ANTORA_VERSION: ${{ inputs.antora-version }}
-      PDF_EXTENSION_VERSION: ${{ inputs.pdf-extension-version }}
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
@@ -73,44 +62,17 @@ jobs:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
-    # Always checked out to `.pdf-tools` at the repo root, regardless of
-    # docs-dir - antora-assembler-pdf.yml's config_file path (set in each
-    # docset's own pdf-playbook) is relative to *that playbook's* directory
-    # (docs-dir), so it still needs a `../`-prefixed path when docs-dir isn't
-    # "." (see docs-tools/pdf/README).
-    - name: Checkout docs-tools (shared PDF assets)
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      with:
-        repository: neo4j/docs-tools
-        ref: ${{ inputs.docs-tools-ref }}
-        path: .pdf-tools
-        sparse-checkout: |
-          pdf
-        sparse-checkout-cone-mode: false
-
-    # antora-assembler-pdf.yml's build.command can't itself use a relative
-    # path here: build.cwd (what a relative build.command resolves against)
-    # defaults to the *playbook's* directory (docs-dir), which - unlike this
-    # checkout, always at the repo root - varies in nesting depth per docset
-    # (docs-tools' own docs/ is one example). Rewriting it to the real
-    # absolute path, known only here, sidesteps that entirely.
-    - name: Resolve absolute path to convert.js in antora-assembler-pdf.yml
-      run: |
-        sed -i "s#\./.pdf-tools/pdf/scripts/convert.js#${GITHUB_WORKSPACE}/.pdf-tools/pdf/scripts/convert.js#" \
-          .pdf-tools/pdf/antora-assembler-pdf.yml
-
     - name: Use Node.js version ${{ env.NODE_VERSION }}
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    - name: Install renderer (asciidoctor-web-pdf, isolated - see docs-tools/pdf/README)
-      working-directory: .pdf-tools/pdf/renderer
-      # npm ci requires a committed package-lock.json - docs-tools gitignores
-      # it repo-wide (no lockfiles committed anywhere here), so npm install.
-      run: npm install
-
-    - name: Install docset dependencies and Antora + pdf-extension
+    # @neo4j-antora/pdf-generator is a normal npm dependency the docset's own
+    # package.json declares (see its own README) - it brings in
+    # @antora/pdf-extension, the PDF theme/renderer/postprocessors, and its
+    # own isolated Asciidoctor.js install (via its own postinstall) all by
+    # itself. Nothing to check out or path-patch here any more.
+    - name: Install docset dependencies
       working-directory: ${{ env.DOCS_DIR }}
       run: |
         npm install --omit=dev
@@ -119,7 +81,7 @@ jobs:
         # Antora 3.2.0+ bundles, regardless of what a docset's own package.json
         # currently pins.
         npm uninstall @antora/cli @antora/site-generator-default || true
-        npm install "antora@${ANTORA_VERSION}" "@antora/pdf-extension@${PDF_EXTENSION_VERSION}"
+        npm install "antora@${ANTORA_VERSION}"
 
     - name: Run Antora PDF build
       id: run-pdf-build

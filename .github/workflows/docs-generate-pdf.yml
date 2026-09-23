@@ -5,8 +5,8 @@ permissions:
 
 # Mirrors docs-generate-html.yml's trigger shape (workflow_dispatch with a
 # build-ref input). Deliberately simpler for now: PDF export always builds
-# from preview-pdf.yml regardless of environment (no publish-pdf.yml/dev-vs-
-# prod split yet - see reusable-docs-pdf-build.yml's pdf-playbook input), and
+# from pdf.yml regardless of environment (no publish-pdf.yml/dev-vs-prod
+# split yet - see reusable-docs-pdf-build.yml's pdf-playbook input), and
 # there's no publish hand-off step - it just uploads the PDF as a build
 # artifact until a real publish target exists. Uses a relative path (this
 # workflow lives in the same repo as reusable-docs-pdf-build.yml, testing it
@@ -39,9 +39,3 @@ jobs:
       docs-dir: 'docs'
       build-ref: ${{ inputs.build-ref || github.ref_name }}
       fetch-depth: 0
-      # docs-tools-ref defaults to 'v2' (the real, released tag), which
-      # doesn't have pdf/ yet - only this branch does, since this workflow
-      # only exists here too. Passing github.ref_name makes this self-test
-      # check out the exact same ref that's actually running, so it finds
-      # pdf/. Remove once this is merged and defaulting to a real tag works.
-      docs-tools-ref: ${{ github.ref_name }}
