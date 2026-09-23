@@ -11,12 +11,6 @@ permissions:
 # against docs-tools' own docs/ as the fixture) rather than a versioned
 # `neo4j/docs-tools/...@v2`-style reference, the same way docs-generate-
 # html.yml does for reusable-docs-build.yml.
-#
-# Uses preview.yml rather than reusable-docs-pdf-build.yml's own
-# publish.yml default - this repo's docs/ is a synthetic test fixture, and
-# preview.yml (not publish.yml) is the one that actually registers
-# tabbed-nav and carries the label/footnote/etc. test content this pipeline
-# has been verified against.
 on:
   workflow_dispatch:
     inputs:
@@ -34,4 +28,3 @@ jobs:
       docs-dir: 'docs'
       build-ref: ${{ inputs.build-ref || github.ref_name }}
       fetch-depth: 0
-      antora-playbook: 'preview.yml'
