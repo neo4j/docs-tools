@@ -270,6 +270,28 @@ tr { break-inside: avoid; }
 /* lists */
 .ulist, .olist, .dlist { margin: 0.5em 0; }
 
+/* footnotes (copied from asciidoctor-web-pdf's own default document.css -
+   overriding `stylesheet` wholesale, as this theme does, drops the default
+   theme's CSS entirely, not just the rules this theme redefines. Without
+   these, a footnote's `span.footnote` renders in normal document flow
+   instead of being pulled out via the CSS `float: footnote`/`::footnote`
+   paged-media mechanism Vivliostyle implements, so the note text shows up
+   inline, right where footnote:[...] was written, with no superscript
+   marker and no separation from the surrounding sentence - easy to mistake
+   for footnotes being silently dropped, since nothing errors and the text
+   is still technically present.) */
+span.footnote {
+  float: footnote;
+}
+
+[data-footnote-call]::after {
+  content: "[" counter(footnote) "]";
+}
+
+a[data-footnote-call] {
+  cursor: pointer;
+}
+
 /* role labels (badges added by @neo4j-antora/roles-labels for label:x[] macros
    and :page-role:/[role=label--x] roles).
 
