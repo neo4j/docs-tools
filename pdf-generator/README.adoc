@@ -77,9 +77,8 @@ override individual assembler settings if needed.
     `pdf-theme/assets/fonts/` rather than read from a docset's own HTML
     build output, so this theme has no dependency on that build having
     already run.
-- `extensions/` - `roles-labels-postprocessor.js` and
-  `table-footnotes-postprocessor.js` port the essential parts of the Antora
-  extensions of the same name (see "Known limitations" below);
+- `extensions/` - `roles-labels-postprocessor.js` ports the essential parts
+  of the Antora extension of the same name (see "Known limitations" below);
   `macros-adapter.js` and `remote-include-adapter.js` wrap the real
   `@neo4j-documentation/macros`/`remote-include` packages, fixing a
   pre-4.x-Asciidoctor.js API incompatibility in each at runtime (see their
@@ -96,28 +95,32 @@ override individual assembler settings if needed.
 
 == Known limitations
 
-- **No footnotes render at all, anywhere in the PDF, because of the TOC.**
-  Isolated by direct testing against `asciidoctor-web-pdf` outside this whole
-  pipeline: passing `-a toc` alone (nothing else - no tables, no our own
-  extensions) is enough to break native Asciidoctor `footnote:[...]`
-  conversion entirely - no superscript reference, no `#footnotes` div, just
-  the footnote text dropped in-line as if the macro had never been
-  processed. Since the print theme enables `toc` for every docset, this
-  currently affects every PDF this pipeline produces, not just docsets using
-  footnotes inside tables. `extensions/table-footnotes-postprocessor.js`
-  (see above) is correctly written and wired in, but has nothing to do while
-  this is broken - there's no `#footnotes` div for it to move content out of.
-  Not yet root-caused further (asciidoctor-web-pdf itself, or its Vivliostyle
-  dependency) or fixed.
+- **Fixed**: footnotes used to render inline, in the middle of the running
+  text, with no number and no separation from the surrounding sentence -
+  easy to mistake for the macro being dropped entirely, since the text is
+  still technically there. Root cause: `asciidoctor-web-pdf`'s own converter
+  emits a footnote as a single self-contained `<span class="footnote">text
+  </span>` right at the point of use, and relies entirely on its default
+  theme's `span.footnote { float: footnote }` (a native CSS Generated
+  Content for Paged Media rule - the browser/Vivliostyle itself lays the
+  floated span into the footnote area of whichever page it lands on, and
+  generates the marker/counter) to pull it out and number it. Overriding
+  `stylesheet` wholesale (see `print.css` above) replaces that default theme
+  entirely rather than layering on top of it, so this pipeline had silently
+  dropped that rule. `print.css` now carries its own copy of it. Because the
+  float is resolved per-page by the layout engine itself, this also means a
+  footnote always lands on the same page as whatever referenced it - table
+  or not - with no extra plumbing needed.
 - `@neo4j-antora/roles-labels` and `@neo4j-antora/table-footnotes` are Antora
   extensions (hook `pagesComposed`, operate on an Antora `ContentCatalog`) -
   neither can run against this pipeline at all, structurally: the assembler
   hands the merged `.adoc` to a completely separate, isolated Asciidoctor
-  conversion with no Antora generator context. `table-footnotes` is ported
-  as a plain Asciidoctor `Postprocessor` instead
-  (`extensions/table-footnotes-postprocessor.js`) - pure HTML restructuring,
-  no Antora-specific data needed, so the port is a straight copy.
-  `roles-labels-postprocessor.js` reuses `@neo4j-antora/roles-labels`'s own
+  conversion with no Antora generator context. `table-footnotes` has no
+  ported equivalent here (nor is it in `reusable-docs-pdf-build.yml`'s
+  `antora-extensions` default list) - per the footnote fix above, the native
+  CSS float already puts a table's footnotes on the right page on its own,
+  so there's nothing left for it to do. `roles-labels-postprocessor.js`
+  reuses `@neo4j-antora/roles-labels`'s own
   shared `lib/process-labels.js` core directly (same synonym resolution,
   version/product-suffix stripping, dataset attributes as the real HTML
   site - not a hand-ported subset), with one deliberate behavioural

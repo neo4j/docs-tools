@@ -27,7 +27,6 @@ const path = require('node:path')
 const RENDERER = path.join(__dirname, '../vendor/node_modules/asciidoctor-pdf/bin/asciidoctor-web-pdf')
 const STYLESHEET = path.join(__dirname, '../pdf-theme/print.css')
 const ROLES_LABELS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/roles-labels-postprocessor.js')
-const TABLE_FOOTNOTES_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/table-footnotes-postprocessor.js')
 const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../vendor/extensions/remote-include-adapter.js')
 const MACROS_ADAPTER = path.join(__dirname, '../vendor/extensions/macros-adapter.js')
 
@@ -94,15 +93,17 @@ const PUPPETEER_TIMEOUT_ENV = {
 // this can't just be a relative value in the playbook/assembler config.
 const args = process.argv.slice(2)
 const stdinMarkerIdx = args.lastIndexOf('-')
-// roles-labels-postprocessor.js and table-footnotes-postprocessor.js port the
-// essential parts of the Antora extensions of the same name (see those
-// files); macros-adapter.js and remote-include-adapter.js wrap the real
-// @neo4j-documentation packages - added here, __dirname-computed, for the
-// same reason as the stylesheet above.
+// roles-labels-postprocessor.js ports the essential parts of the Antora
+// extension of the same name (see that file); macros-adapter.js and
+// remote-include-adapter.js wrap the real @neo4j-documentation packages -
+// added here, __dirname-computed, for the same reason as the stylesheet
+// above. (table-footnotes has no equivalent here: CSS `float: footnote` -
+// see the print theme's own comment - already places a footnote on whatever
+// page its table lands on, natively, so there's nothing for a postprocessor
+// to move.)
 const extraArgs = [
   '-a', `stylesheet=${STYLESHEET}`,
   '--extension', ROLES_LABELS_POSTPROCESSOR,
-  '--extension', TABLE_FOOTNOTES_POSTPROCESSOR,
   '--extension', REMOTE_INCLUDE_ADAPTER,
   '--extension', MACROS_ADAPTER,
 ]
