@@ -33,6 +33,3 @@ jobs:
       # reason reusable-docs-build.yml has this same input: no docset
       # installs every one of them.
       antora-extensions-exclude: '@neo4j-antora/antora-modify-sitemaps @neo4j-antora/antora-page-list @neo4j-antora/antora-unlisted-pages'
-      # TEMPORARY, for CI verification only - revert after: real 0.1.0 isn't
-      # published yet, so pin to the latest published RC.
-      pdf-generator-version: '0.1.0-rc.2'
