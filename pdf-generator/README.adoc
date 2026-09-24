@@ -6,12 +6,18 @@ renderer) instead of the legacy Gradle + AsciidoctorJ mono-merge pipeline.
 See `reusable-pdf-build.yml` in `.github/workflows/` for the CI entry point
 that uses this package.
 
-Published as a normal npm dependency - a docset adds it as a devDependency
-and gets a real, versioned copy in its own `node_modules`, the same way it
-already depends on `@neo4j-antora/roles-labels` or `@neo4j-antora/tabbed-nav`.
-There's nothing to check out, symlink, or hand-configure: `@antora/pdf-
-extension` is this package's own dependency (not something a docset lists
-itself), so `npm install @neo4j-antora/pdf-generator` is the entire setup.
+Published as a normal npm package, but deliberately *not* one a docset
+declares in its own `package.json`: it's only ever needed for a PDF-specific
+build, and a docset's `package.json` is shared by every job that runs
+`npm install` against it (including totally unrelated jobs, e.g. a plain
+HTML PR check), so declaring it there would make all of those fail whenever
+a given version isn't published yet. `reusable-docs-pdf-build.yml` installs
+it itself, as its own explicit `npm install @neo4j-antora/pdf-generator@...`
+step, the same way it installs a specific Antora version regardless of what
+the docset's own `package.json` pins. There's nothing to check out, symlink,
+or hand-configure beyond that: `@antora/pdf-extension` is this package's own
+dependency (not something a docset lists itself), so installing this one
+package is the entire setup.
 
 == Usage
 

@@ -32,6 +32,11 @@ on:
         required: false
         type: string
         default: '3.2.0'
+      pdf-generator-version:
+        description: 'The @neo4j-antora/pdf-generator version to install. Not a dependency of the docset''s own package.json - it is only ever needed for this PDF-specific build, so declaring it there would make *every* install in the repo (including totally unrelated jobs, e.g. a plain HTML PR check) fail whenever this version is not yet published, the same way reusable-docs-build.yml installs a specific Antora version itself rather than trusting whatever a docset''s own package.json happens to pin.'
+        required: false
+        type: string
+        default: '0.1.0'
       package-script:
         description: 'The name of the script to run in package.json, same convention as reusable-docs-build.yml''s own package-script input - the docset is trusted to already have a valid script here (defaults to verify:publish, matching what a real PDF export should reflect). @neo4j-antora/pdf-generator is injected as a one-off --extension flag onto whatever that script already does, so it needs no dedicated PDF playbook or script of its own.'
         required: false
@@ -73,6 +78,7 @@ jobs:
       BUILD_REF: ${{ inputs.build-ref || '' }}
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
+      PDF_GENERATOR_VERSION: ${{ inputs.pdf-generator-version }}
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
@@ -89,11 +95,6 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    # @neo4j-antora/pdf-generator is a normal npm dependency the docset's own
-    # package.json declares (see its own README) - it brings in
-    # @antora/pdf-extension, the PDF theme/renderer/postprocessors, and its
-    # own isolated Asciidoctor.js install (via its own postinstall) all by
-    # itself. Nothing to check out or path-patch here any more.
     - name: Install docset dependencies
       working-directory: ${{ env.DOCS_DIR }}
       run: |
@@ -104,6 +105,16 @@ jobs:
         # currently pins.
         npm uninstall @antora/cli @antora/site-generator-default || true
         npm install "antora@${ANTORA_VERSION}"
+        # @neo4j-antora/pdf-generator is installed here, on its own, rather than
+        # being declared in the docset's own package.json - it's only ever
+        # needed for this PDF-specific build, and a docset's package.json is
+        # shared by every job that runs npm install against it (e.g. the plain
+        # HTML PR-check build), so declaring it there would make all of those
+        # unrelated jobs fail whenever this version isn't published yet. It
+        # brings in @antora/pdf-extension, the PDF theme/renderer/
+        # postprocessors, and its own isolated Asciidoctor.js install (via its
+        # own postinstall) all by itself.
+        npm install "@neo4j-antora/pdf-generator@${PDF_GENERATOR_VERSION}"
 
     # Mirrors reusable-docs-build.yml's own "Remove excluded extensions" +
     # "Create list of extensions for the Antora CLI" steps - not every
