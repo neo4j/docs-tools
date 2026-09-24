@@ -15,19 +15,37 @@ itself), so `npm install @neo4j-antora/pdf-generator` is the entire setup.
 
 == Usage
 
-A docset needs its own small playbook (like `preview.yml`/`publish.yml`,
-since content sources/attributes differ per docset - not shared here) that
-registers `@antora/pdf-extension` with this package's assembler config:
+This package self-registers as a real Antora extension (it wraps
+`@antora/pdf-extension`, pre-wired with its own assembler config as the
+default - see `extension.js`), so it needs no dedicated playbook or
+`package.json` script of its own. Pass it as a one-off `--extension` flag
+onto whatever playbook/script a docset already uses for a normal build:
+
+[source,shell]
+----
+antora publish.yml --extension @neo4j-antora/pdf-generator
+# or, reusing an existing package.json script:
+npm run verify:publish -- --extension @neo4j-antora/pdf-generator
+----
+
+Generating a PDF this way always regenerates the full HTML site alongside
+it in the same Antora run (`@antora/assembler`/`@antora/pdf-extension` hook
+into normal site generation rather than replacing it) - there's no way to
+get "just the PDF" from a single run.
+
+A docset can still register it declaratively in a playbook instead, if
+preferred:
 
 [source,yaml]
 ----
 antora:
   extensions:
-   - require: '@antora/pdf-extension'
-     config_file: './node_modules/@neo4j-antora/pdf-generator/antora-assembler-pdf.yml'
+   - require: '@neo4j-antora/pdf-generator'
 ----
 
-and a `package.json` script to run it, e.g. `"pdf": "antora pdf.yml"`.
+Either form picks up this package's own `antora-assembler-pdf.yml` as the
+default `configFile` - pass a `config:` block in the playbook form to
+override individual assembler settings if needed.
 
 == Layout
 
