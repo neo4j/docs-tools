@@ -36,6 +36,11 @@ on:
         description: 'The name of the script to run in package.json '
         type: string
         default: 'verify:preview'
+      publish-env:
+        description: "The publish environment to build docs for: dev or prod"
+        required: false
+        type: string
+        default: 'dev'
       antora-attributes:
         description: 'Antora attributes to pass to the build script'
         required: false
@@ -70,6 +75,26 @@ on:
         required: false
         type: string
         default: 'na'
+      antora-fetch-branches:
+        description: 'Space-separated list of additional branches to fetch, on top of whatever is auto-detected from antora-playbook (e.g. a branch needed for a one-off reason that is not itself a playbook content source). Fetched with git before the build, so Antora does not have to rely on its own --fetch (isomorphic-git), which is less reliable for this.'
+        required: false
+        type: string
+        default: ''
+      antora-playbook:
+        description: 'Antora playbook file, relative to docs-dir, to read multi-version branches from (content.sources[].branches). Every branch listed there - other than HEAD, which is whatever build-ref already checked out - is fetched automatically before the build, so this input does not need manual upkeep as versions are added or removed. Defaults to publish.yml for verify:publish builds and preview.yml otherwise, matching the convention every repo already follows - override only if a repo names its playbook something else.'
+        required: false
+        type: string
+        default: ''
+      sparse-checkout:
+        description: 'Whether to sparse-checkout only docs-dir (plus sparse-checkout-extra-paths) instead of the whole repo. Only relevant when docs-dir is not ".". Set to false to check out the whole repo, e.g. if docs-dir needs to reference sibling paths elsewhere in the repo.'
+        required: false
+        type: boolean
+        default: true
+      sparse-checkout-extra-paths:
+        description: 'Extra repo-relative paths to include in the sparse checkout alongside docs-dir (newline-separated), e.g. a sibling extensions folder referenced by local-path antora-extensions. Only relevant when docs-dir is not "." and sparse-checkout is true.'
+        required: false
+        type: string
+        default: ''
       deploy-id:
         description: 'The Deploy ID or PR number if workflow called by a PR'
         required: false
@@ -88,6 +113,11 @@ on:
         type: string
         default: ''
         required: false
+      fetch-nav-preview:
+        description: 'Whether a PR-preview/local verify:preview build should fetch the real aggregated nav (tabs.json) from the published prod site, so the cross-docset tab strip is fully populated instead of showing only this repo''s own docset(s). Off by default since it couples every PR-preview build to a live fetch against prod. Has no effect on verify:publish builds, which always fetch regardless (see DOCS_FETCH_NAV below).'
+        required: false
+        type: boolean
+        default: false
 
     outputs:
         pages-listed:
@@ -101,6 +131,14 @@ jobs:
     outputs:
       pages-listed: ${{ steps.page-list-artifact.outcome }}
 
+    # Only scope to an environment (and its deployment branch policies) for actual
+    # publish builds, which are the only ones that need DOCS_PUBLISH_URL. Ordinary
+    # preview builds (e.g. PR checks) don't need it and shouldn't be blocked by
+    # environment deployment branch policies meant for publishing.
+    environment:
+      name: ${{ inputs.package-script == 'verify:publish' && inputs.publish-env || '' }}
+      deployment: false
+
     env:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       NODE_VERSION: ${{ inputs.node-version }}
@@ -110,30 +148,139 @@ jobs:
       FETCH_DEPTH: ${{ inputs.fetch-depth }}
       DOCS_DIR: ${{ inputs.docs-dir }}
       SITE_DIR: ${{ inputs.site-dir }}
-      ANTORA_CLI_OPTIONS: ${{ inputs.antora-cli-options }}
-      ANTORA_UI_BUNDLE_URL: ${{ inputs.antora-ui-bundle-url }}
-      ANTORA_ATTRIBUTES: ${{ inputs.antora-attributes }}
-      ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
+      # Publish builds use the real published URL. TEMPORARY: hardcoded rather than read
+      # from a secret, because reusable workflows never get the caller's secrets (org,
+      # repo, or environment) unless the caller adds `secrets: inherit` - no caller of
+      # this workflow does, anywhere, so secrets.* has always resolved empty here. See
+      # memory note project_reusable_workflow_secrets_inherit for the proper fix (roll
+      # out secrets: inherit to every caller); deferred since we're only testing in a
+      # sandbox right now.
+      #
+      # Resolved once here, not duplicated at each use: ANTORA_CLI_OPTIONS and
+      # DOCS_NAV_URL both need the dev-vs-prod split, but they read it via
+      # env.DOCS_PUBLISH_URL from the "Run package script" step's own env: block
+      # below rather than from here directly - a step's env CAN reference an
+      # already-resolved job-level env var, but two entries in this same job-level
+      # env: block can't reference each other (this one included), so they can't be
+      # defined here alongside it.
+      DOCS_PUBLISH_URL: "${{ inputs.publish-env == 'dev' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs' }}"
+      ANTORA_UI_BUNDLE_URL: "${{ inputs.package-script == 'verify:publish' && 'https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip'|| inputs.antora-ui-bundle-url }}"
+      # page-no-local-manifest: dev/prod never serve local-manifest.json (that's a
+      # local-dev-only file - see the tabbed-nav extension's emitLocalManifest option and
+      # its middleware). Stamped so the UI bundle can skip fetching it there entirely,
+      # rather than issuing a request that's guaranteed to 404.
+      ANTORA_ATTRIBUTES: "${{ inputs.antora-attributes }}${{ inputs.package-script == 'verify:publish' && ' --attribute page-no-local-manifest=true' || '' }}"
+      ANTORA_EXTENSIONS: "${{ inputs.antora-extensions }}${{ inputs.package-script == 'verify:publish' && '@neo4j-antora/tabbed-nav' || '' }}"
+      # tabbed-nav's fetchNav defaults to false (a docset referencing it locally
+      # shouldn't silently reach out to a remote tabs.json) - publish builds need the
+      # real cross-repo aggregation, so opt in via its env-var override rather than
+      # every consumer's playbook needing to carry fetchNav: true as extension config.
+      DOCS_FETCH_NAV: "${{ inputs.package-script == 'verify:publish' && 'true' || '' }}"
+      # emitLocalManifest defaults to false - only non-publish builds (PR-preview
+      # surge deploys, plain local verify:preview CI runs) need the static
+      # local-manifest.json so the UI bundle's local-tabs dots/href-rewrite have
+      # something to fetch on a static host with no dev middleware. Publish builds
+      # skip it entirely (see page-no-local-manifest above).
+      DOCS_EMIT_LOCAL_MANIFEST: "${{ inputs.package-script != 'verify:publish' && 'true' || '' }}"
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
-      ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && '--attribute page-chatbot=https://neo4j.com/docs/assets/chatbot' || '' }}"
+      ANTORA_FETCH_BRANCHES: ${{ inputs.antora-fetch-branches }}
+      ANTORA_PLAYBOOK: "${{ inputs.antora-playbook || (inputs.package-script == 'verify:publish' && 'publish.yml' || 'preview.yml') }}"
+      SPARSE_CHECKOUT: ${{ inputs.sparse-checkout }}
+      SPARSE_CHECKOUT_EXTRA_PATHS: ${{ inputs.sparse-checkout-extra-paths }}
 
     steps:
 
     # Checkout the whole repo
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      if: ${{ env.DOCS_DIR == '.' }}
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      if: ${{ env.DOCS_DIR == '.' || env.SPARSE_CHECKOUT == 'false' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
-    # Checkout the docs dir
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      if: ${{ env.DOCS_DIR != '.' }}
+    # Checkout the docs dir only (sparse)
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      if: ${{ env.DOCS_DIR != '.' && env.SPARSE_CHECKOUT != 'false' }}
       with:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
-        sparse-checkout: ${{ env.DOCS_DIR }}
+        sparse-checkout: |
+          ${{ env.DOCS_DIR }}
+          ${{ env.SPARSE_CHECKOUT_EXTRA_PATHS }}
         sparse-checkout-cone-mode: false
+
+    # Fetch every branch a multi-version Antora playbook needs, using real git (more
+    # reliable than relying on antora --fetch, which uses isomorphic-git). Branches come
+    # from two places, unioned: content.sources[].branches in antora-playbook (read
+    # automatically - HEAD is excluded, since that's whatever build-ref already checked
+    # out, not a separate branch to fetch) and the antora-fetch-branches input (a manual
+    # escape hatch for a branch needed for some other reason).
+    - name: Fetch Antora playbook branches
+      run: |
+        playbook_path="${DOCS_DIR}/${ANTORA_PLAYBOOK}"
+        playbook_branches=""
+        if [ -f "$playbook_path" ]; then
+          # A playbook can declare multiple content sources, each from a different repo.
+          # We only checked out and can git-fetch branches for THIS repo, so only consider
+          # sources whose url is a relative/local path to it - not an absolute url (a
+          # scheme like https:// or git://, or scp-like git@host:path), which always means
+          # a different repo. Those are Antora's own problem to fetch, not ours.
+          playbook_branches=$(yq eval '
+            [.content.sources[] | select(((.url | test("^[a-zA-Z][a-zA-Z0-9+.-]*://")) or (.url | test("^[^/]+@[^:/]+:"))) | not) | .branches]
+            | flatten
+            | map(select(. != "HEAD"))
+            | unique
+            | join(" ")
+          ' "$playbook_path")
+        else
+          echo "::warning::Antora playbook not found at ${playbook_path}; skipping auto-detected branches"
+        fi
+
+        # Filter HEAD from the combined list too, not just the playbook-derived part -
+        # it's not a real remote branch, so a git fetch refspec for it fails outright
+        # (and fails the whole multi-refspec fetch, not just that one ref) if it ever
+        # reaches here via antora-fetch-branches instead. The `|| true` guards against
+        # grep's own exit 1 when it filters out every line (e.g. input was only "HEAD")
+        # - that's not an error, it's exactly the "nothing to fetch" case the next check
+        # handles, but bash's errexit would otherwise abort the script right here first.
+        branches=$(printf '%s\n' $playbook_branches $ANTORA_FETCH_BRANCHES | grep -v '^HEAD$' | sort -u | tr '\n' ' ' || true)
+        if [ -z "$(echo "$branches" | tr -d '[:space:]')" ]; then
+          echo "No additional branches to fetch"
+          exit 0
+        fi
+        echo "Fetching branches: ${branches}"
+
+        refspecs=()
+        for branch in $branches; do
+          refspecs+=("+refs/heads/${branch}:refs/remotes/origin/${branch}")
+        done
+
+        # fetch-depth: 0 makes actions/checkout do a blobless partial clone
+        # (--filter=blob:none) - commits and trees only, no file contents. antora reads
+        # each branch from the git object store via isomorphic-git, which (a) can't
+        # lazy-fetch a missing blob the way real git does, and (b) loads a whole packfile
+        # into memory to read it, so it chokes on a very large pack (readSlice -> null,
+        # "Cannot read properties of null (reading 'slice')"). `git fetch --refetch` here
+        # avoided (a) but caused (b): it re-downloads the FULL history and ALL blobs of
+        # every branch (gigabytes on big repos) into one pack isomorphic-git can't read.
+        #
+        # Instead, get the branches' commits/trees (cheap, still blobless) so the refs
+        # resolve, then hydrate ONLY the blobs antora needs by checking out each branch
+        # tip. Because actions/checkout above set sparse-checkout to DOCS_DIR, each
+        # checkout batch-fetches just DOCS_DIR's blobs for that tip from the promisor
+        # remote - keeping the object store small (tens of MB) and isomorphic-git-readable.
+        # Finally restore the worktree/HEAD to the ref we built from.
+        #
+        # NOTE: this assumes every LOCAL content source's start_path is within the
+        # sparse-checkout set (DOCS_DIR / SPARSE_CHECKOUT_EXTRA_PATHS). A local source
+        # outside it would not be hydrated. Remote-url sources are antora's to fetch.
+        git config core.commitGraph false  # avoid commit-graph/promisor desync during hydration
+        git fetch --no-tags origin "${refspecs[@]}"
+
+        build_ref_head="$(git rev-parse HEAD)"
+        for branch in $branches; do
+          git checkout -q --detach "refs/remotes/origin/${branch}"
+        done
+        git checkout -q --detach "$build_ref_head"
 
     - name: Remove excluded extensions
       run: |
@@ -169,8 +316,8 @@ jobs:
         npm install $ANTORA_FILTERED_EXTENSIONS
         
         # Ensure a correct version of sitemaps extension
-        printf "\n\n<!---- Ensure correct sitemaps extension version -->"
-        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
+        # Ensure tabbed-nav extension is installed (it cannot be excluded)
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2 @neo4j-antora/tabbed-nav
 
         # Update extensions
         printf "\n\n<!---- Update extensions -->"
@@ -185,9 +332,50 @@ jobs:
         printf "\n\n<!---- Installed packages -->\n"
         npm list
 
+    # A missing script name is a genuine config error - not something to tolerate the way
+    # the run step's continue-on-error tolerates antora itself failing - so this step gets
+    # no continue-on-error and fails the job outright.
     - name: Run package script
+      id: run-package-script
       working-directory: ${{ env.DOCS_DIR }}
+      continue-on-error: true
+      env:
+        # antora requires local-path extensions (e.g. a sibling extensions/ dir) directly by their
+        # real filesystem path, bypassing node_modules resolution entirely. NODE_PATH gives Node an
+        # extra place to look, so those extensions can still find hoisted deps (e.g. vinyl) that are
+        # only installed under docs/node_modules.
+        NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
+        # All three derive the dev/prod split from the single env.DOCS_PUBLISH_URL set
+        # at job level above - defined here, not there, because that's a job-level
+        # env: block and this one can read it; two entries in the SAME block can't
+        # read each other. Everything else - including PR previews - derives the
+        # surge.sh URL it's about to be deployed to (see docs-deploy-surge.yml, which
+        # computes the same $ORG-$REPO-$DEPLOYID.surge.sh pattern), so nav links
+        # depending on an absolute site URL still resolve.
+        ANTORA_CLI_OPTIONS: "${{ inputs.antora-cli-options }}${{ inputs.package-script == 'verify:publish' && format(' --url {0}', env.DOCS_PUBLISH_URL) || format(' --url https://{0}-{1}-{2}.surge.sh', github.repository_owner, github.event.repository.name, inputs.deploy-id) }}"
+        # Opt-in only (fetch-nav-preview input, default false): a PR-preview build
+        # only generates this one repo's own nav shard, so without fetching, its
+        # cross-docset tab strip shows just that. Setting an explicit nav source is
+        # itself what turns fetching on for tabbed-nav (see DOCS_FETCH_NAV above and
+        # the extension's own shouldFetchNav gate) - publish builds already fetch
+        # unconditionally via DOCS_FETCH_NAV, so this only ever applies to the
+        # non-publish path, and is blank (no effect) otherwise.
+        DOCS_NAV_URL: "${{ inputs.package-script != 'verify:publish' && inputs.fetch-nav-preview && format('{0}/nav/tabs.json', env.DOCS_PUBLISH_URL) || '' }}"
+        # The chatbot asset lives alongside the rest of the published site, so it
+        # follows the same dev-vs-prod split as everything else here rather than
+        # being hardcoded to the prod neo4j.com host.
+        ANTORA_AI_SEARCH_LINK: "${{ inputs.package-script == 'verify:publish' && format('--attribute page-chatbot={0}/assets/chatbot', env.DOCS_PUBLISH_URL) || '' }}"
       run: npm run $PACKAGE_SCRIPT -- --ui-bundle-url=$ANTORA_UI_BUNDLE_URL $ANTORA_CLI_OPTIONS $ANTORA_CLI_EXTENSIONS $ANTORA_ATTRIBUTES $ANTORA_AI_SEARCH_LINK
+
+    - name: Print Antora log
+      if: steps.run-package-script.outcome == 'failure'
+      working-directory: ${{ env.DOCS_DIR }}
+      run: |
+        if [ -f build/log/log.json ]; then
+          cat build/log/log.json
+        else
+          echo "No log file found at build/log/log.json"
+        fi
 
     - name: Get the dir that contains the HTML
       working-directory: ${{ env.DOCS_DIR }}
@@ -215,6 +403,7 @@ jobs:
         retention-days: ${{ inputs.retain-artifacts }}          
 
     - name: Upload Log artifact
+      if: always()
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: antora-log
@@ -242,3 +431,7 @@ jobs:
         if-no-files-found: ignore
         include-hidden-files: true
         retention-days: ${{ inputs.retain-artifacts }}
+
+    - name: Fail job if package script failed
+      if: always() && steps.run-package-script.outcome == 'failure'
+      run: exit 1

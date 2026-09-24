@@ -1,0 +1,4 @@
+= Administration
+:page-tabs: administration
+
+Content

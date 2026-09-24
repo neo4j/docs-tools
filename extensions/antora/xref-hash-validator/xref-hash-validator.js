@@ -105,16 +105,37 @@ module.exports.register = function ({ config }) {
         // by verifying that for an internal link to a section, the hash does actually exist in the target page
         files.forEach( (file) => {
             if (!file.out || !file.asciidoc) return
+
+            // console.log(file.pub)
     
             // check the internal links in the file
             file.xrefChecker.internalLinks.forEach((link) => {
 
-                // what is the full url of each link?
-                searchForThisURL = new URL(path.join(file.pub.url, link), (playbook.site && playbook.site.url) ? playbook.site.url : 'https://example.com')
+                // internalLinks (built above, in documentsConverted) only ever contains
+                // hrefs Antora's own xref resolution already resolved to a real page -
+                // anything unresolved is filtered out before we see it, and Antora logs
+                // that separately. So the target file is guaranteed to exist by
+                // construction; there's nothing to gain by independently re-deriving and
+                // re-validating "is this URL within the site" from file.pub.url + link,
+                // and two different bugs in that derivation (a path.dirname off-by-one
+                // dropping the component prefix, and new URL() dropping site.url's last
+                // path segment when it lacked a trailing slash) each caused entirely valid
+                // links to be wrongly rejected. All that's actually still worth checking
+                // is whether the #hash anchor exists on that (already-confirmed-real) page.
+                const rawSiteURLRoot = (playbook.site && playbook.site.url) ? playbook.site.url : 'http://example.com'
+                // Still need a trailing slash: new URL(relativePath, base) treats base's
+                // last path segment as a filename to discard when there's no trailing
+                // slash (same as a browser resolving a relative link), so without this,
+                // 'https://neo4j.com/docs' as a base would silently drop "docs".
+                const siteURLRoot = rawSiteURLRoot.endsWith('/') ? rawSiteURLRoot : rawSiteURLRoot + '/'
+
+                const searchForThisURL = new URL(path.join(file.pub.url, link), siteURLRoot)
 
                 // if there's no hash the xref is already checked by Antora
                 // this check shouldn't ever match anyway because we should have already filtered out links without hashes
                 if (!searchForThisURL.hash) return
+
+                // We should be safe now!
                 
                 // Find the file in the contentcatalog that has a file.pub.url value that matches the pathname of the link target
                 // where the pathname is a relative path from the site root, which is also what pub.url represents
@@ -125,7 +146,8 @@ module.exports.register = function ({ config }) {
                     return f.pub.url === searchForThisURL.pathname
                 })[0]
 
-                // we shouldn't generate this log message, but just in case...
+                // we shouldn't be able to generate this log message now
+                // if target file is not found, Antora should have already logged an error, but just in case...
                 if (!targetFile) {
                     logger[logLevel]({ file: file.src, source: file.src.origin }, 'target file %s not found for link %s', searchForThisURL.pathname, link)
                     return

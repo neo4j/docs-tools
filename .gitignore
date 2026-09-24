@@ -120,3 +120,4 @@ node_modules/
 # Claude — ignore everything except the shared slash commands
 .claude/*
 !.claude/commands/
+CLAUDE.md
