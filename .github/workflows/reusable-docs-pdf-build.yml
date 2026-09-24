@@ -1,0 +1,186 @@
+name: Generate PDF
+
+permissions:
+  contents: read
+  pull-requests: none
+
+on:
+  workflow_call:
+    inputs:
+      build-ref:
+        description: 'The git ref (branch or tag) to checkout'
+        required: false
+        type: string
+        default: ''
+      fetch-depth:
+        description: 'The git fetch depth: 1 to fetch just the ref (branch or tag), 0 for full history'
+        required: false
+        type: number
+        default: 1
+      docs-dir:
+        description: 'The working directory to run jobs in'
+        required: false
+        type: string
+        default: '.'
+      node-version:
+        description: 'The Node.js version to use'
+        required: false
+        type: string
+        default: '24'
+      antora-version:
+        description: 'The Antora version to install (must be >=3.2.0 - @antora/pdf-extension needs the assembler it bundles from that version on)'
+        required: false
+        type: string
+        default: '3.2.0'
+      pdf-generator-version:
+        description: 'The @neo4j-antora/pdf-generator version to install. Not a dependency of the docset''s own package.json - it is only ever needed for this PDF-specific build, so declaring it there would make *every* install in the repo (including totally unrelated jobs, e.g. a plain HTML PR check) fail whenever this version is not yet published, the same way reusable-docs-build.yml installs a specific Antora version itself rather than trusting whatever a docset''s own package.json happens to pin.'
+        required: false
+        type: string
+        default: '0.1.0'
+      package-script:
+        description: 'The name of the script to run in package.json, same convention as reusable-docs-build.yml''s own package-script input - the docset is trusted to already have a valid script here (defaults to verify:publish, matching what a real PDF export should reflect). @neo4j-antora/pdf-generator is injected as a one-off --extension flag onto whatever that script already does, so it needs no dedicated PDF playbook or script of its own.'
+        required: false
+        type: string
+        default: 'verify:publish'
+      antora-extensions:
+        description: 'Antora extensions to pass to the build script. Defaults to the same list reusable-docs-build.yml uses for a real publish build, plus @neo4j-antora/pdf-generator itself, minus @neo4j-antora/table-footnotes - that one hooks Antora''s own pagesComposed event, which this pipeline''s separate, isolated Asciidoctor conversion never triggers, so it would always be a silent no-op here (see pdf-generator/README.adoc). package-script''s own command has none of these baked in itself (reusable-docs-build.yml supplies them as CLI flags, the same way this workflow does), so without this a PDF build would silently run without them.'
+        required: false
+        type: string
+        default: '
+          @neo4j-antora/aliases-redirects
+          @neo4j-antora/antora-modify-sitemaps
+          @neo4j-antora/antora-page-list
+          @neo4j-antora/antora-unlisted-pages
+          @neo4j-antora/roles-labels
+          @neo4j-antora/selector-labels
+          @neo4j-antora/xref-hash-validator
+          @neo4j-antora/pdf-generator
+          '
+      antora-extensions-exclude:
+        description: 'Antora extensions to NOT pass to the build script, same convention as reusable-docs-build.yml''s own input of the same name - not every docset installs every extension in the antora-extensions default list.'
+        required: false
+        type: string
+        default: 'na'
+      retain-artifacts:
+        description: 'The number of days to retain artifacts'
+        type: number
+        default: 28
+
+jobs:
+
+  build-pdf:
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_VERSION: ${{ inputs.node-version }}
+      ANTORA_VERSION: ${{ inputs.antora-version }}
+      BUILD_REF: ${{ inputs.build-ref || '' }}
+      FETCH_DEPTH: ${{ inputs.fetch-depth }}
+      DOCS_DIR: ${{ inputs.docs-dir }}
+      PDF_GENERATOR_VERSION: ${{ inputs.pdf-generator-version }}
+      PACKAGE_SCRIPT: ${{ inputs.package-script }}
+      ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
+      ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
+
+    steps:
+
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: ${{ env.BUILD_REF }}
+        fetch-depth: ${{ env.FETCH_DEPTH }}
+
+    - name: Use Node.js version ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install docset dependencies
+      working-directory: ${{ env.DOCS_DIR }}
+      run: |
+        npm install --omit=dev
+        # Ensure a correct version of Antora, the same way reusable-docs-build.yml
+        # does for the HTML build - @antora/pdf-extension needs the assembler
+        # Antora 3.2.0+ bundles, regardless of what a docset's own package.json
+        # currently pins.
+        npm uninstall @antora/cli @antora/site-generator-default || true
+        npm install "antora@${ANTORA_VERSION}"
+        # @neo4j-antora/pdf-generator is installed here, on its own, rather than
+        # being declared in the docset's own package.json - it's only ever
+        # needed for this PDF-specific build, and a docset's package.json is
+        # shared by every job that runs npm install against it (e.g. the plain
+        # HTML PR-check build), so declaring it there would make all of those
+        # unrelated jobs fail whenever this version isn't published yet. It
+        # brings in @antora/pdf-extension, the PDF theme/renderer/
+        # postprocessors, and its own isolated Asciidoctor.js install (via its
+        # own postinstall) all by itself.
+        npm install "@neo4j-antora/pdf-generator@${PDF_GENERATOR_VERSION}"
+
+    # Mirrors reusable-docs-build.yml's own "Remove excluded extensions" +
+    # "Create list of extensions for the Antora CLI" steps - not every
+    # docset installs every extension in the antora-extensions default list,
+    # so antora-extensions-exclude lets a caller drop the ones it doesn't
+    # have before turning the rest into --extension X --extension Y ... flags.
+    - name: Remove excluded extensions
+      run: |
+        for extension in $ANTORA_EXTENSIONS; do
+          if [[ $ANTORA_EXTENSIONS_EXCLUDE =~ "$extension" ]]; then
+            continue
+          fi
+          filtered_extensions=" ${extension} ${filtered_extensions}"
+        done
+        echo "ANTORA_FILTERED_EXTENSIONS=${filtered_extensions}" >> $GITHUB_ENV
+
+    - name: Create list of extensions for the Antora CLI
+      run: |
+        for extension in $ANTORA_FILTERED_EXTENSIONS; do
+          antora_cli_extensions="--extension ${extension} ${antora_cli_extensions}"
+        done
+        echo "ANTORA_CLI_EXTENSIONS=${antora_cli_extensions}" >> $GITHUB_ENV
+
+    # Reuses whichever script the docset already runs for a normal build
+    # (default verify:publish) rather than needing its own dedicated PDF
+    # script or playbook - the extension list above (which includes
+    # @neo4j-antora/pdf-generator itself) is appended as trailing CLI flags,
+    # the same way reusable-docs-build.yml appends its own extensions onto
+    # $PACKAGE_SCRIPT via `npm run ... --`, rather than the docset's own
+    # script needing to know about any of them.
+    - name: Run PDF build
+      id: run-pdf-build
+      working-directory: ${{ env.DOCS_DIR }}
+      continue-on-error: true
+      env:
+        # Same fix as reusable-docs-build.yml's "Run package script" step:
+        # antora requires local-path extensions (e.g. a sibling extensions/
+        # dir) directly by their real filesystem path, bypassing node_modules
+        # resolution entirely. NODE_PATH gives Node an extra place to look,
+        # so those extensions can still find hoisted deps (e.g. vinyl) that
+        # are only installed under docs-dir's node_modules.
+        NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
+      run: npm run "$PACKAGE_SCRIPT" -- $ANTORA_CLI_EXTENSIONS
+
+    - name: Get the dir that contains the PDF
+      if: steps.run-pdf-build.outcome == 'success'
+      working-directory: ${{ env.DOCS_DIR }}
+      id: get-pdf-path
+      run: |
+        # Excludes build/assembler/ - the assembler's own intermediate working
+        # copy, not the real deliverable - since output.dir (where the real
+        # one lands) varies by playbook (e.g. build/site vs build/docs).
+        pdf_path=$(find build -path '*/assembler/*' -prune -o -iname '*.pdf' -print | head -1)
+        if [ -z "$pdf_path" ]; then
+          echo "::error::No PDF found under build/ - check the Antora log above"
+          exit 1
+        fi
+        echo "pdf-path=$pdf_path" >> "$GITHUB_OUTPUT"
+
+    - name: Upload PDF artifact
+      if: steps.run-pdf-build.outcome == 'success'
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      with:
+        name: pdf
+        path: ${{ env.DOCS_DIR }}/${{ steps.get-pdf-path.outputs.pdf-path }}
+        retention-days: ${{ inputs.retain-artifacts }}
+
+    - name: Fail job if PDF build failed
+      if: always() && steps.run-pdf-build.outcome == 'failure'
+      run: exit 1

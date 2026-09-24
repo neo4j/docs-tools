@@ -1,0 +1,158 @@
+= PDF generation
+
+Generates a PDF export from any Antora docset, via `@antora/assembler` +
+`@antora/pdf-extension` and `asciidoctor-web-pdf` (a Chrome/Puppeteer + CSS
+renderer) instead of the legacy Gradle + AsciidoctorJ mono-merge pipeline.
+See `reusable-pdf-build.yml` in `.github/workflows/` for the CI entry point
+that uses this package.
+
+Published as a normal npm package, but deliberately *not* one a docset
+declares in its own `package.json`: it's only ever needed for a PDF-specific
+build, and a docset's `package.json` is shared by every job that runs
+`npm install` against it (including totally unrelated jobs, e.g. a plain
+HTML PR check), so declaring it there would make all of those fail whenever
+a given version isn't published yet. `reusable-docs-pdf-build.yml` installs
+it itself, as its own explicit `npm install @neo4j-antora/pdf-generator@...`
+step, the same way it installs a specific Antora version regardless of what
+the docset's own `package.json` pins. There's nothing to check out, symlink,
+or hand-configure beyond that: `@antora/pdf-extension` is this package's own
+dependency (not something a docset lists itself), so installing this one
+package is the entire setup.
+
+== Usage
+
+This package self-registers as a real Antora extension (it wraps
+`@antora/pdf-extension`, pre-wired with its own assembler config as the
+default - see `extension.js`), so it needs no dedicated playbook or
+`package.json` script of its own. Pass it as a one-off `--extension` flag
+onto whatever playbook/script a docset already uses for a normal build:
+
+[source,shell]
+----
+antora publish.yml --extension @neo4j-antora/pdf-generator
+# or, reusing an existing package.json script:
+npm run verify:publish -- --extension @neo4j-antora/pdf-generator
+----
+
+Generating a PDF this way always regenerates the full HTML site alongside
+it in the same Antora run (`@antora/assembler`/`@antora/pdf-extension` hook
+into normal site generation rather than replacing it) - there's no way to
+get "just the PDF" from a single run.
+
+A docset can still register it declaratively in a playbook instead, if
+preferred:
+
+[source,yaml]
+----
+antora:
+  extensions:
+   - require: '@neo4j-antora/pdf-generator'
+----
+
+Either form picks up this package's own `antora-assembler-pdf.yml` as the
+default `configFile` - pass a `config:` block in the playbook form to
+override individual assembler settings if needed.
+
+== Layout
+
+- `antora-assembler-pdf.yml` - Assembler config, pointed at from a docset's
+  own playbook (see above).
+- `scripts/convert.js` - wraps the real `asciidoctor-web-pdf` binary as the
+  assembler's `build.command`. Resolves the renderer binary (via
+  `require.resolve` against its own `asciidoctor-pdf` dependency, regardless
+  of how npm hoists it) and the stylesheet/extension paths (via `__dirname`)
+  at runtime, so nothing here is hardcoded to a particular install layout.
+  Also works around a real bug (`ifndef::backend-pdf[]` not evaluating
+  correctly under this pipeline) for docsets using that idiom - a no-op for
+  any docset that doesn't.
+- `pdf-theme/print.css` - print stylesheet targeting Asciidoctor's standard
+  HTML5 backend class names (`sect1`, `admonitionblock`, `listingblock`,
+  `tableblock`, `label`, ...), using colour/font tokens copied from
+  `docs-ui`'s `src/css/vars.css` (itself resolving to raw Needle design
+  system tokens in `@neo4j-ndl/base`'s `tokens/css/tokens.css`) and
+  `docs-ui`'s `src/css/labels.css`. Not a fork of the real site CSS wholesale
+  - Asciidoctor's default HTML5 output doesn't have Antora's `.doc` wrapper
+    markup most of the site CSS's selectors are written against, so most of
+    it wouldn't match anything here anyway. Fonts are vendored into
+    `pdf-theme/assets/fonts/` rather than read from a docset's own HTML
+    build output, so this theme has no dependency on that build having
+    already run.
+- `extensions/` - `roles-labels-postprocessor.js` ports the essential parts
+  of the Antora extension of the same name (see "Known limitations" below);
+  `macros-adapter.js` and `remote-include-adapter.js` wrap the real
+  `@neo4j-documentation/macros`/`remote-include` packages, fixing a
+  pre-4.x-Asciidoctor.js API incompatibility in each at runtime (see their
+  own comments) rather than patching the installed packages - a nested
+  dependency's own `postinstall` isn't guaranteed to run once this package
+  is itself installed as a docset's dependency, so `patch-package` isn't a
+  reliable option here the way it is for a top-level project.
+- `@asciidoctor/core` 4.x (needed by `asciidoctor-pdf`) vs. Antora's own 2.x:
+  no longer needs the isolated sibling npm project the git-checkout-based
+  version of this pipeline required - both land in the same install
+  correctly because npm nests conflicting versions of the same dependency
+  automatically; this package simply declares its own real dependencies and
+  lets normal npm resolution do the isolation.
+
+== Known limitations
+
+- **Fixed**: footnotes used to render inline, in the middle of the running
+  text, with no number and no separation from the surrounding sentence -
+  easy to mistake for the macro being dropped entirely, since the text is
+  still technically there. Root cause: `asciidoctor-web-pdf`'s own converter
+  emits a footnote as a single self-contained `<span class="footnote">text
+  </span>` right at the point of use, and relies entirely on its default
+  theme's `span.footnote { float: footnote }` (a native CSS Generated
+  Content for Paged Media rule - the browser/Vivliostyle itself lays the
+  floated span into the footnote area of whichever page it lands on, and
+  generates the marker/counter) to pull it out and number it. Overriding
+  `stylesheet` wholesale (see `print.css` above) replaces that default theme
+  entirely rather than layering on top of it, so this pipeline had silently
+  dropped that rule. `print.css` now carries its own copy of it. Because the
+  float is resolved per-page by the layout engine itself, this also means a
+  footnote always lands on the same page as whatever referenced it - table
+  or not - with no extra plumbing needed.
+- `@neo4j-antora/roles-labels` and `@neo4j-antora/table-footnotes` are Antora
+  extensions (hook `pagesComposed`, operate on an Antora `ContentCatalog`) -
+  neither can run against this pipeline at all, structurally: the assembler
+  hands the merged `.adoc` to a completely separate, isolated Asciidoctor
+  conversion with no Antora generator context. `table-footnotes` has no
+  ported equivalent here (nor is it in `reusable-docs-pdf-build.yml`'s
+  `antora-extensions` default list) - per the footnote fix above, the native
+  CSS float already puts a table's footnotes on the right page on its own,
+  so there's nothing left for it to do. `roles-labels-postprocessor.js`
+  reuses `@neo4j-antora/roles-labels`'s own
+  shared `lib/process-labels.js` core directly (same synonym resolution,
+  version/product-suffix stripping, dataset attributes as the real HTML
+  site - not a hand-ported subset), with one deliberate behavioural
+  difference: it passes `skipDiscrete: false`, because `@antora/assembler`
+  marks *every* merged page's heading `discrete` to flatten section nesting
+  across the book, which isn't the authorial signal `discrete` is on a real
+  Antora HTML page (see `process-labels.js`'s own comment on that option).
+- Classification of `reusable-docs-build.yml`'s default `antora-extensions`
+  list, checked against their actual registration mechanism:
+  `aliases-redirects`, `antora-modify-sitemaps`, `antora-page-list` all hook
+  Antora-only lifecycle events (site redirects, sitemap.xml, the HTML
+  page-list artifact) - inherently HTML/site-only, correctly and harmlessly
+  absent from PDF output, nothing to do. `antora-unlisted-pages`/
+  `selector-labels` not individually confirmed but almost certainly the same
+  (nav/site-UI concerns). `xref-hash-validator` hooks `contentClassified`/
+  `documentsConverted` but only validates/warns - doesn't transform content,
+  so its absence from PDF just means xrefs aren't validated in that context,
+  not a rendering gap.
+- **TODO, not yet decided**: `@neo4j-antora/mark-terms` *is* a plain
+  Asciidoctor extension (`module.exports = function (registry) {...}`, no
+  Antora event hook) - structurally it'd just need `--extension`
+  registration, the same easy fix as `macros`/`remote-include`. Not done
+  yet, because it's a product decision, not just a technical one: mark-terms
+  adds a trademark/copyright mark on a term's *first use per page* (e.g. the
+  first "Neo4j" on each HTML page) - a PDF has no equivalent notion of "page"
+  the way a docset's HTML pages do, so "first use" would need redefining
+  (per PDF? per chapter? just once, ever?), or the whole approach swapped for
+  a single boilerplate copyright/trademark statement somewhere in the PDF
+  (e.g. the cover or a colophon page) instead of inline marks. Needs a call
+  on the right behaviour before doing the (otherwise straightforward)
+  registration work.
+- This package's `print.css` label colours are hand-resolved from
+  `docs-ui`'s source files, not read from them live - if the Needle tokens or
+  `docs-ui`'s `vars.css`/`labels.css` change, this drifts until someone
+  notices and re-syncs it by hand.
