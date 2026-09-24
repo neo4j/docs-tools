@@ -28,3 +28,8 @@ jobs:
       docs-dir: 'docs'
       build-ref: ${{ inputs.build-ref || github.ref_name }}
       fetch-depth: 0
+      # This repo's own docs/package.json doesn't install every extension in
+      # reusable-docs-pdf-build.yml's antora-extensions default list - same
+      # reason reusable-docs-build.yml has this same input: no docset
+      # installs every one of them.
+      antora-extensions-exclude: '@neo4j-antora/antora-modify-sitemaps @neo4j-antora/antora-page-list @neo4j-antora/antora-unlisted-pages'
