@@ -24,6 +24,9 @@ antora:
   extensions:
    - require: "../extensions/antora/tabbed-nav"
     #  fetchNav: false
+   - require: "../extensions/antora/table-footnotes"
+   - require: "../extensions/antora/roles-labels"
+   - require: "../extensions/antora/markdown-pages"
 
 asciidoc:
   attributes:
