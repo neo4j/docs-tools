@@ -140,6 +140,24 @@ const extraArgs = [
   '--extension', MACROS_ADAPTER,
 ]
 if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
+// Reading from stdin (this is piped the merged .adoc, not a real file - see
+// below), asciidoctor-web-pdf invents a fictive input path rooted at
+// `--base-dir`/`-B` if given, else its own cwd (lib/cli.js's
+// _convertFromStdin), and writes its temporary intermediate HTML file next
+// to THAT path (lib/converter.js's getTemporaryHtmlFile), not next to the
+// real docdir the assembler passes via `-a docdir=...`. Without `-B`, that
+// temp HTML ends up sitting in whatever directory this script itself was
+// invoked from (the docset's own root, since that's antora's cwd) - one or
+// more levels away from `-a docdir`/`-a imagesoutdir`. Every image target,
+// resolved correctly as relative to the real docdir (e.g. `../_images/
+// foo.png`), then resolves relative to the WRONG directory when the
+// browser loads that temp HTML via file://, so every image in the PDF is
+// silently broken. Passing the same docdir here as `-B` puts the temp HTML
+// file where the image paths actually expect it to be.
+const docdirIdx = args.findIndex((arg) => arg.startsWith('docdir='))
+if (docdirIdx > 0 && args[docdirIdx - 1] === '-a') {
+  extraArgs.push('-B', args[docdirIdx].slice('docdir='.length))
+}
 const finalArgs =
   stdinMarkerIdx === -1
     ? [...args, ...extraArgs]

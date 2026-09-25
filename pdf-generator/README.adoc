@@ -47,7 +47,14 @@ install. A docset that doesn't use it is unaffected.
   at runtime, so nothing here is hardcoded to a particular install layout.
   Also works around a real bug (`ifndef::backend-pdf[]` not evaluating
   correctly under this pipeline) for docsets using that idiom - a no-op for
-  any docset that doesn't.
+  any docset that doesn't. Also passes `-B <docdir>` (the same docdir the
+  assembler passes as `-a docdir=...`) through to the renderer - reading the
+  merged `.adoc` from stdin, asciidoctor-web-pdf invents a fictive input
+  path rooted at `-B` if given, else its own cwd, and writes its temporary
+  intermediate HTML file next to that path, not next to the real docdir.
+  Every image target resolves correctly (relative to the real docdir), but
+  without `-B` the browser loads that temp HTML from the wrong directory,
+  so every image in the PDF silently fails to resolve.
 - `pdf-theme/print.css` - print stylesheet targeting Asciidoctor's standard
   HTML5 backend class names (`sect1`, `admonitionblock`, `listingblock`,
   `tableblock`, `label`, ...), using colour/font tokens copied from
