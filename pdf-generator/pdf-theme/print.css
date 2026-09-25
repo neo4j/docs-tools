@@ -210,6 +210,42 @@ pre, code, kbd, tt {
   margin-bottom: 4pt;
 }
 
+/* Callouts (code annotation markers <1> <2> ... and their explanation list
+   below the block). asciidoctor-web-pdf's own converter emits inline
+   callouts in code listings as a bare, empty `<i class="conum"
+   data-value="N"></i>` (see its lib/document/document-converter.js) and
+   relies entirely on CSS to draw a visible marker - normally supplied by
+   its own default stylesheet, which a custom `stylesheet` attribute (this
+   file) replaces rather than supplements. Ported from that default
+   stylesheet's `.conum` rules (vendor's css/asciidoctor.css), recolored to
+   the brand palette instead of its black/white default. */
+.conum[data-value] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  top: -0.125em;
+  width: 1.67em;
+  height: 1.67em;
+  border-radius: 100px;
+  background: var(--brand-primary);
+  color: #fff;
+  font-family: var(--font-body);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.75em;
+  line-height: 1.67em;
+}
+.conum[data-value]:after {
+  content: attr(data-value);
+}
+.conum[data-value] + b {
+  display: none;
+}
+.colist table td:first-of-type {
+  padding: 0.5625em 0.625em;
+}
+
 /* tables */
 table.tableblock {
   border-collapse: collapse;
@@ -268,7 +304,7 @@ tr { break-inside: avoid; }
 .admonitionblock.tip .title { color: var(--brand-primary-strong); }
 
 /* lists */
-.ulist, .olist, .dlist { margin: 0.5em 0; }
+.ulist, .olist, .dlist, .colist { margin: 0.5em 0; }
 
 /* role labels (badges added by @neo4j-antora/roles-labels for label:x[] macros
    and :page-role:/[role=label--x] roles).
