@@ -90,6 +90,18 @@ install. A docset that doesn't use it is unaffected.
   proxy like the other two adapters, `mathjax-adapter.js` loads the real
   package's source and rewrites those call sites in memory before
   evaluating it - see its own comment.
+  `keep-image-with-intro-postprocessor.js` wraps an image together with a
+  paragraph that directly introduces it (e.g. "Here's an image:") in a
+  `.keep-with-image` div, so `print.css` can give that pair
+  `break-inside: avoid-page` - if the image doesn't fit in the remaining
+  space on a page, both move to the next page together instead of the
+  intro text being left stranded on the page before. This has to be real
+  HTML restructuring, not a `print.css` rule reaching for the image
+  directly with `:has()` - confirmed directly that this renderer's
+  Vivliostyle Viewer layout engine doesn't evaluate `:has()` for
+  fragmentation, or at all (a `:has()` rule that should have matched didn't
+  even apply its own unrelated declarations, like a plain background
+  colour).
 - `@asciidoctor/core` 4.x (needed by `asciidoctor-pdf`) vs. Antora's own 2.x:
   no longer needs the isolated sibling npm project the git-checkout-based
   version of this pipeline required - both land in the same install

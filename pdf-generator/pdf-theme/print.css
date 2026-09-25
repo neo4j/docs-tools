@@ -210,6 +210,22 @@ pre, code, kbd, tt {
   margin-bottom: 4pt;
 }
 
+/* Images. A block image (`image::foo.png[]`) is `.imageblock`; a standalone
+   inline image (`image:foo.png[]` on its own line) ends up as `.paragraph`
+   containing only a `.image` span - either way, never split top/bottom
+   across a page. `.keep-with-image` (added by
+   keep-image-with-intro-postprocessor.js, wrapping the image together with
+   a paragraph that directly introduces it) gets the same treatment, so if
+   the pair doesn't fit in the remaining space, both move to the next page
+   together instead of the intro text being left stranded on the page
+   before. Plain `break-inside`, not a `:has()`-based rule reaching for the
+   image directly - confirmed directly that this renderer's Vivliostyle
+   Viewer layout engine doesn't evaluate `:has()` at all (a `:has()` rule
+   that should match didn't even apply its own unrelated declarations). */
+.imageblock, .keep-with-image {
+  break-inside: avoid-page;
+}
+
 /* Callouts (code annotation markers <1> <2> ... and their explanation list
    below the block). asciidoctor-web-pdf's own converter emits inline
    callouts in code listings as a bare, empty `<i class="conum"
