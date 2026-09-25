@@ -102,6 +102,15 @@ install. A docset that doesn't use it is unaffected.
   fragmentation, or at all (a `:has()` rule that should have matched didn't
   even apply its own unrelated declarations, like a plain background
   colour).
+  `colophon-postprocessor.js` inserts a one-time copyright/trademark
+  colophon page right after the cover/title page and before the table of
+  contents (see "Known limitations" below on why this exists instead of
+  running `@neo4j-antora/mark-terms`). Inserted as HTML directly before
+  whichever element the converter actually produced for the TOC (or, with
+  no TOC, the main content div) - not as real AsciiDoc content in the
+  document preamble, which would risk pulling a docset's own genuine intro
+  text (content before its first page's own first heading is also
+  "preamble") in front of the TOC along with it.
 - `@asciidoctor/core` 4.x (needed by `asciidoctor-pdf`) vs. Antora's own 2.x:
   no longer needs the isolated sibling npm project the git-checkout-based
   version of this pipeline required - both land in the same install
@@ -151,19 +160,16 @@ install. A docset that doesn't use it is unaffected.
   `documentsConverted` but only validates/warns - doesn't transform content,
   so its absence from PDF just means xrefs aren't validated in that context,
   not a rendering gap.
-- **TODO, not yet decided**: `@neo4j-antora/mark-terms` *is* a plain
-  Asciidoctor extension (`module.exports = function (registry) {...}`, no
-  Antora event hook) - structurally it'd just need `--extension`
-  registration, the same easy fix as `macros`/`remote-include`. Not done
-  yet, because it's a product decision, not just a technical one: mark-terms
-  adds a trademark/copyright mark on a term's *first use per page* (e.g. the
-  first "Neo4j" on each HTML page) - a PDF has no equivalent notion of "page"
-  the way a docset's HTML pages do, so "first use" would need redefining
-  (per PDF? per chapter? just once, ever?), or the whole approach swapped for
-  a single boilerplate copyright/trademark statement somewhere in the PDF
-  (e.g. the cover or a colophon page) instead of inline marks. Needs a call
-  on the right behaviour before doing the (otherwise straightforward)
-  registration work.
+- **Decided against** running `@neo4j-antora/mark-terms` in this pipeline.
+  It *is* a plain Asciidoctor extension (`module.exports = function
+  (registry) {...}`, no Antora event hook) - structurally it'd just need
+  `--extension` registration, the same easy fix as `macros`/
+  `remote-include`. But mark-terms adds a trademark/copyright mark on a
+  term's *first use per page* (e.g. the first "Neo4j" on each HTML page) -
+  a PDF has no equivalent notion of "page" the way a docset's HTML pages
+  do, so "first use" has no sound definition here (per PDF? per chapter?
+  just once, ever?). Went with a single boilerplate copyright/trademark
+  colophon page instead - see `colophon-postprocessor.js` below.
 - This package's `print.css` label colours are hand-resolved from
   `docs-ui`'s source files, not read from them live - if the Needle tokens or
   `docs-ui`'s `vars.css`/`labels.css` change, this drifts until someone

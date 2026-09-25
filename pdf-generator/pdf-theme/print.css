@@ -170,6 +170,36 @@ body.book {
   font-weight: 400;
 }
 
+/* Colophon (added by colophon-postprocessor.js, right after the cover/
+   title page and before the table of contents) - the one-time copyright/
+   trademark boilerplate statement this pipeline uses in place of running
+   @neo4j-antora/mark-terms's inline, per-page marks (see this package's
+   own README).
+   `height: 100%` doesn't resolve here - this renderer's Vivliostyle Viewer
+   layout engine doesn't give this box a definite containing-block height
+   to be a percentage of, so centering silently no-ops. 252mm is the actual
+   per-page content height this theme produces: A4 (297mm) minus this
+   file's own `@page` rule above (25mm top margin, 20mm bottom) - update
+   this alongside that rule if it ever changes. */
+#colophon {
+  page-break-after: always;
+  height: 252mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-family: var(--font-body);
+}
+#colophon h1 {
+  font-size: 22pt;
+  margin-bottom: 16pt;
+}
+#colophon p {
+  font-size: 9pt;
+  line-height: 1.5;
+  color: var(--brand-text-weak);
+  margin: 0 0 0.75em;
+}
+
 .sect1 { break-before: page; }
 .sect1:first-child { break-before: avoid; }
 

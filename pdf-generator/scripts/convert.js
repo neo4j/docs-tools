@@ -32,6 +32,7 @@ const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../vendor/extensions/remote
 const MACROS_ADAPTER = path.join(__dirname, '../vendor/extensions/macros-adapter.js')
 const MATHJAX_ADAPTER = path.join(__dirname, '../vendor/extensions/mathjax-adapter.js')
 const KEEP_IMAGE_WITH_INTRO_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/keep-image-with-intro-postprocessor.js')
+const COLOPHON_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/colophon-postprocessor.js')
 
 // Unlike the extensions above, `@djencks/asciidoctor-mathjax` isn't a
 // dependency of this package - it's an opt-in feature a docset adds itself
@@ -140,6 +141,7 @@ const extraArgs = [
   '--extension', REMOTE_INCLUDE_ADAPTER,
   '--extension', MACROS_ADAPTER,
   '--extension', KEEP_IMAGE_WITH_INTRO_POSTPROCESSOR,
+  '--extension', COLOPHON_POSTPROCESSOR,
 ]
 if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
 // Reading from stdin (this is piped the merged .adoc, not a real file - see
