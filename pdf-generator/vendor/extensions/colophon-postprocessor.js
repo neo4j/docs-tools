@@ -32,8 +32,8 @@ const { parse: parseHTML } = require('node-html-parser')
 const { Postprocessor } = require('asciidoctor')
 
 const TRADEMARK_NOTICE =
-  'Neo4j®, Neo Technology®, Cypher®, Neo4j® Bloom™, Neo4j® AuraDB℠, and ' +
-  'Neo4j® AuraDS℠ are registered trademarks or trademarks of Neo4j, Inc. in the United States ' +
+  'Neo Technology®, Neo4j®, Cypher®, Neo4j Bloom™, Neo4j Graph Data Science Library™, Neo4j® Aura™, and ' +
+  'Neo4j® AuraDB™ are registered trademarks or trademarks of Neo4j, Inc. in the United States ' +
   'and other countries.'
 const OTHER_MARKS_NOTICE =
   'All other trademarks, service marks, registered trademarks, or registered service marks mentioned ' +
