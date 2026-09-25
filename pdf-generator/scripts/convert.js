@@ -38,12 +38,29 @@ const MATHJAX_ADAPTER = path.join(__dirname, '../vendor/extensions/mathjax-adapt
 // only if it actually uses `stem`/`latexmath` blocks. Registering it here
 // only when the docset's own install actually has it keeps every other
 // docset's PDF build unaffected (no extra dependency, nothing to fail).
+//
+// A plain `require.resolve` walks up from *this file's own real location*
+// (Node dereferences symlinks before resolving), which is this package's
+// own install under the docset's node_modules in the normal case - fine.
+// But under `npm link` (this package developed as a local checkout,
+// symlinked into a docset for testing), that real location is somewhere
+// else entirely, so the docset's own node_modules is never on the search
+// path and this always reports unavailable even when the docset has the
+// package. Falling back to a resolve rooted at the working directory
+// (antora's own cwd is always the docset being built) covers that case
+// too, without changing anything for a normal, non-linked install.
 function mathjaxAvailable () {
+  return !!resolveMathjaxSource()
+}
+function resolveMathjaxSource () {
   try {
-    require.resolve('@djencks/asciidoctor-mathjax')
-    return true
+    return require.resolve('@djencks/asciidoctor-mathjax')
   } catch {
-    return false
+    try {
+      return require.resolve('@djencks/asciidoctor-mathjax', { paths: [process.cwd()] })
+    } catch {
+      return null
+    }
   }
 }
 

@@ -39,8 +39,20 @@ const REPLACEMENTS = [
   [/\.\$inner_document\(\)/g, '.innerDocument'],
 ]
 
+function resolveSource (id) {
+  // See scripts/convert.js's own resolveMathjaxSource comment: this file's
+  // real (symlink-dereferenced) location isn't the docset's own
+  // node_modules under `npm link`, so fall back to a resolve rooted at the
+  // working directory (antora's cwd is always the docset being built).
+  try {
+    return require.resolve(id)
+  } catch {
+    return require.resolve(id, { paths: [process.cwd()] })
+  }
+}
+
 function loadPatched (id) {
-  const target = require.resolve(id)
+  const target = resolveSource(id)
   let src = fs.readFileSync(target, 'utf8')
   for (const [pattern, replacement] of REPLACEMENTS) src = src.replace(pattern, replacement)
   const patched = new Module(target, module)
