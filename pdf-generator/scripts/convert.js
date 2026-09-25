@@ -30,6 +30,22 @@ const ROLES_LABELS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/ro
 const TABLE_FOOTNOTES_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/table-footnotes-postprocessor.js')
 const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../vendor/extensions/remote-include-adapter.js')
 const MACROS_ADAPTER = path.join(__dirname, '../vendor/extensions/macros-adapter.js')
+const MATHJAX_ADAPTER = path.join(__dirname, '../vendor/extensions/mathjax-adapter.js')
+
+// Unlike the extensions above, `@djencks/asciidoctor-mathjax` isn't a
+// dependency of this package - it's an opt-in feature a docset adds itself
+// (alongside registering it in its own preview.yml, for the live HTML site)
+// only if it actually uses `stem`/`latexmath` blocks. Registering it here
+// only when the docset's own install actually has it keeps every other
+// docset's PDF build unaffected (no extra dependency, nothing to fail).
+function mathjaxAvailable () {
+  try {
+    require.resolve('@djencks/asciidoctor-mathjax')
+    return true
+  } catch {
+    return false
+  }
+}
 
 const PAGE_BOUNDARY_RX = /(?=^:page-docname: .*$)/m
 const GLOSSARY_MARKER_RX = /^\[discrete\.glossary#.*\]$/m
@@ -106,6 +122,7 @@ const extraArgs = [
   '--extension', REMOTE_INCLUDE_ADAPTER,
   '--extension', MACROS_ADAPTER,
 ]
+if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
 const finalArgs =
   stdinMarkerIdx === -1
     ? [...args, ...extraArgs]

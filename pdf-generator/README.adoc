@@ -29,6 +29,13 @@ antora:
 
 and a `package.json` script to run it, e.g. `"pdf": "antora pdf.yml"`.
 
+A docset using `stem`/`latexmath` blocks (via `@djencks/asciidoctor-mathjax`,
+registered in its own `preview.yml` for the live HTML site) gets the same
+math typeset in its PDF automatically, with nothing extra to configure -
+`scripts/convert.js` registers the adapter in `extensions/` for the final
+PDF conversion whenever that package is present in the docset's own
+install. A docset that doesn't use it is unaffected.
+
 == Layout
 
 - `antora-assembler-pdf.yml` - Assembler config, pointed at from a docset's
@@ -63,6 +70,19 @@ and a `package.json` script to run it, e.g. `"pdf": "antora pdf.yml"`.
   dependency's own `postinstall` isn't guaranteed to run once this package
   is itself installed as a docset's dependency, so `patch-package` isn't a
   reliable option here the way it is for a top-level project.
+  `mathjax-adapter.js` is the same idea for `@djencks/asciidoctor-mathjax`
+  (`stem`/`latexmath` block support), but unlike the two above it isn't a
+  dependency of this package - it's optional, registered in
+  `scripts/convert.js` only when the docset's own install actually has that
+  package (i.e. the docset added it itself for the live HTML site, same as
+  today). Its incompatibilities with 4.x go well beyond one call site
+  (`doc.$playback_attributes`/`$restore_attributes`,
+  `processor.$create_pass_block`, `stem.attributes.$$smap.role`, a bare
+  `Opal` global that doesn't exist in this non-Opal engine at all,
+  `cell.$inner_document()`), so rather than chase each one with a `this`
+  proxy like the other two adapters, `mathjax-adapter.js` loads the real
+  package's source and rewrites those call sites in memory before
+  evaluating it - see its own comment.
 - `@asciidoctor/core` 4.x (needed by `asciidoctor-pdf`) vs. Antora's own 2.x:
   no longer needs the isolated sibling npm project the git-checkout-based
   version of this pipeline required - both land in the same install
