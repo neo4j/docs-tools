@@ -361,14 +361,41 @@ module.exports.register = function ({ config }) {
       const shouldFetchNav = !fetchNavExplicitlyDisabled && (fetchNav || fetchNavEnv || !!explicitNavUrl)
 
       if (shouldFetchNav && resolvedNavUrl) {
-        try {
-          const res = await fetch(resolvedNavUrl)
-          if (!res.ok) throw new Error('HTTP ' + res.status)
-          const data = await res.json()
-          navShards.push(data)
-          logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
-        } catch (e) {
-          logger.warn('Could not fetch nav from %s: %s', resolvedNavUrl, e.message)
+        // The published tabs.json is occasionally served to a runner as an HTTP 200 with an
+        // empty (or truncated) body, which made res.json() throw "Unexpected end of JSON
+        // input" and failed the build on the resulting warning. Read the body as text so a
+        // bad response can be detected, described in the log, and retried.
+        const maxAttempts = 3
+        let lastError
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            const res = await fetch(resolvedNavUrl)
+            if (!res.ok) throw new Error('HTTP ' + res.status)
+            const body = await res.text()
+            try {
+              navShards.push(JSON.parse(body))
+            } catch (e) {
+              throw new Error(
+                `${e.message} (status ${res.status}, content-type ${res.headers.get('content-type')}, ` +
+                `content-length ${res.headers.get('content-length')}, content-encoding ${res.headers.get('content-encoding')}, ` +
+                `received ${body.length} chars)`
+              )
+            }
+            logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
+            lastError = undefined
+            break
+          } catch (e) {
+            lastError = e
+            if (attempt < maxAttempts) {
+              // info, not warn: a warning fails the log-report check, and a retry that
+              // then succeeds is not a problem - but it should still be visible in the log.
+              logger.info('Fetching nav from %s failed (attempt %d/%d), retrying: %s', resolvedNavUrl, attempt, maxAttempts, e.message)
+              await new Promise((resolve) => setTimeout(resolve, attempt * 1000))
+            }
+          }
+        }
+        if (lastError) {
+          logger.warn('Could not fetch nav from %s after %d attempts: %s', resolvedNavUrl, maxAttempts, lastError.message)
         }
       }
 
