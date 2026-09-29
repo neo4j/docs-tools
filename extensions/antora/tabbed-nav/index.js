@@ -378,6 +378,7 @@ module.exports.register = function ({ config }) {
               throw new Error(
                 `${e.message} (status ${res.status}, content-type ${res.headers.get('content-type')}, ` +
                 `content-length ${res.headers.get('content-length')}, content-encoding ${res.headers.get('content-encoding')}, ` +
+                `x-cache ${res.headers.get('x-cache')}, x-amz-cf-pop ${res.headers.get('x-amz-cf-pop')}, ` +
                 `received ${body.length} chars)`
               )
             }
