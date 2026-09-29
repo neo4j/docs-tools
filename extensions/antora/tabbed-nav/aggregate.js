@@ -72,6 +72,12 @@ async function putJson (Key, data) {
     Key,
     Body: JSON.stringify(data),
     ContentType: 'application/json',
+    // tabs.json lives at one fixed URL and is overwritten on every publish. With no
+    // Cache-Control, CloudFront applies the default TTL of its cache policy (24h) and
+    // browsers fall back to a heuristic based on Last-Modified. A short explicit TTL
+    // keeps a publish visible within about a minute and limits how long a bad cached
+    // copy at any one edge can be served.
+    CacheControl: 'public, max-age=60',
   }))
 }
 
