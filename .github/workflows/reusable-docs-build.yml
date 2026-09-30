@@ -123,6 +123,9 @@ on:
       DOCS_NAV_USER_AGENT:
         description: 'The User-Agent value that the WAF in front of the docs site allow-lists, so the tabbed-nav extension can fetch the aggregated nav (tabs.json) from a GitHub-hosted runner, where the default User-Agent is challenged. Optional: when a caller does not pass it, the default User-Agent is sent and that fetch can fail on a runner.'
         required: false
+      DOCS_TESTING_CRAWLER:
+        description: 'The value of the neo4j-docs-testing-crawler request header that the WAF in front of the docs site allow-lists, sent by the tabbed-nav extension on its nav fetch as an alternative to the User-Agent above. Optional: when a caller does not pass it, the header is not sent.'
+        required: false
 
     outputs:
         pages-listed:
@@ -373,6 +376,9 @@ jobs:
         # reusable workflow if the caller passes it (see docs-generate-html.yml); when it does
         # not, this is blank and the extension sends the default User-Agent.
         DOCS_NAV_USER_AGENT: ${{ secrets.DOCS_NAV_USER_AGENT }}
+        # Same idea for a custom request header: the extension sends neo4j-docs-testing-crawler
+        # with this value when it is set. Also a secret, passed by the caller.
+        DOCS_TESTING_CRAWLER: ${{ secrets.DOCS_TESTING_CRAWLER }}
         # The chatbot asset lives alongside the rest of the published site, so it
         # follows the same dev-vs-prod split as everything else here rather than
         # being hardcoded to the prod neo4j.com host.

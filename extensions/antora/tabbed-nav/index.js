@@ -13,6 +13,20 @@ const SHARD_FILENAME = 'nav.json'
 // worth something if it is not published here. When unset, the default Node User-Agent is sent.
 const NAV_FETCH_USER_AGENT = process.env.DOCS_NAV_USER_AGENT
 
+// A second way for the WAF to recognise the fetch: a custom request header whose value is a secret,
+// taken from DOCS_TESTING_CRAWLER. Only the header name is in the code; the value is not. Sent only
+// when the variable is set.
+const NAV_FETCH_CRAWLER_HEADER = 'neo4j-docs-testing-crawler'
+const NAV_FETCH_CRAWLER_TOKEN = process.env.DOCS_TESTING_CRAWLER
+
+// Headers for the nav fetch. Empty (so Node defaults apply) when neither variable is set.
+function navFetchHeaders () {
+  const headers = {}
+  if (NAV_FETCH_USER_AGENT) headers['user-agent'] = NAV_FETCH_USER_AGENT
+  if (NAV_FETCH_CRAWLER_TOKEN) headers[NAV_FETCH_CRAWLER_HEADER] = NAV_FETCH_CRAWLER_TOKEN
+  return headers
+}
+
 // const { buildNavigation, NavigationCatalog } = require('@antora/navigation-builder')
 
 module.exports.register = function ({ config }) {
@@ -370,9 +384,9 @@ module.exports.register = function ({ config }) {
         // The published site sits behind a WAF that challenges requests from datacentre
         // IPs (HTTP 202, empty body) unless they carry an allow-listed User-Agent, so the
         // default Node one gets no tabs.json and used to fail as "Unexpected end of JSON
-        // input". NAV_FETCH_USER_AGENT is the value agreed with the web team to bypass it.
+        // input". NAV_FETCH_USER_AGENT and the crawler header (see navFetchHeaders) are what the web team allow.
         try {
-          const res = await fetch(resolvedNavUrl, NAV_FETCH_USER_AGENT ? { headers: { 'user-agent': NAV_FETCH_USER_AGENT } } : {})
+          const res = await fetch(resolvedNavUrl, { headers: navFetchHeaders() })
           const body = await res.text()
           let data
           if (res.status === 200) {
