@@ -119,6 +119,11 @@ on:
         type: boolean
         default: false
 
+    secrets:
+      DOCS_NAV_USER_AGENT:
+        description: 'The User-Agent value that the WAF in front of the docs site allow-lists, so the tabbed-nav extension can fetch the aggregated nav (tabs.json) from a GitHub-hosted runner, where the default User-Agent is challenged. Optional: when a caller does not pass it, the default User-Agent is sent and that fetch can fail on a runner.'
+        required: false
+
     outputs:
         pages-listed:
           description: "Page list artifact was uploaded"
@@ -361,6 +366,13 @@ jobs:
         # unconditionally via DOCS_FETCH_NAV, so this only ever applies to the
         # non-publish path, and is blank (no effect) otherwise.
         DOCS_NAV_URL: "${{ inputs.package-script != 'verify:publish' && inputs.fetch-nav-preview && format('{0}/nav/tabs.json', env.DOCS_PUBLISH_URL) || '' }}"
+        # The WAF in front of the docs site challenges requests from GitHub-hosted runners
+        # (HTTP 202, empty body) unless they send an allow-listed User-Agent, which the
+        # tabbed-nav extension reads from this variable. It is a secret so that the value is
+        # masked in logs and not published in this (public) repo. A secret only reaches this
+        # reusable workflow if the caller passes it (see docs-generate-html.yml); when it does
+        # not, this is blank and the extension sends the default User-Agent.
+        DOCS_NAV_USER_AGENT: ${{ secrets.DOCS_NAV_USER_AGENT }}
         # The chatbot asset lives alongside the rest of the published site, so it
         # follows the same dev-vs-prod split as everything else here rather than
         # being hardcoded to the prod neo4j.com host.
