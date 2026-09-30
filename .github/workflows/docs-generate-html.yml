@@ -60,11 +60,12 @@ jobs:
       publish-env: ${{ needs.resolve-env.outputs.publish-env }}
       # DEMO BRANCH ONLY: include the extension folder so it can be installed from the checkout.
       sparse-checkout-extra-paths: extensions/antora/tabbed-nav
-    # A called workflow does not get the caller's secrets automatically. Pass just this
-    # one (not `secrets: inherit`, which would hand over every secret the caller can see,
+    # A called workflow does not get the caller's secrets automatically. Pass just these
+    # (not `secrets: inherit`, which would hand over every secret the caller can see,
     # e.g. DOCS_DISPATCH_TOKEN, to a workflow referenced by a moving tag).
     secrets:
       DOCS_NAV_USER_AGENT: ${{ secrets.DOCS_NAV_USER_AGENT }}
+      DOCS_TESTING_CRAWLER: ${{ secrets.DOCS_TESTING_CRAWLER }}
 
   docs-verify:
     name: Verify HTML
