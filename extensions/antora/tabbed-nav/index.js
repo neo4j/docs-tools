@@ -7,6 +7,12 @@ const { title } = require('process')
 // the S3 aggregator (./aggregate.js) when discovering shards.
 const SHARD_FILENAME = 'nav.json'
 
+// User-Agent sent when fetching the aggregated nav, taken from DOCS_NAV_USER_AGENT. The web team
+// allow-list a specific value in the WAF in front of the docs site; without it, requests from CI
+// runners are challenged. Deliberately not hardcoded: this repo is public, and the value is only
+// worth something if it is not published here. When unset, the default Node User-Agent is sent.
+const NAV_FETCH_USER_AGENT = process.env.DOCS_NAV_USER_AGENT
+
 // const { buildNavigation, NavigationCatalog } = require('@antora/navigation-builder')
 
 module.exports.register = function ({ config }) {
@@ -361,42 +367,35 @@ module.exports.register = function ({ config }) {
       const shouldFetchNav = !fetchNavExplicitlyDisabled && (fetchNav || fetchNavEnv || !!explicitNavUrl)
 
       if (shouldFetchNav && resolvedNavUrl) {
-        // The published tabs.json is occasionally served to a runner as an HTTP 200 with an
-        // empty (or truncated) body, which made res.json() throw "Unexpected end of JSON
-        // input" and failed the build on the resulting warning. Read the body as text so a
-        // bad response can be detected, described in the log, and retried.
-        const maxAttempts = 3
-        let lastError
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          try {
-            const res = await fetch(resolvedNavUrl)
-            if (!res.ok) throw new Error('HTTP ' + res.status)
-            const body = await res.text()
+        // The published site sits behind a WAF that challenges requests from datacentre
+        // IPs (HTTP 202, empty body) unless they carry an allow-listed User-Agent, so the
+        // default Node one gets no tabs.json and used to fail as "Unexpected end of JSON
+        // input". NAV_FETCH_USER_AGENT is the value agreed with the web team to bypass it.
+        try {
+          const res = await fetch(resolvedNavUrl, NAV_FETCH_USER_AGENT ? { headers: { 'user-agent': NAV_FETCH_USER_AGENT } } : {})
+          const body = await res.text()
+          let data
+          if (res.status === 200) {
             try {
-              navShards.push(JSON.parse(body))
+              data = JSON.parse(body)
             } catch (e) {
-              throw new Error(
-                `${e.message} (status ${res.status}, content-type ${res.headers.get('content-type')}, ` +
-                `content-length ${res.headers.get('content-length')}, content-encoding ${res.headers.get('content-encoding')}, ` +
-                `x-cache ${res.headers.get('x-cache')}, x-amz-cf-pop ${res.headers.get('x-amz-cf-pop')}, ` +
-                `received ${body.length} chars)`
-              )
-            }
-            logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
-            lastError = undefined
-            break
-          } catch (e) {
-            lastError = e
-            if (attempt < maxAttempts) {
-              // info, not warn: a warning fails the log-report check, and a retry that
-              // then succeeds is not a problem - but it should still be visible in the log.
-              logger.info('Fetching nav from %s failed (attempt %d/%d), retrying: %s', resolvedNavUrl, attempt, maxAttempts, e.message)
-              await new Promise((resolve) => setTimeout(resolve, attempt * 1000))
+              // fall through: reported below with the response details
             }
           }
-        }
-        if (lastError) {
-          logger.warn('Could not fetch nav from %s after %d attempts: %s', resolvedNavUrl, maxAttempts, lastError.message)
+          if (!data) {
+            // Anything but a 200 carrying JSON is a failure (a 202 is still res.ok, which is
+            // how the WAF challenge used to look like a parse error). Say what came back.
+            throw new Error(
+              `unexpected response (status ${res.status}, content-type ${res.headers.get('content-type')}, ` +
+              `content-length ${res.headers.get('content-length')}, content-encoding ${res.headers.get('content-encoding')}, ` +
+              `x-cache ${res.headers.get('x-cache')}, x-amz-cf-pop ${res.headers.get('x-amz-cf-pop')}, ` +
+              `received ${body.length} chars)`
+            )
+          }
+          navShards.push(data)
+          logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
+        } catch (e) {
+          logger.warn('Could not fetch nav from %s: %s', resolvedNavUrl, e.message)
         }
       }
 
