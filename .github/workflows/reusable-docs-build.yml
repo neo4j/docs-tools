@@ -322,7 +322,10 @@ jobs:
         
         # Ensure a correct version of sitemaps extension
         # Ensure tabbed-nav extension is installed (it cannot be excluded)
-        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2 @neo4j-antora/tabbed-nav
+        # DEMO BRANCH ONLY: install the tabbed-nav extension from this checkout, not npm,
+        # so the run exercises the unpublished DOCS_NAV_USER_AGENT support.
+        npm install @neo4j-antora/antora-modify-sitemaps@0.7.2
+        npm install "$(npm pack ../extensions/antora/tabbed-nav | tail -1)"
 
         # Update extensions
         printf "\n\n<!---- Update extensions -->"
