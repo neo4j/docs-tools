@@ -1,0 +1,23 @@
+component_version_filter:
+  names: '**'
+assembly:
+  attributes:
+    allow-uri-read: ''
+    toc: ''
+    toc-title: Table of Contents
+    toclevels: 2
+build:
+  # build.cwd (what a relative command resolves against) defaults to the
+  # *playbook's* directory (docs-dir) - the same directory `npm install` is
+  # run from for that docset, since that's where its own package.json lives.
+  # node_modules is therefore always right here, at a fixed, predictable
+  # depth, regardless of how deeply nested docs-dir is within the docset
+  # repo - unlike the old git-checkout-into-.pdf-tools convention this
+  # package replaces, no per-consumer path rewriting is needed. Once
+  # convert.js itself is running, it resolves everything else (the
+  # renderer, the stylesheet, the extensions) from its own location or via
+  # require.resolve against its own dependencies instead - see this
+  # package's own README.
+  command: node ./node_modules/@neo4j-antora/pdf-generator/scripts/convert.js --trace
+  keep_source: true
+  qualify_exports: true

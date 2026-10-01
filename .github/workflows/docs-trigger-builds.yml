@@ -32,6 +32,10 @@ on:
   push:
     branches:
     - 'dev'
+    # TEMPORARY, while docs-generate-pdf.yml is being tested on its PR (#136): remove this
+    # branch before merging. docs-tools itself is not published from, so there is no real
+    # branch list to keep in step with the playbooks here.
+    - 'pdf-generator-package-clean'
   workflow_dispatch:
 
 # Set DEV_BRANCH to your staging branch.
@@ -138,4 +142,36 @@ jobs:
               core.summary.addRaw(`Triggered \`docs-generate-html.yml\` on branch \`${build.buildRef}\` for \`${env}\``, true)
             }
 
+            await core.summary.write()
+
+  # Trigger docs-generate-pdf.yml as its own separate run too, for the same reasons as
+  # above: not a workflow_call, so it is fully independent of the HTML builds. If the PDF
+  # build fails, the HTML builds are unaffected (nothing here `needs` this job, and it
+  # `needs` nothing), and its artifact can't collide with the HTML "docs" artifact.
+  # It builds the branch that triggered this run: a PDF is not environment-specific, so
+  # there is no dev/prod pairing to work out.
+  trigger-generate-pdf:
+    name: Trigger PDF build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch docs-generate-pdf.yml
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          BUILD_REF: ${{ github.ref_name }}
+        with:
+          script: |
+            const buildRef = process.env.BUILD_REF
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docs-generate-pdf.yml',
+              // Dispatch from the same branch that is being built, so the workflow file
+              // that runs is the one on that branch (docs-generate-pdf.yml only exists on
+              // this branch until its PR is merged).
+              ref: buildRef,
+              inputs: {
+                'build-ref': buildRef,
+              },
+            })
+            core.summary.addRaw(`Triggered \`docs-generate-pdf.yml\` on branch \`${buildRef}\``, true)
             await core.summary.write()
