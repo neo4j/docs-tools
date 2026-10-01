@@ -36,7 +36,7 @@ on:
         description: 'The @neo4j-antora/pdf-generator version to install. Not a dependency of the docset''s own package.json - it is only ever needed for this PDF-specific build, so declaring it there would make *every* install in the repo (including totally unrelated jobs, e.g. a plain HTML PR check) fail whenever this version is not yet published, the same way reusable-docs-build.yml installs a specific Antora version itself rather than trusting whatever a docset''s own package.json happens to pin.'
         required: false
         type: string
-        default: '0.1.0'
+        default: '0.1.1'
       package-script:
         description: 'The name of the script to run in package.json, same convention as reusable-docs-build.yml''s own package-script input - the docset is trusted to already have a valid script here (defaults to verify:publish, matching what a real PDF export should reflect). @neo4j-antora/pdf-generator is injected as a one-off --extension flag onto whatever that script already does, so it needs no dedicated PDF playbook or script of its own.'
         required: false
