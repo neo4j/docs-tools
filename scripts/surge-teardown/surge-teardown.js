@@ -1,11 +1,14 @@
-const util = require('util');
-const exec = util.promisify(require('child_process').exec);
-const fs = require('fs');
-const stripAnsi = require('strip-ansi');
-const { Octokit } = require("octokit");
-const { env } = require('process');
+import util from 'util';
+import { exec as execCallback } from 'child_process';
+import fs from 'fs';
+import { Octokit } from 'octokit';
+import { env } from 'process';
+import dotenv from 'dotenv';
 
-require('dotenv').config()
+const exec = util.promisify(execCallback);
+
+// quiet: dotenv 17+ logs a line on every load unless told not to
+dotenv.config({ quiet: true })
 const { GH_TOKEN, SKIP_NEO_TECHNOLOGY } = process.env;
 
 const octokit = new Octokit({
@@ -28,7 +31,7 @@ async function surgeList() {
       console.log('stdout:', stdout);
       console.log('stderr:', stderr);
 
-      const deploys = stripAnsi(stdout).split('\n');
+      const deploys = util.stripVTControlCharacters(stdout).split('\n');
     
       // const deploys = fs.readFileSync('deploys.txt','utf-8').split(/\r?\n|\r|\n/g);
     
