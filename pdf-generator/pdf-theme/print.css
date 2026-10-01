@@ -232,6 +232,16 @@ tr { break-inside: avoid; }
 /* admonitions */
 .admonitionblock { break-inside: avoid-page; margin: 1em 0; }
 .admonitionblock table { width: 100%; border: none; }
+/* Asciidoctor renders an admonition as a table (icon cell + content cell). Laid out as a
+   real table, a content table (or anything else with a footnote) inside it is a table
+   nested in a table, and Vivliostyle then never finishes paginating a floated footnote in
+   there - the build waits out the 180 s rendering timeout and produces no PDF at all.
+   Only the content cell is shown (the icon cell is hidden below), so lay the admonition
+   out as plain blocks instead. */
+.admonitionblock > table,
+.admonitionblock > table > tbody,
+.admonitionblock > table > tbody > tr,
+.admonitionblock td.content { display: block; }
 .admonitionblock td.icon { display: none; }
 .admonitionblock td.content {
   border-left: 3pt solid var(--brand-border-strong);
@@ -282,6 +292,16 @@ tr { break-inside: avoid; }
    is still technically present.) */
 span.footnote {
   float: footnote;
+}
+
+/* A footnote inside a table that is itself inside a table cell (an `a|` cell holding a
+   table) cannot be floated either: Vivliostyle never finishes paginating it, and the build
+   times out with no PDF. Leave such a footnote in place instead - its text then appears
+   in the cell rather than as a numbered note at the foot of the page, which is a poorer
+   result but a PDF. Admonition tables are not affected (they are laid out as blocks
+   above and their footnotes float normally). */
+table.tableblock table span.footnote {
+  float: none;
 }
 
 [data-footnote-call]::after {
