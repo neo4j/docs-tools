@@ -4,6 +4,10 @@ module.exports.register = function (registry, { file, contentCatalog }) {
   registry.preprocessor(function () {
     var self = this
     self.process(function (doc, reader) {
+      // Antora's Assembler (PDF/EPUB, since Antora 3.2) reduces the page back to its
+      // original source lines and errors if an include directive we injected isn't
+      // there. Notes are a site-only UX feature, so skip them during assembly builds.
+      if (doc.getAttribute('assembler-filetype')) return reader
       if (!doc.getAttribute('page-add-notes-tags')) return reader
       if (doc.getAttribute('page-add-notes-versions') && !doc.getAttribute('page-add-notes-versions').includes(doc.getAttribute('page-version'))) return reader
       var notesModule = doc.getAttribute('page-add-notes-module') ? doc.getAttribute('page-add-notes-module') : 'ROOT';
