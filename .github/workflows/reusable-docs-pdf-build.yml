@@ -168,12 +168,34 @@ jobs:
         fi
         echo "pdf-path=$pdf_path" >> "$GITHUB_OUTPUT"
 
+    # Same as reusable-docs-build.yml's "Print Antora log", but also when the build step
+    # itself reported success yet no PDF was found: the PDF renderer can fail ("Unable
+    # to generate the PDF") without making the Antora run fail, so that case only shows
+    # up as the PDF lookup above failing.
+    - name: Print Antora log
+      if: always() && (steps.run-pdf-build.outcome == 'failure' || steps.get-pdf-path.outcome == 'failure')
+      working-directory: ${{ env.DOCS_DIR }}
+      run: |
+        if [ -f build/log/log.json ]; then
+          cat build/log/log.json
+        else
+          echo "No log file found at build/log/log.json"
+        fi
+
     - name: Upload PDF artifact
       if: steps.run-pdf-build.outcome == 'success'
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
         name: pdf
         path: ${{ env.DOCS_DIR }}/${{ steps.get-pdf-path.outputs.pdf-path }}
+        retention-days: ${{ inputs.retain-artifacts }}
+
+    - name: Upload Log artifact
+      if: always()
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      with:
+        name: antora-log
+        path: ${{ env.DOCS_DIR }}/build/log
         retention-days: ${{ inputs.retain-artifacts }}
 
     - name: Fail job if PDF build failed
