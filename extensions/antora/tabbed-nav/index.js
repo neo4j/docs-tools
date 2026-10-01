@@ -399,17 +399,23 @@ module.exports.register = function ({ config }) {
           if (!data) {
             // Anything but a 200 carrying JSON is a failure (a 202 is still res.ok, which is
             // how the WAF challenge used to look like a parse error). Say what came back.
+            const challengeHint = res.status === 202 && !NAV_FETCH_CRAWLER_TOKEN
+              ? ' - the site may be challenging this client; the DOCS_TESTING_CRAWLER environment variable is not set'
+              : ''
             throw new Error(
               `unexpected response (status ${res.status}, content-type ${res.headers.get('content-type')}, ` +
               `content-length ${res.headers.get('content-length')}, content-encoding ${res.headers.get('content-encoding')}, ` +
               `x-cache ${res.headers.get('x-cache')}, x-amz-cf-pop ${res.headers.get('x-amz-cf-pop')}, ` +
-              `received ${body.length} chars)`
+              `received ${body.length} chars)${challengeHint}`
             )
           }
           navShards.push(data)
           logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
         } catch (e) {
-          logger.warn('Could not fetch nav from %s: %s', resolvedNavUrl, e.message)
+          // info, not warn: the build carries on with the nav of just the docsets being built, which
+          // is an acceptable fallback, and a warning would fail checks that fail on warnings (e.g.
+          // the log-report step of Generate HTML) and block publishing for what is only a degraded nav.
+          logger.info('Could not fetch nav from %s, continuing with only the nav of the docsets in this build: %s', resolvedNavUrl, e.message)
         }
       }
 
