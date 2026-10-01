@@ -1,7 +1,6 @@
 import util from 'util';
 import { exec as execCallback } from 'child_process';
 import fs from 'fs';
-import stripAnsi from 'strip-ansi';
 import { Octokit } from 'octokit';
 import { env } from 'process';
 import dotenv from 'dotenv';
@@ -32,7 +31,7 @@ async function surgeList() {
       console.log('stdout:', stdout);
       console.log('stderr:', stderr);
 
-      const deploys = stripAnsi(stdout).split('\n');
+      const deploys = util.stripVTControlCharacters(stdout).split('\n');
     
       // const deploys = fs.readFileSync('deploys.txt','utf-8').split(/\r?\n|\r|\n/g);
     

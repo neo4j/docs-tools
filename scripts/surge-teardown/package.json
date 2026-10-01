@@ -11,7 +11,6 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "18.0.5",
-    "octokit": "5.0.5",
-    "strip-ansi": "7.2.0"
+    "octokit": "5.0.5"
   }
 }
