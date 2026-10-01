@@ -7,6 +7,26 @@ const { title } = require('process')
 // the S3 aggregator (./aggregate.js) when discovering shards.
 const SHARD_FILENAME = 'nav.json'
 
+// User-Agent sent when fetching the aggregated nav, taken from DOCS_NAV_USER_AGENT. The web team
+// allow-list a specific value in the WAF in front of the docs site; without it, requests from CI
+// runners are challenged. Deliberately not hardcoded: this repo is public, and the value is only
+// worth something if it is not published here. When unset, the default Node User-Agent is sent.
+const NAV_FETCH_USER_AGENT = process.env.DOCS_NAV_USER_AGENT
+
+// A second way for the WAF to recognise the fetch: a custom request header whose value is a secret,
+// taken from DOCS_TESTING_CRAWLER. Only the header name is in the code; the value is not. Sent only
+// when the variable is set.
+const NAV_FETCH_CRAWLER_HEADER = 'neo4j-docs-testing-crawler'
+const NAV_FETCH_CRAWLER_TOKEN = process.env.DOCS_TESTING_CRAWLER
+
+// Headers for the nav fetch. Empty (so Node defaults apply) when neither variable is set.
+function navFetchHeaders () {
+  const headers = {}
+  if (NAV_FETCH_USER_AGENT) headers['user-agent'] = NAV_FETCH_USER_AGENT
+  if (NAV_FETCH_CRAWLER_TOKEN) headers[NAV_FETCH_CRAWLER_HEADER] = NAV_FETCH_CRAWLER_TOKEN
+  return headers
+}
+
 // const { buildNavigation, NavigationCatalog } = require('@antora/navigation-builder')
 
 module.exports.register = function ({ config }) {
@@ -361,14 +381,41 @@ module.exports.register = function ({ config }) {
       const shouldFetchNav = !fetchNavExplicitlyDisabled && (fetchNav || fetchNavEnv || !!explicitNavUrl)
 
       if (shouldFetchNav && resolvedNavUrl) {
+        // The published site sits behind a WAF that challenges requests from datacentre
+        // IPs (HTTP 202, empty body) unless they carry an allow-listed User-Agent, so the
+        // default Node one gets no tabs.json and used to fail as "Unexpected end of JSON
+        // input". NAV_FETCH_USER_AGENT and the crawler header (see navFetchHeaders) are what the web team allow.
         try {
-          const res = await fetch(resolvedNavUrl)
-          if (!res.ok) throw new Error('HTTP ' + res.status)
-          const data = await res.json()
+          const res = await fetch(resolvedNavUrl, { headers: navFetchHeaders() })
+          const body = await res.text()
+          let data
+          if (res.status === 200) {
+            try {
+              data = JSON.parse(body)
+            } catch (e) {
+              // fall through: reported below with the response details
+            }
+          }
+          if (!data) {
+            // Anything but a 200 carrying JSON is a failure (a 202 is still res.ok, which is
+            // how the WAF challenge used to look like a parse error). Say what came back.
+            const challengeHint = res.status === 202 && !NAV_FETCH_CRAWLER_TOKEN
+              ? ' - the site may be challenging this client; the DOCS_TESTING_CRAWLER environment variable is not set'
+              : ''
+            throw new Error(
+              `unexpected response (status ${res.status}, content-type ${res.headers.get('content-type')}, ` +
+              `content-length ${res.headers.get('content-length')}, content-encoding ${res.headers.get('content-encoding')}, ` +
+              `x-cache ${res.headers.get('x-cache')}, x-amz-cf-pop ${res.headers.get('x-amz-cf-pop')}, ` +
+              `received ${body.length} chars)${challengeHint}`
+            )
+          }
           navShards.push(data)
           logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
         } catch (e) {
-          logger.warn('Could not fetch nav from %s: %s', resolvedNavUrl, e.message)
+          // info, not warn: the build carries on with the nav of just the docsets being built, which
+          // is an acceptable fallback, and a warning would fail checks that fail on warnings (e.g.
+          // the log-report step of Generate HTML) and block publishing for what is only a degraded nav.
+          logger.info('Could not fetch nav from %s, continuing with only the nav of the docsets in this build: %s', resolvedNavUrl, e.message)
         }
       }
 
