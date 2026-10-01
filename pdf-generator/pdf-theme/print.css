@@ -248,7 +248,12 @@ tr { break-inside: avoid; }
   padding: 6pt 10pt;
   background: var(--brand-bg-strong);
 }
-.admonitionblock .title {
+/* Style only the admonition's own title (a direct child of its content cell), not every
+   `.title` inside it. A table in an admonition has its caption as `caption.title`; with
+   these rules applied to it, the caption was made `display: block` (so it was laid out
+   after the header row instead of above it) and shown in capitals and the admonition
+   colour. */
+.admonitionblock td.content > .title {
   font-weight: 700;
   text-transform: uppercase;
   font-size: 8.5pt;
@@ -262,20 +267,20 @@ tr { break-inside: avoid; }
   border-left-color: var(--brand-warning);
   background: var(--brand-warning-bg);
 }
-.admonitionblock.warning .title,
-.admonitionblock.caution .title { color: var(--brand-warning); }
+.admonitionblock.warning td.content > .title,
+.admonitionblock.caution td.content > .title { color: var(--brand-warning); }
 .admonitionblock.important td.content {
   border-left-color: var(--brand-danger);
   background: var(--brand-danger-bg);
 }
-.admonitionblock.important .title { color: var(--brand-danger); }
+.admonitionblock.important td.content > .title { color: var(--brand-danger); }
 .admonitionblock.note td.content,
 .admonitionblock.tip td.content {
   border-left-color: var(--brand-primary);
   background: var(--brand-primary-weak);
 }
-.admonitionblock.note .title,
-.admonitionblock.tip .title { color: var(--brand-primary-strong); }
+.admonitionblock.note td.content > .title,
+.admonitionblock.tip td.content > .title { color: var(--brand-primary-strong); }
 
 /* lists */
 .ulist, .olist, .dlist { margin: 0.5em 0; }
