@@ -97,7 +97,7 @@ jobs:
   # plain "docs" artifact exactly like a run does today (no name collisions, since
   # they're separate runs, not jobs sharing one run).
   trigger-generate-html:
-    name: Trigger builds
+    name: Trigger HTML build
     needs: prepare-ref-env
     runs-on: ubuntu-latest
     steps:
