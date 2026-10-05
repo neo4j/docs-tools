@@ -32,10 +32,6 @@ on:
   push:
     branches:
     - 'dev'
-    # TEMPORARY, while docs-generate-pdf.yml is being tested on its PR (#136): remove this
-    # branch before merging. docs-tools itself is not published from, so there is no real
-    # branch list to keep in step with the playbooks here.
-    - 'pdf-generator-package-clean'
   workflow_dispatch:
 
 # Set DEV_BRANCH to your staging branch.
