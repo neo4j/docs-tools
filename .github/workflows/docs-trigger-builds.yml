@@ -42,24 +42,25 @@ env:
 
 jobs:
 
-  prepare-ref-env:
+  prepare-builds:
     name: Set builds to trigger
     runs-on: ubuntu-latest
     outputs:
-      # JSON array of {buildRef, publishEnv} - one entry per independent
-      # docs-generate-html.yml run to trigger. publishEnv is left '' except in the one
-      # case where it's genuinely ambiguous (see below) - docs-generate-html.yml derives
-      # it itself from build-ref against its own vars.DOCS_PROD_BRANCH whenever
+      # JSON array of {workflow, buildRef, publishEnv} - one entry per independent
+      # dispatch to make. publishEnv is null for docs-generate-pdf.yml (a PDF isn't
+      # environment-specific) and left '' for docs-generate-html.yml except in the one
+      # case where it's genuinely ambiguous (see below) - that workflow derives it
+      # itself from build-ref against its own vars.DOCS_PROD_BRANCH whenever
       # publishEnv is blank.
-      builds: ${{ steps.set-ref-env.outputs.builds }}
+      builds: ${{ steps.set-builds.outputs.builds }}
     steps:
       - name: Set builds
-        id: set-ref-env
+        id: set-builds
         run: |
           dev_branch="${{ env.DEV_BRANCH }}"
           prod_branch="${{ env.PROD_BRANCH }}"
 
-          # Rules:
+          # HTML rules:
           # - No separate prod branch configured -> staging only, always (nothing to
           #   double up).
           # - DEV_BRANCH == PROD_BRANCH -> both, always (one branch serves both, so
@@ -73,101 +74,81 @@ jobs:
           #   we just always rebuild everything except the one case (dev branch) we
           #   know for certain doesn't affect prod.
           if [[ -z "${prod_branch}" ]]; then
-            builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{buildRef:$dev,publishEnv:""}]')
+            html_builds=$(jq -nc --arg dev "$dev_branch" \
+              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:""}]')
           elif [[ "${dev_branch}" == "${prod_branch}" ]]; then
             # build-ref alone can't distinguish these two - same branch - so publishEnv
             # has to be passed explicitly here, or docs-generate-html.yml's derivation
             # would resolve both to the same environment.
-            builds=$(jq -nc --arg b "$dev_branch" \
-              '[{buildRef:$b,publishEnv:"dev"},{buildRef:$b,publishEnv:"prod"}]')
+            html_builds=$(jq -nc --arg b "$dev_branch" \
+              '[{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"dev"},{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"prod"}]')
           elif [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
-            builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{buildRef:$dev,publishEnv:""}]')
+            html_builds=$(jq -nc --arg dev "$dev_branch" \
+              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:""}]')
           else
-            builds=$(jq -nc --arg dev "$dev_branch" --arg prod "$prod_branch" \
-              '[{buildRef:$dev,publishEnv:""},{buildRef:$prod,publishEnv:""}]')
+            html_builds=$(jq -nc --arg dev "$dev_branch" --arg prod "$prod_branch" \
+              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:""},{workflow:"docs-generate-html.yml",buildRef:$prod,publishEnv:""}]')
           fi
 
+          # PDF always builds from the branch that triggered this run - no dev/prod
+          # pairing to work out, since a PDF isn't environment-specific.
+          pdf_build=$(jq -nc --arg ref "${GITHUB_REF_NAME}" \
+            '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:null}]')
+
+          builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
           echo "builds=${builds}" >> $GITHUB_OUTPUT
 
-  # Trigger docs-generate-html.yml as its own separate run, once per build - not a
-  # workflow_call (which would keep them all in this one run) - so each is fully
-  # independent: if one run fails, the others are unaffected, and each ends up with a
-  # plain "docs" artifact exactly like a run does today (no name collisions, since
+  # One matrix job instance per build prepare-builds resolved, each dispatching its
+  # target workflow as its own separate run - not a workflow_call (which would keep
+  # them all in this one run), so each is fully independent: fail-fast: false means
+  # one matrix instance failing to dispatch doesn't cancel the others, and each
+  # dispatched run ends up with its own normally-named artifacts (no collisions, since
   # they're separate runs, not jobs sharing one run).
-  trigger-generate-html:
-    name: Trigger HTML build
-    needs: prepare-ref-env
+  trigger-builds:
+    name: Trigger ${{ matrix.build.workflow }} (${{ matrix.build.buildRef }})
+    needs: prepare-builds
+    strategy:
+      fail-fast: false
+      matrix:
+        build: ${{ fromJson(needs.prepare-builds.outputs.builds) }}
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch docs-generate-html.yml for each build
+      - name: Dispatch
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
-          BUILDS: ${{ needs.prepare-ref-env.outputs.builds }}
+          BUILD: ${{ toJson(matrix.build) }}
           PROD_BRANCH: ${{ env.PROD_BRANCH }}
         with:
           script: |
-            const builds = JSON.parse(process.env.BUILDS)
+            const build = JSON.parse(process.env.BUILD)
             const prodBranch = process.env.PROD_BRANCH
-            for (const build of builds) {
-              await github.rest.actions.createWorkflowDispatch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'docs-generate-html.yml',
-                // Dispatch from build.buildRef itself, NOT the branch that triggered
-                // this workflow - this run's ref becomes its real head_branch, which is
-                // exactly what docs-publish's check-build-branch inspects. Using a
-                // single fixed ref for every build here would make every dispatched
-                // run's head_branch equal whatever branch triggered THIS workflow,
-                // regardless of which environment it's actually building for - so a
-                // trigger from any branch other than build.buildRef (e.g. a versioned
-                // content branch, or the "other" branch when both are built) would
-                // always fail that check downstream, even for an otherwise-legitimate
-                // build.
-                ref: build.buildRef,
-                inputs: {
-                  'build-ref': build.buildRef,
-                  'publish-env': build.publishEnv,
-                },
-              })
-              // Mirrors resolve-env's own derivation for display purposes only - the
-              // real derivation happens inside the dispatched run, this is just to show
-              // what it will resolve to when no explicit override was passed.
-              const env = build.publishEnv || (build.buildRef === prodBranch ? 'prod' : 'dev')
-              core.summary.addRaw(`Triggered \`docs-generate-html.yml\` on branch \`${build.buildRef}\` for \`${env}\``, true)
-            }
-
-            await core.summary.write()
-
-  # Trigger docs-generate-pdf.yml as its own separate run too, for the same reasons as
-  # above: not a workflow_call, so it is fully independent of the HTML builds. If the PDF
-  # build fails, the HTML builds are unaffected (nothing here `needs` this job, and it
-  # `needs` nothing), and its artifact can't collide with the HTML "docs" artifact.
-  # It builds the branch that triggered this run: a PDF is not environment-specific, so
-  # there is no dev/prod pairing to work out.
-  trigger-generate-pdf:
-    name: Trigger PDF build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch docs-generate-pdf.yml
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        env:
-          BUILD_REF: ${{ github.ref_name }}
-        with:
-          script: |
-            const buildRef = process.env.BUILD_REF
+            const inputs = { 'build-ref': build.buildRef }
+            // docs-generate-pdf.yml takes no publish-env input at all - a PDF isn't
+            // environment-specific - so this is only ever added for the HTML builds.
+            if (build.publishEnv !== null) inputs['publish-env'] = build.publishEnv
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: 'docs-generate-pdf.yml',
-              // Dispatch from the same branch that is being built, so the workflow file
-              // that runs is the one on that branch (docs-generate-pdf.yml only exists on
-              // this branch until its PR is merged).
-              ref: buildRef,
-              inputs: {
-                'build-ref': buildRef,
-              },
+              workflow_id: build.workflow,
+              // Dispatch from build.buildRef itself, NOT the branch that triggered
+              // this workflow - a dispatched run's ref becomes its real head_branch,
+              // which is exactly what docs-publish's check-build-branch inspects.
+              // Using a single fixed ref for every build here would make every
+              // dispatched run's head_branch equal whatever branch triggered THIS
+              // workflow, regardless of which environment it's actually building for
+              // - so a trigger from any branch other than build.buildRef (e.g. a
+              // versioned content branch, or the "other" HTML build when both are
+              // triggered) would always fail that check downstream, even for an
+              // otherwise-legitimate build.
+              ref: build.buildRef,
+              inputs,
             })
-            core.summary.addRaw(`Triggered \`docs-generate-pdf.yml\` on branch \`${buildRef}\``, true)
+            // Mirrors docs-generate-html.yml's own publish-env derivation for
+            // display purposes only - the real derivation happens inside the
+            // dispatched run, this is just to show what it will resolve to when no
+            // explicit override was passed.
+            const env = build.publishEnv === null
+              ? ''
+              : ` for \`${build.publishEnv || (build.buildRef === prodBranch ? 'prod' : 'dev')}\``
+            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\`${env}`, true)
             await core.summary.write()
