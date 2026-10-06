@@ -28,17 +28,16 @@ permissions:
 # sources' `branches`). prepare-ref-env's logic below assumes this - it doesn't inspect
 # the playbooks itself, it just trusts that if this workflow ran at all, the branch that
 # triggered it is a real content branch for at least one of the two environments.
+#
+# This list is a plain, static YAML value, not an expression - GitHub Actions doesn't
+# allow `vars.*` (or any expression) in a trigger definition, so it can't be read
+# from vars.DOCS_DEV_BRANCH/DOCS_PROD_BRANCH the way the job logic below does. Keep it
+# in sync with those two variables by hand.
 on:
   push:
     branches:
     - 'dev'
   workflow_dispatch:
-
-# Set DEV_BRANCH to your staging branch.
-# Set PROD_BRANCH if you also publish to neo4j.com/docs; omit it for staging-only repos.
-env:
-  DEV_BRANCH: 'dev'
-  # PROD_BRANCH: 'main'
 
 jobs:
 
@@ -58,8 +57,8 @@ jobs:
       - name: Set builds
         id: set-builds
         run: |
-          dev_branch="${{ env.DEV_BRANCH }}"
-          prod_branch="${{ env.PROD_BRANCH }}"
+          dev_branch="${{ vars.DOCS_DEV_BRANCH }}"
+          prod_branch="${{ vars.DOCS_PROD_BRANCH }}"
 
           # HTML rules:
           # - No separate prod branch configured -> staging only, always (nothing to
@@ -126,7 +125,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           BUILD: ${{ toJson(matrix.build) }}
-          PROD_BRANCH: ${{ env.PROD_BRANCH }}
+          PROD_BRANCH: ${{ vars.DOCS_PROD_BRANCH }}
         with:
           script: |
             const build = JSON.parse(process.env.BUILD)
