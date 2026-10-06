@@ -92,9 +92,12 @@ jobs:
 
           # PDF always builds from the branch that triggered this run - no dev/prod
           # pairing to work out the way HTML has to (there's only ever one PDF build
-          # per trigger). Its publish-env is still dev or prod, though, resolved the
-          # same way docs-generate-html.yml resolves its own fallback: the dev branch
-          # means dev, anything else means prod.
+          # per trigger). Its publish-env is still dev or prod, though, resolved with
+          # the same conservative default the HTML rules above use: the dev branch is
+          # the one case known for certain not to affect prod, so it's the only one
+          # that resolves to dev - every other branch (the real prod branch, a third
+          # long-lived branch, a typo, ...) resolves to prod, the same "assume prod
+          # unless we're sure it's dev-only" policy, not the opposite.
           if [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
             pdf_publish_env="dev"
           else
