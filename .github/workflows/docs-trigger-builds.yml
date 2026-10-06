@@ -47,11 +47,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # JSON array of {workflow, buildRef, publishEnv} - one entry per independent
-      # dispatch to make. publishEnv is null for docs-generate-pdf.yml (a PDF isn't
-      # environment-specific) and left '' for docs-generate-html.yml except in the one
-      # case where it's genuinely ambiguous (see below) - that workflow derives it
-      # itself from build-ref against its own vars.DOCS_PROD_BRANCH whenever
-      # publishEnv is blank.
+      # dispatch to make. publishEnv is left '' for docs-generate-html.yml except in
+      # the one case where it's genuinely ambiguous (see below) - that workflow
+      # derives it itself from build-ref against its own vars.DOCS_PROD_BRANCH
+      # whenever publishEnv is blank. docs-generate-pdf.yml has no such ambiguous
+      # case (a PDF build is always exactly the branch that triggered this run), so
+      # its publishEnv is always resolved explicitly here, the same way.
       builds: ${{ steps.set-builds.outputs.builds }}
     steps:
       - name: Set builds
@@ -91,9 +92,17 @@ jobs:
           fi
 
           # PDF always builds from the branch that triggered this run - no dev/prod
-          # pairing to work out, since a PDF isn't environment-specific.
-          pdf_build=$(jq -nc --arg ref "${GITHUB_REF_NAME}" \
-            '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:null}]')
+          # pairing to work out the way HTML has to (there's only ever one PDF build
+          # per trigger). Its publish-env is still dev or prod, though, resolved the
+          # same way docs-generate-html.yml resolves its own fallback: the dev branch
+          # means dev, anything else means prod.
+          if [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
+            pdf_publish_env="dev"
+          else
+            pdf_publish_env="prod"
+          fi
+          pdf_build=$(jq -nc --arg ref "${GITHUB_REF_NAME}" --arg env "$pdf_publish_env" \
+            '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env}]')
 
           builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
           echo "builds=${builds}" >> $GITHUB_OUTPUT
@@ -122,10 +131,8 @@ jobs:
           script: |
             const build = JSON.parse(process.env.BUILD)
             const prodBranch = process.env.PROD_BRANCH
-            const inputs = { 'build-ref': build.buildRef }
-            // docs-generate-pdf.yml takes no publish-env input at all - a PDF isn't
-            // environment-specific - so this is only ever added for the HTML builds.
-            if (build.publishEnv !== null) inputs['publish-env'] = build.publishEnv
+            // Both docs-generate-html.yml and docs-generate-pdf.yml accept publish-env.
+            const inputs = { 'build-ref': build.buildRef, 'publish-env': build.publishEnv }
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -146,9 +153,8 @@ jobs:
             // Mirrors docs-generate-html.yml's own publish-env derivation for
             // display purposes only - the real derivation happens inside the
             // dispatched run, this is just to show what it will resolve to when no
-            // explicit override was passed.
-            const env = build.publishEnv === null
-              ? ''
-              : ` for \`${build.publishEnv || (build.buildRef === prodBranch ? 'prod' : 'dev')}\``
-            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\`${env}`, true)
+            // explicit override was passed (the empty-string case, only possible for
+            // an HTML build - see prepare-builds above).
+            const env = build.publishEnv || (build.buildRef === prodBranch ? 'prod' : 'dev')
+            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\` for \`${env}\``, true)
             await core.summary.write()

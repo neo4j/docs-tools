@@ -61,10 +61,22 @@ on:
         type: number
         default: 28
 
+    outputs:
+      docset:
+        description: 'The Antora component (docset) name the PDF was built for, parsed from the PDF''s own build path - e.g. the <docset> in build/docs/<docset>/<version>/_exports/<file>.pdf. Empty if the build failed.'
+        value: ${{ jobs.build-pdf.outputs.docset }}
+      version:
+        description: 'The docset version the PDF was built for, parsed the same way as docset above. Empty if the build failed.'
+        value: ${{ jobs.build-pdf.outputs.version }}
+
 jobs:
 
   build-pdf:
     runs-on: ubuntu-latest
+
+    outputs:
+      docset: ${{ steps.get-docset-version.outputs.docset }}
+      version: ${{ steps.get-docset-version.outputs.version }}
 
     env:
       NODE_VERSION: ${{ inputs.node-version }}
@@ -197,6 +209,31 @@ jobs:
         name: antora-log
         path: ${{ env.DOCS_DIR }}/build/log
         retention-days: ${{ inputs.retain-artifacts }}
+
+    # @antora/pdf-extension always places a component version's PDF at
+    # <component>/<version>/_exports/<file>.pdf (relative to the site's own
+    # output.dir, which is why pdf-path above is found rather than assumed) - so the
+    # docset/version a publish step needs can be read straight back out of that path,
+    # with no separate antora.yml parsing needed. Deliberately placed after both
+    # artifact uploads above: a failure here shouldn't suppress the PDF/log artifacts
+    # a human would want to debug it with (an `if:` without always() implicitly
+    # requires success() on every earlier step, so an earlier failure here would skip
+    # them too).
+    - name: Determine docset and version from the PDF path
+      if: steps.run-pdf-build.outcome == 'success'
+      working-directory: ${{ env.DOCS_DIR }}
+      id: get-docset-version
+      run: |
+        pdf_path="${{ steps.get-pdf-path.outputs.pdf-path }}"
+        exports_dir=$(dirname "$pdf_path")
+        version_dir=$(dirname "$exports_dir")
+        docset_dir=$(dirname "$version_dir")
+        if [ "$(basename "$exports_dir")" != "_exports" ] || [ "$docset_dir" = "." ]; then
+          echo "::error::Could not determine docset/version from PDF path '$pdf_path' - expected <docset>/<version>/_exports/<file>.pdf"
+          exit 1
+        fi
+        echo "docset=$(basename "$docset_dir")" >> "$GITHUB_OUTPUT"
+        echo "version=$(basename "$version_dir")" >> "$GITHUB_OUTPUT"
 
     - name: Fail job if PDF build failed
       if: always() && steps.run-pdf-build.outcome == 'failure'
