@@ -108,7 +108,16 @@ jobs:
         # Ensure a correct version of Antora, the same way reusable-docs-build.yml
         # does for the HTML build - @antora/pdf-extension needs the assembler
         # Antora 3.2.0+ bundles, regardless of what a docset's own package.json
-        # currently pins.
+        # currently pins. Deleting package-lock.json first matters: npm's own
+        # conservative incremental resolution can otherwise leave a nested
+        # transitive dependency (e.g. @antora/site-generator) on a stale,
+        # pre-upgrade version even after the top-level antora package itself is
+        # bumped - confirmed directly: without this, a docset pinning an older
+        # Antora (e.g. the 3.1.15 reusable-docs-build.yml itself defaults to)
+        # ends up with an @antora/site-generator that never emits the
+        # componentsRegistered event @antora/assembler listens for, so the PDF
+        # step silently produces nothing (exit 0, no error, no PDF).
+        rm -f package-lock.json
         npm uninstall @antora/cli @antora/site-generator-default || true
         npm install "antora@${ANTORA_VERSION}"
         # @neo4j-antora/pdf-generator is installed here, on its own, rather than
