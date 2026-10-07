@@ -193,7 +193,14 @@ jobs:
           echo "::error::No PDF found under build/ - check the Antora log above"
           exit 1
         fi
-        echo "pdf-path=$pdf_path" >> "$GITHUB_OUTPUT"
+        # Matches the legacy Gradle pipeline's own neo4j-<name>-<version>.pdf naming -
+        # @antora/assembler's own filename (just <component>-<version>, no product
+        # name) isn't self-identifying once the file is out of context, e.g. sitting
+        # in a Downloads folder or a Slack thread.
+        dir=$(dirname "$pdf_path")
+        filename="neo4j-$(basename "$pdf_path")"
+        mv "$pdf_path" "$dir/$filename"
+        echo "pdf-path=$dir/$filename" >> "$GITHUB_OUTPUT"
 
     # Same as reusable-docs-build.yml's "Print Antora log", but also when the build step
     # itself reported success yet no PDF was found: the PDF renderer can fail ("Unable
