@@ -210,6 +210,20 @@ pre, code, kbd, tt {
   margin-bottom: 4pt;
 }
 
+/* images */
+/* An image with no explicit width renders at its own native pixel size - fine in a
+   browser's normal flow, but this page has a fixed content width (see @page above),
+   so a wide source image (e.g. a diagram sized for a wide screen) overflows the page's
+   right margin and gets cut off rather than shrinking to fit, the way most real sites'
+   own CSS already handles for free. Applies to the bare <img> tag directly rather than
+   a wrapper class, since that covers both Asciidoctor's block (.imageblock) and inline
+   (.image) image markup the same way. An image with an explicit width: attribute in
+   its own image::[] macro still honours that (this only caps it, never upscales). */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* tables */
 table.tableblock {
   border-collapse: collapse;
