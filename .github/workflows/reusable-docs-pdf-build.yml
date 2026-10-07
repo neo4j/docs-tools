@@ -60,13 +60,18 @@ on:
         description: 'The number of days to retain artifacts'
         type: number
         default: 28
+      versionless:
+        description: 'Whether this docset has no version (antora.yml''s version: ~), the same self-reported convention docs-generate-html.yml''s own publish-html step already uses. @antora/pdf-extension places a versionless component''s PDF at <docset>/_exports/<file>.pdf (no version segment) rather than <docset>/<version>/_exports/<file>.pdf - there''s no way to tell the two shapes apart from the path alone (a versionless docset''s own name could easily be mistaken for a version segment, or vice versa), so this flag decides which parse the docset/version outputs below use.'
+        required: false
+        type: boolean
+        default: false
 
     outputs:
       docset:
         description: 'The Antora component (docset) name the PDF was built for, parsed from the PDF''s own build path - e.g. the <docset> in build/docs/<docset>/<version>/_exports/<file>.pdf. Empty if the build failed.'
         value: ${{ jobs.build-pdf.outputs.docset }}
       version:
-        description: 'The docset version the PDF was built for, parsed the same way as docset above. Empty if the build failed.'
+        description: 'The docset version the PDF was built for, parsed the same way as docset above. Empty if the build failed, or if the versionless input is true.'
         value: ${{ jobs.build-pdf.outputs.version }}
 
 jobs:
@@ -88,6 +93,7 @@ jobs:
       PACKAGE_SCRIPT: ${{ inputs.package-script }}
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
+      VERSIONLESS: ${{ inputs.versionless }}
 
     steps:
 
@@ -223,11 +229,15 @@ jobs:
     # <component>/<version>/_exports/<file>.pdf (relative to the site's own
     # output.dir, which is why pdf-path above is found rather than assumed) - so the
     # docset/version a publish step needs can be read straight back out of that path,
-    # with no separate antora.yml parsing needed. Deliberately placed after both
-    # artifact uploads above: a failure here shouldn't suppress the PDF/log artifacts
-    # a human would want to debug it with (an `if:` without always() implicitly
-    # requires success() on every earlier step, so an earlier failure here would skip
-    # them too).
+    # with no separate antora.yml parsing needed. A versionless component (antora.yml's
+    # version: ~) has no version segment at all - just <component>/_exports/<file>.pdf -
+    # and there's no way to tell the two shapes apart from the path alone (nothing stops
+    # a versionless docset's own name looking exactly like a version segment, or vice
+    # versa), hence the explicit, self-reported versionless input rather than trying to
+    # detect it. Deliberately placed after both artifact uploads above: a failure here
+    # shouldn't suppress the PDF/log artifacts a human would want to debug it with (an
+    # `if:` without always() implicitly requires success() on every earlier step, so an
+    # earlier failure here would skip them too).
     - name: Determine docset and version from the PDF path
       if: steps.run-pdf-build.outcome == 'success'
       working-directory: ${{ env.DOCS_DIR }}
@@ -235,14 +245,28 @@ jobs:
       run: |
         pdf_path="${{ steps.get-pdf-path.outputs.pdf-path }}"
         exports_dir=$(dirname "$pdf_path")
-        version_dir=$(dirname "$exports_dir")
-        docset_dir=$(dirname "$version_dir")
-        if [ "$(basename "$exports_dir")" != "_exports" ] || [ "$docset_dir" = "." ]; then
-          echo "::error::Could not determine docset/version from PDF path '$pdf_path' - expected <docset>/<version>/_exports/<file>.pdf"
+        if [ "$(basename "$exports_dir")" != "_exports" ]; then
+          echo "::error::Could not determine docset/version from PDF path '$pdf_path' - expected <docset>/_exports/<file>.pdf or <docset>/<version>/_exports/<file>.pdf"
           exit 1
         fi
-        echo "docset=$(basename "$docset_dir")" >> "$GITHUB_OUTPUT"
-        echo "version=$(basename "$version_dir")" >> "$GITHUB_OUTPUT"
+        if [ "${VERSIONLESS}" = "true" ]; then
+          docset_dir=$(dirname "$exports_dir")
+          if [ "$docset_dir" = "." ]; then
+            echo "::error::Could not determine docset from PDF path '$pdf_path' - expected <docset>/_exports/<file>.pdf"
+            exit 1
+          fi
+          echo "docset=$(basename "$docset_dir")" >> "$GITHUB_OUTPUT"
+          echo "version=" >> "$GITHUB_OUTPUT"
+        else
+          version_dir=$(dirname "$exports_dir")
+          docset_dir=$(dirname "$version_dir")
+          if [ "$docset_dir" = "." ]; then
+            echo "::error::Could not determine docset/version from PDF path '$pdf_path' - expected <docset>/<version>/_exports/<file>.pdf"
+            exit 1
+          fi
+          echo "docset=$(basename "$docset_dir")" >> "$GITHUB_OUTPUT"
+          echo "version=$(basename "$version_dir")" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Fail job if PDF build failed
       if: always() && steps.run-pdf-build.outcome == 'failure'
