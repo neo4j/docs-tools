@@ -30,6 +30,39 @@ const STYLESHEET = path.join(__dirname, '../pdf-theme/print.css')
 const ROLES_LABELS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/roles-labels-postprocessor.js')
 const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../vendor/extensions/remote-include-adapter.js')
 const MACROS_ADAPTER = path.join(__dirname, '../vendor/extensions/macros-adapter.js')
+const MATHJAX_ADAPTER = path.join(__dirname, '../vendor/extensions/mathjax-adapter.js')
+const COLOPHON_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/colophon-postprocessor.js')
+
+// Unlike the extensions above, `@djencks/asciidoctor-mathjax` isn't a
+// dependency of this package - it's an opt-in feature a docset adds itself
+// (alongside registering it in its own preview.yml, for the live HTML site)
+// only if it actually uses `stem`/`latexmath` blocks. Registering it here
+// only when the docset's own install actually has it keeps every other
+// docset's PDF build unaffected (no extra dependency, nothing to fail).
+//
+// A plain `require.resolve` walks up from *this file's own real location*
+// (Node dereferences symlinks before resolving), which is this package's
+// own install under the docset's node_modules in the normal case - fine.
+// But under `npm link` (this package developed as a local checkout,
+// symlinked into a docset for testing), that real location is somewhere
+// else entirely, so the docset's own node_modules is never on the search
+// path and this always reports unavailable even when the docset has the
+// package. Falling back to a resolve rooted at the working directory
+// (antora's own cwd is always the docset being built) covers that case
+// too, without changing anything for a normal, non-linked install.
+function mathjaxAvailable () {
+  try {
+    require.resolve('@djencks/asciidoctor-mathjax')
+    return true
+  } catch {
+    try {
+      require.resolve('@djencks/asciidoctor-mathjax', { paths: [process.cwd()] })
+      return true
+    } catch {
+      return false
+    }
+  }
+}
 
 const PAGE_BOUNDARY_RX = /(?=^:page-docname: .*$)/m
 const GLOSSARY_MARKER_RX = /^\[discrete\.glossary#.*\]$/m
@@ -110,8 +143,8 @@ const PUPPETEER_TIMEOUT_ENV = {
 // this can't just be a relative value in the playbook/assembler config.
 const args = process.argv.slice(2)
 const stdinMarkerIdx = args.lastIndexOf('-')
-// roles-labels-postprocessor.js ports the essential parts of the Antora
-// extension of the same name (see that file); macros-adapter.js and
+// roles-labels-postprocessor.js and colophon-postprocessor.js port/add
+// behavior of their own (see those files); macros-adapter.js and
 // remote-include-adapter.js wrap the real @neo4j-documentation packages -
 // added here, __dirname-computed, for the same reason as the stylesheet
 // above. (table-footnotes has no equivalent here: CSS `float: footnote` -
@@ -123,7 +156,9 @@ const extraArgs = [
   '--extension', ROLES_LABELS_POSTPROCESSOR,
   '--extension', REMOTE_INCLUDE_ADAPTER,
   '--extension', MACROS_ADAPTER,
+  '--extension', COLOPHON_POSTPROCESSOR,
 ]
+if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
 // Reading from stdin (this is piped the merged .adoc, not a real file - see
 // below), asciidoctor-web-pdf invents a fictive input path rooted at
 // `--base-dir`/`-B` if given, else its own cwd (lib/cli.js's
