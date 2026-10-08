@@ -7,6 +7,7 @@
 // node_modules happens to hoist things - see this package's own README.
 
 const { spawn } = require('node:child_process')
+const fs = require('node:fs')
 const path = require('node:path')
 
 // asciidoctor-pdf needs @asciidoctor/core 4.x while Antora needs 2.x, and it
@@ -29,6 +30,40 @@ const STYLESHEET = path.join(__dirname, '../pdf-theme/print.css')
 const ROLES_LABELS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/roles-labels-postprocessor.js')
 const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../vendor/extensions/remote-include-adapter.js')
 const MACROS_ADAPTER = path.join(__dirname, '../vendor/extensions/macros-adapter.js')
+const MATHJAX_ADAPTER = path.join(__dirname, '../vendor/extensions/mathjax-adapter.js')
+const COLOPHON_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/colophon-postprocessor.js')
+const ABSOLUTE_LINKS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/absolute-links-postprocessor.js')
+
+// Unlike the extensions above, `@djencks/asciidoctor-mathjax` isn't a
+// dependency of this package - it's an opt-in feature a docset adds itself
+// (alongside registering it in its own preview.yml, for the live HTML site)
+// only if it actually uses `stem`/`latexmath` blocks. Registering it here
+// only when the docset's own install actually has it keeps every other
+// docset's PDF build unaffected (no extra dependency, nothing to fail).
+//
+// A plain `require.resolve` walks up from *this file's own real location*
+// (Node dereferences symlinks before resolving), which is this package's
+// own install under the docset's node_modules in the normal case - fine.
+// But under `npm link` (this package developed as a local checkout,
+// symlinked into a docset for testing), that real location is somewhere
+// else entirely, so the docset's own node_modules is never on the search
+// path and this always reports unavailable even when the docset has the
+// package. Falling back to a resolve rooted at the working directory
+// (antora's own cwd is always the docset being built) covers that case
+// too, without changing anything for a normal, non-linked install.
+function mathjaxAvailable () {
+  try {
+    require.resolve('@djencks/asciidoctor-mathjax')
+    return true
+  } catch {
+    try {
+      require.resolve('@djencks/asciidoctor-mathjax', { paths: [process.cwd()] })
+      return true
+    } catch {
+      return false
+    }
+  }
+}
 
 const PAGE_BOUNDARY_RX = /(?=^:page-docname: .*$)/m
 const GLOSSARY_MARKER_RX = /^\[discrete\.glossary#.*\]$/m
@@ -67,6 +102,22 @@ function dedupeGlossary (adoc) {
   return result
 }
 
+// Every PDF this pipeline produces gets the same closing License page appended -
+// not a per-docset opt-in, the same way the old Gradle pipeline's build.gradle
+// unconditionally appended its own copy of this page to every book's pdfNav.
+// Vendored here (rather than read from a consuming docset's own content, the
+// way a couple of repos still happen to carry a copy of this exact page at
+// modules/ROOT/pages/license.adoc left over from that old pipeline, unused by
+// their nav and therefore invisible to this one) so every docset gets it
+// identically regardless of what that docset's own content tree does or
+// doesn't contain. `[discrete]` keeps it out of the book's own table of
+// contents, same as a real book's colophon page; the heading is still a
+// level-1 (`==`) heading, matching every other chapter this pipeline merges
+// in, so it inherits the same typography - only the page-break-before (since a
+// discrete heading, unlike a real chapter, isn't wrapped in its own `.sect1`)
+// needs a dedicated rule in print.css.
+const LICENSE_PAGE = fs.readFileSync(path.join(__dirname, '../pages/license.adoc'), 'utf8')
+
 function readStdin () {
   const chunks = []
   return new Promise((resolve, reject) => {
@@ -93,8 +144,24 @@ const PUPPETEER_TIMEOUT_ENV = {
 // this can't just be a relative value in the playbook/assembler config.
 const args = process.argv.slice(2)
 const stdinMarkerIdx = args.lastIndexOf('-')
-// roles-labels-postprocessor.js ports the essential parts of the Antora
-// extension of the same name (see that file); macros-adapter.js and
+// @antora/assembler already passes the real `site.url` from the docset's own
+// publish.yml (the same canonical production URL reusable-docs-build.yml's
+// HTML build uses, e.g. https://neo4j.com/docs) as a plain `-a` flag here -
+// absolute-links-postprocessor.js needs just its origin (scheme + host) to
+// rewrite a root-relative href into a full URL. Reading it back out of these
+// args rather than hardcoding the origin separately means it can't drift
+// from whatever value a docset's own playbook actually declares.
+function siteOrigin () {
+  const idx = args.findIndex((arg) => arg.startsWith('site-url='))
+  if (idx === -1) return null
+  try {
+    return new URL(args[idx].slice('site-url='.length)).origin
+  } catch {
+    return null
+  }
+}
+// roles-labels-postprocessor.js and colophon-postprocessor.js port/add
+// behavior of their own (see those files); macros-adapter.js and
 // remote-include-adapter.js wrap the real @neo4j-documentation packages -
 // added here, __dirname-computed, for the same reason as the stylesheet
 // above. (table-footnotes has no equivalent here: CSS `float: footnote` -
@@ -106,7 +173,12 @@ const extraArgs = [
   '--extension', ROLES_LABELS_POSTPROCESSOR,
   '--extension', REMOTE_INCLUDE_ADAPTER,
   '--extension', MACROS_ADAPTER,
+  '--extension', COLOPHON_POSTPROCESSOR,
+  '--extension', ABSOLUTE_LINKS_POSTPROCESSOR,
 ]
+const origin = siteOrigin()
+if (origin) extraArgs.push('-a', `absolute-link-origin=${origin}`)
+if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
 // Reading from stdin (this is piped the merged .adoc, not a real file - see
 // below), asciidoctor-web-pdf invents a fictive input path rooted at
 // `--base-dir`/`-B` if given, else its own cwd (lib/cli.js's
@@ -140,5 +212,5 @@ readStdin().then((adoc) => {
     process.exit(1)
   })
   child.on('close', (status) => process.exit(status ?? 1))
-  child.stdin.end(dedupeGlossary(adoc))
+  child.stdin.end(dedupeGlossary(adoc).trimEnd() + '\n\n' + LICENSE_PAGE)
 })

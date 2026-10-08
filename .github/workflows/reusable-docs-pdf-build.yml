@@ -65,6 +65,11 @@ on:
         required: false
         type: boolean
         default: false
+      publish-env:
+        description: 'dev or prod - same meaning and same dev/prod URL split as reusable-docs-build.yml''s own DOCS_PUBLISH_URL, passed through as Antora''s --url so the docset''s own site.url (used, among other things, to make a cross-manual/javadoc link absolute - see @neo4j-antora/pdf-generator''s absolute-links-postprocessor.js) matches whichever environment this PDF is actually being published to, instead of always resolving to the docset''s own publish.yml default (its real prod URL).'
+        required: false
+        type: string
+        default: ''
 
     outputs:
       docset:
@@ -94,6 +99,14 @@ jobs:
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       VERSIONLESS: ${{ inputs.versionless }}
+      # Same dev/prod split as reusable-docs-build.yml's own DOCS_PUBLISH_URL (see its
+      # own comment on this - TEMPORARY hardcoded values, same reason: secrets.* always
+      # resolves empty here, no caller of this reusable workflow has secrets: inherit).
+      # Passed to Antora as --url below so the docset's own site.url (and therefore
+      # absolute-links-postprocessor.js's rewritten links - see its own comment) reflects
+      # whichever environment this PDF is actually being published to, rather than
+      # always falling back to the docset's own publish.yml default (its real prod URL).
+      DOCS_PUBLISH_URL: "${{ inputs.publish-env == 'dev' && 'https://development.neo4j.dev/docs/sandbox/restructure/docs' || 'https://neo4j.com/docs' }}"
 
     steps:
 
@@ -205,7 +218,13 @@ jobs:
         # so those extensions can still find hoisted deps (e.g. vinyl) that
         # are only installed under docs-dir's node_modules.
         NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
-      run: npm run "$PACKAGE_SCRIPT" -- $ANTORA_CLI_EXTENSIONS
+      # --url, same as reusable-docs-build.yml's own HTML build: cascades into the
+      # docset's own site-url, which assembler passes on to build.command as a plain
+      # -a flag - convert.js reads it back out to resolve absolute-links-postprocessor.js's
+      # rewrite origin (see its own comment), rather than always falling back to the
+      # docset's own publish.yml default (its real prod URL) regardless of which
+      # environment this PDF is actually being published to.
+      run: npm run "$PACKAGE_SCRIPT" -- --url "$DOCS_PUBLISH_URL" $ANTORA_CLI_EXTENSIONS
 
     - name: Get the dir that contains the PDF
       if: steps.run-pdf-build.outcome == 'success'

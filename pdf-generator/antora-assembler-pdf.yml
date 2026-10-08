@@ -5,7 +5,7 @@ assembly:
     allow-uri-read: ''
     toc: ''
     toc-title: Table of Contents
-    toclevels: 2
+    toclevels: 3
 build:
   # build.cwd (what a relative command resolves against) defaults to the
   # *playbook's* directory (docs-dir) - the same directory `npm install` is

@@ -124,6 +124,36 @@ body.book {
   display: none;
 }
 
+/* Colophon (added by colophon-postprocessor.js, right after the cover/
+   title page and before the table of contents) - the one-time copyright/
+   trademark boilerplate statement this pipeline uses in place of running
+   @neo4j-antora/mark-terms's inline, per-page marks (see this package's
+   own README).
+   `height: 100%` doesn't resolve here - this renderer's Vivliostyle Viewer
+   layout engine doesn't give this box a definite containing-block height
+   to be a percentage of, so centering silently no-ops. 252mm is the actual
+   per-page content height this theme produces: A4 (297mm) minus this
+   file's own `@page` rule above (25mm top margin, 20mm bottom) - update
+   this alongside that rule if it ever changes. */
+#colophon {
+  page-break-after: always;
+  height: 252mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-family: var(--font-body);
+}
+#colophon h1 {
+  font-size: 22pt;
+  margin-bottom: 16pt;
+}
+#colophon p {
+  font-size: 9pt;
+  line-height: 1.5;
+  color: var(--brand-text-weak);
+  margin: 0 0 0.75em;
+}
+
 /* Table of contents */
 #toc {
   page-break-after: always;
@@ -143,11 +173,19 @@ body.book {
   margin-left: 0;
   padding-left: 0;
 }
-#toc ul.sectlevel0 {
+/* Asciidoctor's own TOC class names are 1-indexed (sectlevel1 is the outermost list, for
+   level-1/== headings - there is no sectlevel0), not 0-indexed - these selectors used to
+   target sectlevel0/sectlevel1, which Asciidoctor's TOC markup never actually emits, so
+   this indentation (and the top-level bold/colour styling below) was a silent no-op in
+   every PDF this pipeline has ever shipped. */
+#toc ul.sectlevel1 {
   margin-left: 0;
 }
-#toc ul ul.sectlevel1 {
+#toc ul ul.sectlevel2 {
   margin-left: 14pt;
+}
+#toc ul ul ul.sectlevel3 {
+  margin-left: 28pt;
 }
 #toc li {
   margin-top: 6pt;
@@ -159,7 +197,7 @@ body.book {
   text-decoration: none;
   font-size: 10.5pt;
 }
-#toc ul.sectlevel0 > li > a {
+#toc ul.sectlevel1 > li > a {
   font-weight: 600;
   font-style: normal;
   color: var(--brand-primary-strong);
@@ -173,15 +211,35 @@ body.book {
 .sect1 { break-before: page; }
 .sect1:first-child { break-before: avoid; }
 
+/* The closing License page (convert.js always appends one - see its own comment) is a
+   [discrete] heading, so it isn't wrapped in a .sect1 div the way every real chapter is,
+   and therefore doesn't inherit the page-break-before rule above. */
+#license { break-before: page; }
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-body);
   color: var(--brand-primary-strong);
   font-weight: 700;
   break-after: avoid;
 }
-h2 { font-size: 18pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 4pt; }
-h3 { font-size: 14pt; }
-h4 { font-size: 12pt; }
+/* h2 is this book's chapter title (every merged page's own top-level heading - see
+   convert.js's own comment on heading levels) - testing locally against docs-java-reference
+   per a style pass comparing against the legacy pipeline's own output, where chapter
+   titles were much more prominent than this theme's original 18pt. */
+h2 { font-size: 26pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 6pt; }
+h3 { font-size: 18pt; }
+h4 { font-size: 14pt; }
+/* A page nested two levels deep in its component's nav (e.g. a page under a sub-chapter)
+   has its own internal headings shifted down by that same nav depth once merged into this
+   book, same as the page's own top heading is (see convert.js's comment on heading
+   levels) - a heading the source HTML renders as h3/h4 can easily land as h5/h6 here.
+   h5/h6 had no size rule at all before this, so they fell back to the renderer's tiny
+   unstyled defaults - barely legible next to 10.5pt body text. h6 is Asciidoctor's deepest
+   possible heading level, so it gets no further room to shrink into here; italicizing it
+   instead of sizing it down keeps it readable as a heading at a size this close to body
+   text. */
+h5 { font-size: 12pt; }
+h6 { font-size: 11pt; font-style: italic; }
 
 a { color: var(--brand-primary); text-decoration: none; }
 
@@ -437,19 +495,31 @@ div.labels {
   align-items: flex-start;
   flex-direction: row-reverse;
 }
+/* On the real site, `.header-label-container > div.labels` sits inline to the right of
+   its title by default, and client-side JS adds `.wrapped` (below, full-width) only when
+   the title doesn't have room to share its line with the labels. That JS never runs here
+   - there's no live layout to measure against in a static PDF render - so this static
+   theme always applies the "wrapped" styling outright instead of the pre-JS default,
+   rather than ever trying to fit a label beside a title on the page's fixed, narrow
+   content width. */
 .header-label-container {
-  display: flex;
-  flex-wrap: wrap;
+  display: block;
+  /* .header-label-container is always the heading element itself (see
+     process-labels.js's own labelsLocation logic) with its labels div appended as a
+     child, not a sibling - so without this, a heading whose title text just barely
+     fits at the bottom of a page can have its labels div alone pushed onto the next
+     page, split from the title it belongs to. break-inside keeps the whole heading
+     (title text + labels) together as one unit, moving it to the next page entirely
+     when it doesn't fit, the same way a heading on its own already does via
+     h1..h6's break-after: avoid. */
+  break-inside: avoid;
 }
 .admonitionblock div.labels { padding: 0.5rem 0 1rem; }
 .exampleblock div.labels { padding: 0.5rem; }
 .header-label-container > div.labels {
-  justify-content: space-between;
-  margin-left: auto;
-}
-.header-label-container > div.labels.wrapped {
   margin-left: 0;
   margin-top: 0.5rem;
+  justify-content: flex-start;
 }
 h1 > .header-label {
   margin-top: 1.2rem;
