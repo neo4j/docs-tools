@@ -143,11 +143,19 @@ body.book {
   margin-left: 0;
   padding-left: 0;
 }
-#toc ul.sectlevel0 {
+/* Asciidoctor's own TOC class names are 1-indexed (sectlevel1 is the outermost list, for
+   level-1/== headings - there is no sectlevel0), not 0-indexed - these selectors used to
+   target sectlevel0/sectlevel1, which Asciidoctor's TOC markup never actually emits, so
+   this indentation (and the top-level bold/colour styling below) was a silent no-op in
+   every PDF this pipeline has ever shipped. */
+#toc ul.sectlevel1 {
   margin-left: 0;
 }
-#toc ul ul.sectlevel1 {
+#toc ul ul.sectlevel2 {
   margin-left: 14pt;
+}
+#toc ul ul ul.sectlevel3 {
+  margin-left: 28pt;
 }
 #toc li {
   margin-top: 6pt;
@@ -159,7 +167,7 @@ body.book {
   text-decoration: none;
   font-size: 10.5pt;
 }
-#toc ul.sectlevel0 > li > a {
+#toc ul.sectlevel1 > li > a {
   font-weight: 600;
   font-style: normal;
   color: var(--brand-primary-strong);
@@ -173,14 +181,23 @@ body.book {
 .sect1 { break-before: page; }
 .sect1:first-child { break-before: avoid; }
 
+/* The closing License page (convert.js always appends one - see its own comment) is a
+   [discrete] heading, so it isn't wrapped in a .sect1 div the way every real chapter is,
+   and therefore doesn't inherit the page-break-before rule above. */
+#license { break-before: page; }
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-body);
   color: var(--brand-primary-strong);
   font-weight: 700;
   break-after: avoid;
 }
-h2 { font-size: 18pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 4pt; }
-h3 { font-size: 14pt; }
+/* h2 is this book's chapter title (every merged page's own top-level heading - see
+   convert.js's own comment on heading levels) - testing locally against docs-java-reference
+   per a style pass comparing against the legacy pipeline's own output, where chapter
+   titles were much more prominent than this theme's original 18pt. */
+h2 { font-size: 26pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 6pt; }
+h3 { font-size: 15pt; }
 h4 { font-size: 12pt; }
 
 a { color: var(--brand-primary); text-decoration: none; }
@@ -437,19 +454,22 @@ div.labels {
   align-items: flex-start;
   flex-direction: row-reverse;
 }
+/* On the real site, `.header-label-container > div.labels` sits inline to the right of
+   its title by default, and client-side JS adds `.wrapped` (below, full-width) only when
+   the title doesn't have room to share its line with the labels. That JS never runs here
+   - there's no live layout to measure against in a static PDF render - so this static
+   theme always applies the "wrapped" styling outright instead of the pre-JS default,
+   rather than ever trying to fit a label beside a title on the page's fixed, narrow
+   content width. */
 .header-label-container {
-  display: flex;
-  flex-wrap: wrap;
+  display: block;
 }
 .admonitionblock div.labels { padding: 0.5rem 0 1rem; }
 .exampleblock div.labels { padding: 0.5rem; }
 .header-label-container > div.labels {
-  justify-content: space-between;
-  margin-left: auto;
-}
-.header-label-container > div.labels.wrapped {
   margin-left: 0;
   margin-top: 0.5rem;
+  justify-content: flex-start;
 }
 h1 > .header-label {
   margin-top: 1.2rem;

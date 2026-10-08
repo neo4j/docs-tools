@@ -7,6 +7,7 @@
 // node_modules happens to hoist things - see this package's own README.
 
 const { spawn } = require('node:child_process')
+const fs = require('node:fs')
 const path = require('node:path')
 
 // asciidoctor-pdf needs @asciidoctor/core 4.x while Antora needs 2.x, and it
@@ -66,6 +67,22 @@ function dedupeGlossary (adoc) {
   if (glossaryChunk) result = result.trimEnd() + '\n\n' + glossaryChunk + '\n'
   return result
 }
+
+// Every PDF this pipeline produces gets the same closing License page appended -
+// not a per-docset opt-in, the same way the old Gradle pipeline's build.gradle
+// unconditionally appended its own copy of this page to every book's pdfNav.
+// Vendored here (rather than read from a consuming docset's own content, the
+// way a couple of repos still happen to carry a copy of this exact page at
+// modules/ROOT/pages/license.adoc left over from that old pipeline, unused by
+// their nav and therefore invisible to this one) so every docset gets it
+// identically regardless of what that docset's own content tree does or
+// doesn't contain. `[discrete]` keeps it out of the book's own table of
+// contents, same as a real book's colophon page; the heading is still a
+// level-1 (`==`) heading, matching every other chapter this pipeline merges
+// in, so it inherits the same typography - only the page-break-before (since a
+// discrete heading, unlike a real chapter, isn't wrapped in its own `.sect1`)
+// needs a dedicated rule in print.css.
+const LICENSE_PAGE = fs.readFileSync(path.join(__dirname, '../pages/license.adoc'), 'utf8')
 
 function readStdin () {
   const chunks = []
@@ -140,5 +157,5 @@ readStdin().then((adoc) => {
     process.exit(1)
   })
   child.on('close', (status) => process.exit(status ?? 1))
-  child.stdin.end(dedupeGlossary(adoc))
+  child.stdin.end(dedupeGlossary(adoc).trimEnd() + '\n\n' + LICENSE_PAGE)
 })
