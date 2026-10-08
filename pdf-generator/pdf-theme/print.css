@@ -474,6 +474,15 @@ div.labels {
    content width. */
 .header-label-container {
   display: block;
+  /* .header-label-container is always the heading element itself (see
+     process-labels.js's own labelsLocation logic) with its labels div appended as a
+     child, not a sibling - so without this, a heading whose title text just barely
+     fits at the bottom of a page can have its labels div alone pushed onto the next
+     page, split from the title it belongs to. break-inside keeps the whole heading
+     (title text + labels) together as one unit, moving it to the next page entirely
+     when it doesn't fit, the same way a heading on its own already does via
+     h1..h6's break-after: avoid. */
+  break-inside: avoid;
 }
 .admonitionblock div.labels { padding: 0.5rem 0 1rem; }
 .exampleblock div.labels { padding: 0.5rem; }
