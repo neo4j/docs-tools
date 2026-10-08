@@ -197,8 +197,19 @@ h1, h2, h3, h4, h5, h6 {
    per a style pass comparing against the legacy pipeline's own output, where chapter
    titles were much more prominent than this theme's original 18pt. */
 h2 { font-size: 26pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 6pt; }
-h3 { font-size: 15pt; }
-h4 { font-size: 12pt; }
+h3 { font-size: 18pt; }
+h4 { font-size: 14pt; }
+/* A page nested two levels deep in its component's nav (e.g. a page under a sub-chapter)
+   has its own internal headings shifted down by that same nav depth once merged into this
+   book, same as the page's own top heading is (see convert.js's comment on heading
+   levels) - a heading the source HTML renders as h3/h4 can easily land as h5/h6 here.
+   h5/h6 had no size rule at all before this, so they fell back to the renderer's tiny
+   unstyled defaults - barely legible next to 10.5pt body text. h6 is Asciidoctor's deepest
+   possible heading level, so it gets no further room to shrink into here; italicizing it
+   instead of sizing it down keeps it readable as a heading at a size this close to body
+   text. */
+h5 { font-size: 12pt; }
+h6 { font-size: 11pt; font-style: italic; }
 
 a { color: var(--brand-primary); text-decoration: none; }
 
