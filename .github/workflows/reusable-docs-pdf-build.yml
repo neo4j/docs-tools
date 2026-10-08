@@ -102,6 +102,33 @@ jobs:
         ref: ${{ env.BUILD_REF }}
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
+    # docset name/version are antora.yml's own job - that's literally what the
+    # file is for - so read them directly here, once, rather than each later
+    # step inferring either one from Antora's own build-output path shape (a
+    # docset/version pair that's merely *usually* right because Antora's
+    # default output layout happens to use antora.yml's own name/version as
+    # its directory names isn't the same as reading the real source of truth -
+    # see "Get the dir that contains the PDF" below for a case where inferring
+    # from path shape alone picked the wrong version outright).
+    - name: Read docset name and version from antora.yml
+      working-directory: ${{ env.DOCS_DIR }}
+      id: antora-yml
+      run: |
+        name=$(grep -m1 '^name:' antora.yml | sed -E "s/^name:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
+        if [ -z "$name" ]; then
+          echo "::error::Could not read 'name' from antora.yml"
+          exit 1
+        fi
+        echo "name=$name" >> "$GITHUB_OUTPUT"
+        if [ "${VERSIONLESS}" != "true" ]; then
+          version=$(grep -m1 '^version:' antora.yml | sed -E "s/^version:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
+          if [ -z "$version" ]; then
+            echo "::error::Could not read 'version' from antora.yml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Use Node.js version ${{ env.NODE_VERSION }}
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
@@ -206,11 +233,7 @@ jobs:
           # neo4j-java-reference-4.4.pdf while building the dev/2026.10 content).
           # Match on the version build-ref's own antora.yml actually declares
           # instead of guessing from file-listing order.
-          current_version=$(grep -m1 '^version:' antora.yml | sed -E "s/^version:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
-          if [ -z "$current_version" ]; then
-            echo "::error::Could not read 'version' from antora.yml to disambiguate between multiple PDFs: $pdf_candidates"
-            exit 1
-          fi
+          current_version="${{ steps.antora-yml.outputs.version }}"
           pdf_path=$(echo "$pdf_candidates" | grep -F "/${current_version}/_exports/" | head -1)
           if [ -z "$pdf_path" ]; then
             echo "::error::No PDF found for version '$current_version' under build/ - found: $pdf_candidates"
@@ -256,19 +279,16 @@ jobs:
         path: ${{ env.DOCS_DIR }}/build/log
         retention-days: ${{ inputs.retain-artifacts }}
 
-    # @antora/pdf-extension always places a component version's PDF at
-    # <component>/<version>/_exports/<file>.pdf (relative to the site's own
-    # output.dir, which is why pdf-path above is found rather than assumed) - so the
-    # docset/version a publish step needs can be read straight back out of that path,
-    # with no separate antora.yml parsing needed. A versionless component (antora.yml's
-    # version: ~) has no version segment at all - just <component>/_exports/<file>.pdf -
-    # and there's no way to tell the two shapes apart from the path alone (nothing stops
-    # a versionless docset's own name looking exactly like a version segment, or vice
-    # versa), hence the explicit, self-reported versionless input rather than trying to
-    # detect it. Deliberately placed after both artifact uploads above: a failure here
-    # shouldn't suppress the PDF/log artifacts a human would want to debug it with (an
-    # `if:` without always() implicitly requires success() on every earlier step, so an
-    # earlier failure here would skip them too).
+    # docset/version themselves already came from antora.yml (see the "Read
+    # docset name and version from antora.yml" step, right after checkout) -
+    # this step just re-exposes them as this job's own outputs, after a cheap
+    # sanity check that the PDF actually landed where @antora/pdf-extension's
+    # own <component>/<version>/_exports/<file>.pdf (or, versionless,
+    # <component>/_exports/<file>.pdf) convention says it should. Deliberately
+    # placed after both artifact uploads above: a failure here shouldn't
+    # suppress the PDF/log artifacts a human would want to debug it with (an
+    # `if:` without always() implicitly requires success() on every earlier
+    # step, so an earlier failure here would skip them too).
     - name: Determine docset and version from the PDF path
       if: steps.run-pdf-build.outcome == 'success'
       working-directory: ${{ env.DOCS_DIR }}
@@ -277,27 +297,11 @@ jobs:
         pdf_path="${{ steps.get-pdf-path.outputs.pdf-path }}"
         exports_dir=$(dirname "$pdf_path")
         if [ "$(basename "$exports_dir")" != "_exports" ]; then
-          echo "::error::Could not determine docset/version from PDF path '$pdf_path' - expected <docset>/_exports/<file>.pdf or <docset>/<version>/_exports/<file>.pdf"
+          echo "::error::Unexpected PDF path '$pdf_path' - expected <docset>/_exports/<file>.pdf or <docset>/<version>/_exports/<file>.pdf"
           exit 1
         fi
-        if [ "${VERSIONLESS}" = "true" ]; then
-          docset_dir=$(dirname "$exports_dir")
-          if [ "$docset_dir" = "." ]; then
-            echo "::error::Could not determine docset from PDF path '$pdf_path' - expected <docset>/_exports/<file>.pdf"
-            exit 1
-          fi
-          echo "docset=$(basename "$docset_dir")" >> "$GITHUB_OUTPUT"
-          echo "version=" >> "$GITHUB_OUTPUT"
-        else
-          version_dir=$(dirname "$exports_dir")
-          docset_dir=$(dirname "$version_dir")
-          if [ "$docset_dir" = "." ]; then
-            echo "::error::Could not determine docset/version from PDF path '$pdf_path' - expected <docset>/<version>/_exports/<file>.pdf"
-            exit 1
-          fi
-          echo "docset=$(basename "$docset_dir")" >> "$GITHUB_OUTPUT"
-          echo "version=$(basename "$version_dir")" >> "$GITHUB_OUTPUT"
-        fi
+        echo "docset=${{ steps.antora-yml.outputs.name }}" >> "$GITHUB_OUTPUT"
+        echo "version=${{ steps.antora-yml.outputs.version }}" >> "$GITHUB_OUTPUT"
 
     - name: Fail job if PDF build failed
       if: always() && steps.run-pdf-build.outcome == 'failure'
