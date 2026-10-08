@@ -144,6 +144,22 @@ const PUPPETEER_TIMEOUT_ENV = {
 // this can't just be a relative value in the playbook/assembler config.
 const args = process.argv.slice(2)
 const stdinMarkerIdx = args.lastIndexOf('-')
+// @antora/assembler already passes the real `site.url` from the docset's own
+// publish.yml (the same canonical production URL reusable-docs-build.yml's
+// HTML build uses, e.g. https://neo4j.com/docs) as a plain `-a` flag here -
+// absolute-links-postprocessor.js needs just its origin (scheme + host) to
+// rewrite a root-relative href into a full URL. Reading it back out of these
+// args rather than hardcoding the origin separately means it can't drift
+// from whatever value a docset's own playbook actually declares.
+function siteOrigin () {
+  const idx = args.findIndex((arg) => arg.startsWith('site-url='))
+  if (idx === -1) return null
+  try {
+    return new URL(args[idx].slice('site-url='.length)).origin
+  } catch {
+    return null
+  }
+}
 // roles-labels-postprocessor.js and colophon-postprocessor.js port/add
 // behavior of their own (see those files); macros-adapter.js and
 // remote-include-adapter.js wrap the real @neo4j-documentation packages -
@@ -160,6 +176,8 @@ const extraArgs = [
   '--extension', COLOPHON_POSTPROCESSOR,
   '--extension', ABSOLUTE_LINKS_POSTPROCESSOR,
 ]
+const origin = siteOrigin()
+if (origin) extraArgs.push('-a', `absolute-link-origin=${origin}`)
 if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
 // Reading from stdin (this is piped the merged .adoc, not a real file - see
 // below), asciidoctor-web-pdf invents a fictive input path rooted at

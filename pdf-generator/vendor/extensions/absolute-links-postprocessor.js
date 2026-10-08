@@ -26,17 +26,16 @@ const { parse: parseHTML } = require('node-html-parser')
 // internally - see roles-labels-postprocessor.js's own comment on this.
 const { Postprocessor } = require('asciidoctor')
 
-// The production origin every PDF should link back to, however it was
-// built or wherever its own build happens to be published (dev, staging, a
-// PR preview, ...) - a PDF is a standalone, offline-readable artifact with
-// an effectively permanent lifetime once downloaded, so its links should
-// point at the one real, durable destination rather than wherever this
-// particular build happened to run.
-const PRODUCTION_ORIGIN = 'https://neo4j.com'
-
 class AbsoluteLinksPostprocessor extends Postprocessor {
   process (document, output) {
     if (!output.includes('href="/')) return output
+    // convert.js reads this back out of the docset's own publish.yml site.url
+    // (the same canonical production URL reusable-docs-build.yml's HTML build
+    // uses) and passes it on as this attribute - see its own siteOrigin()
+    // comment. Falls back to the real production origin if that ever isn't
+    // available, rather than leaving a root-relative, unusable link in a
+    // downloaded, standalone PDF.
+    const origin = document.getAttribute('absolute-link-origin') || 'https://neo4j.com'
     const root = parseHTML(output)
     root.querySelectorAll('a[href]').forEach((a) => {
       const href = a.getAttribute('href')
@@ -44,7 +43,7 @@ class AbsoluteLinksPostprocessor extends Postprocessor {
       // a different origin entirely) and everything else (full URLs,
       // same-page "#fragment"s, "mailto:", ...) untouched.
       if (href.startsWith('/') && !href.startsWith('//')) {
-        a.setAttribute('href', PRODUCTION_ORIGIN + href)
+        a.setAttribute('href', origin + href)
       }
     })
     return root.toString()
