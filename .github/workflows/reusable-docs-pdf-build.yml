@@ -188,10 +188,34 @@ jobs:
         # Excludes build/assembler/ - the assembler's own intermediate working
         # copy, not the real deliverable - since output.dir (where the real
         # one lands) varies by playbook (e.g. build/site vs build/docs).
-        pdf_path=$(find build -path '*/assembler/*' -prune -o -iname '*.pdf' -print | head -1)
-        if [ -z "$pdf_path" ]; then
+        pdf_candidates=$(find build -path '*/assembler/*' -prune -o -iname '*.pdf' -print)
+        if [ -z "$pdf_candidates" ]; then
           echo "::error::No PDF found under build/ - check the Antora log above"
           exit 1
+        fi
+        if [ "${VERSIONLESS}" = "true" ]; then
+          # No version segment to disambiguate by - only one PDF is expected.
+          pdf_path=$(echo "$pdf_candidates" | head -1)
+        else
+          # A docset whose playbook builds more than one component version in the
+          # same run (e.g. older versioned branches alongside the one actually
+          # being published here, like docs-java-reference's 4.4/5.x/HEAD content
+          # sources) produces one PDF per version - picking whichever `find`
+          # happens to list first silently exports the wrong version's PDF
+          # (confirmed directly: docs-java-reference's first real run exported
+          # neo4j-java-reference-4.4.pdf while building the dev/2026.10 content).
+          # Match on the version build-ref's own antora.yml actually declares
+          # instead of guessing from file-listing order.
+          current_version=$(grep -m1 '^version:' antora.yml | sed -E "s/^version:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
+          if [ -z "$current_version" ]; then
+            echo "::error::Could not read 'version' from antora.yml to disambiguate between multiple PDFs: $pdf_candidates"
+            exit 1
+          fi
+          pdf_path=$(echo "$pdf_candidates" | grep -F "/${current_version}/_exports/" | head -1)
+          if [ -z "$pdf_path" ]; then
+            echo "::error::No PDF found for version '$current_version' under build/ - found: $pdf_candidates"
+            exit 1
+          fi
         fi
         # Matches the legacy Gradle pipeline's own neo4j-<name>-<version>.pdf naming -
         # @antora/assembler's own filename (just <component>-<version>, no product
