@@ -24,6 +24,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Restricted to the dev branch in the repo settings. Also set as the
+    # environment name on each package Trusted Publisher on npmjs.com.
+    environment: npm-publish
     permissions:
       contents: read
       id-token: write # npm trusted publishing (OIDC); no npm token is stored
