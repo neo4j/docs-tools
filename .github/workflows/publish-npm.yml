@@ -24,6 +24,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC); no npm token is stored
 
     steps:
 
@@ -35,7 +38,6 @@ jobs:
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         node-version: 24
-        registry-url: https://registry.npmjs.org
 
     - name: Find packages with an unpublished version
       id: find
@@ -78,10 +80,10 @@ jobs:
     - name: Publish
       if: steps.find.outputs.dirs != ''
       env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         DIRS: ${{ steps.find.outputs.dirs }}
       run: |
         set -euo pipefail
+        echo "npm $(npm --version) (trusted publishing needs 11.5.1 or later)"
         for d in $DIRS; do
           echo "::group::Publishing $d"
           (cd "$d" && npm publish --access public --ignore-scripts)

@@ -17,5 +17,10 @@
   },
   "devDependencies": {
     "jsonschema": "1.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
+    "directory": "extensions/antora/roles-labels"
   }
 }

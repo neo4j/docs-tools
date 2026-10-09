@@ -28,5 +28,10 @@
     "@neo4j-documentation/macros": "1.0.4",
     "@neo4j-documentation/remote-include": "1.0.0",
     "node-html-parser": "9.0.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
+    "directory": "pdf-generator"
   }
 }

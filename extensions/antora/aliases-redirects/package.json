@@ -10,5 +10,10 @@
     "antora"
   ],
   "author": "Neo4j",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
+    "directory": "extensions/antora/aliases-redirects"
+  }
 }
