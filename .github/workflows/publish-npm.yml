@@ -1,0 +1,89 @@
+name: Publish npm packages
+
+# When a merge to dev changes the version in a package.json, publish that package
+# to npm. Only @neo4j-antora/* packages are published, and only if that exact
+# version is not already on the registry, so re-runs are safe.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+    - dev
+    paths:
+    - 'pdf-generator/package.json'
+    - 'extensions/antora/*/package.json'
+    - 'extensions/asciidoc/*/package.json'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        fetch-depth: 0
+
+    - name: Use Node.js version 24
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      with:
+        node-version: 24
+        registry-url: https://registry.npmjs.org
+
+    - name: Find packages with an unpublished version
+      id: find
+      env:
+        BEFORE: ${{ github.event.before }}
+        EVENT: ${{ github.event_name }}
+      run: |
+        set -euo pipefail
+        if [ -n "${BEFORE:-}" ] && ! [[ "$BEFORE" =~ ^0+$ ]] && git cat-file -e "$BEFORE" 2>/dev/null; then
+          base="$BEFORE"
+        else
+          base="HEAD^"
+        fi
+        globs=('pdf-generator/package.json' 'extensions/antora/*/package.json' 'extensions/asciidoc/*/package.json')
+        # workflow_dispatch has no diff to rely on: consider every publishable package
+        if [ "$EVENT" = "workflow_dispatch" ]; then
+          files=$(git ls-files -- "${globs[@]}")
+        else
+          files=$(git diff --name-only "$base" HEAD -- "${globs[@]}")
+        fi
+        dirs=""
+        for f in $files; do
+          [ -f "$f" ] || continue
+          name=$(jq -r '.name' "$f")
+          version=$(jq -r '.version' "$f")
+          private=$(jq -r '.private // false' "$f")
+          if [ "$private" = "true" ] || [[ "$name" != @neo4j-antora/* ]]; then
+            echo "Skipping $f ($name): private or not an @neo4j-antora package"
+            continue
+          fi
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "Skipping $name@$version: already published"
+            continue
+          fi
+          echo "Will publish $name@$version"
+          dirs="$dirs $(dirname "$f")"
+        done
+        echo "dirs=${dirs# }" >> "$GITHUB_OUTPUT"
+
+    - name: Publish
+      if: steps.find.outputs.dirs != ''
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        DIRS: ${{ steps.find.outputs.dirs }}
+      run: |
+        set -euo pipefail
+        for d in $DIRS; do
+          echo "::group::Publishing $d"
+          (cd "$d" && npm publish --access public --ignore-scripts)
+          echo "::endgroup::"
+        done
