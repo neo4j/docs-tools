@@ -23,6 +23,15 @@ Tone and voice, writing style, terminology consistency, list/heading
 conventions, inclusive language, punctuation, and formatting of
 admonitions/code/labels.
 
+Also flag hardcoded links to the Neo4j docs site, such as
+`link:https://neo4j.com/docs/...[text]` or `xref:https://neo4j.com/docs/...[text]`.
+Recommend replacing the `https://neo4j.com/docs` prefix with the
+`{neo4j-docs-base-uri}` AsciiDoc attribute, for example
+`link:{neo4j-docs-base-uri}/cypher-manual/current/[Cypher Manual]`. Use another
+attribute instead only if the style guide names a more specific one for that
+target. Do not flag links to other neo4j.com paths (for example `/blog` or
+`/developer`), or links inside code blocks that are meant to be shown literally.
+
 ## Output
 Write your review as a single Markdown document to the file
 `style-review-comment.md` in the current working directory, using the Write
