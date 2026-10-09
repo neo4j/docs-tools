@@ -24,7 +24,7 @@ conventions, inclusive language, punctuation, and formatting of
 admonitions/code/labels.
 
 Also flag hardcoded links to the Neo4j docs site, such as
-`link:https://neo4j.com/docs/...[text]` or `xref:https://neo4j.com/docs/...[text]`.
+`link:https://neo4j.com/docs/...[text]`.
 Recommend replacing the `https://neo4j.com/docs` prefix with the
 `{neo4j-docs-base-uri}` AsciiDoc attribute, for example
 `link:{neo4j-docs-base-uri}/cypher-manual/current/[Cypher Manual]`. Use another
