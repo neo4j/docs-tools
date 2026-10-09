@@ -216,11 +216,12 @@ jobs:
         # are only installed under docs-dir's node_modules.
         NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
       # --url, same as reusable-docs-build.yml's own HTML build: cascades into the
-      # docset's own site-url, which assembler passes on to build.command as a plain
-      # -a flag - convert.js reads it back out to resolve absolute-links-postprocessor.js's
-      # rewrite origin (see its own comment), rather than always falling back to the
-      # docset's own publish.yml default (its real prod URL) regardless of which
-      # environment this PDF is actually being published to.
+      # docset's own site-url (used for canonical links/sitemaps). DOCS_PUBLISH_URL
+      # itself (this step's own env, set above) is also what convert.js reads
+      # directly via process.env - Antora's own CLI has no generic attribute-override
+      # flag to pass it through any other way, but env vars already reach that child
+      # process for free. See convert.js's own linkPrefix() comment for why
+      # absolute-links-postprocessor.js needs this exact value, not just an origin.
       run: npm run "$PACKAGE_SCRIPT" -- --url "$DOCS_PUBLISH_URL" $ANTORA_CLI_EXTENSIONS
 
     - name: Get the dir that contains the PDF
