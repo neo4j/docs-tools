@@ -144,18 +144,29 @@ const PUPPETEER_TIMEOUT_ENV = {
 // this can't just be a relative value in the playbook/assembler config.
 const args = process.argv.slice(2)
 const stdinMarkerIdx = args.lastIndexOf('-')
-// @antora/assembler already passes the real `site.url` from the docset's own
-// publish.yml (the same canonical production URL reusable-docs-build.yml's
-// HTML build uses, e.g. https://neo4j.com/docs) as a plain `-a` flag here -
-// absolute-links-postprocessor.js needs just its origin (scheme + host) to
-// rewrite a root-relative href into a full URL. Reading it back out of these
-// args rather than hardcoding the origin separately means it can't drift
-// from whatever value a docset's own playbook actually declares.
-function siteOrigin () {
-  const idx = args.findIndex((arg) => arg.startsWith('site-url='))
-  if (idx === -1) return null
+// reusable-docs-pdf-build.yml sets DOCS_PUBLISH_URL as this job's own env - the
+// exact same value reusable-docs-build.yml's own HTML build resolves (dev
+// sandbox vs prod) - which reaches this child process for free (plain env var
+// inheritance), rather than needing to round-trip it through Antora's own CLI
+// args: Antora's top-level command has no generic attribute-override flag the
+// way plain asciidoctor does, so there's no "-a" to read it back out of here.
+//
+// A root-relative href (from neo4j-docs-base-uri - see
+// absolute-links-postprocessor.js's own comment) always starts with the literal
+// "/docs" - true site-root-relative on production, where DOCS_PUBLISH_URL's own
+// path is just "/docs", but not on a sandbox/dev deployment, whose
+// DOCS_PUBLISH_URL has a longer path that merely *ends* in that same "/docs"
+// segment (e.g. ".../sandbox/restructure/docs"). Stripping that one trailing
+// segment before prepending gives the prefix that's correct in both cases - the
+// href's own "/docs" fills back in whichever one was removed:
+//   prod:    https://neo4j.com/docs                           -> https://neo4j.com
+//   sandbox: https://development.neo4j.dev/docs/sandbox/restructure/docs
+//            -> https://development.neo4j.dev/docs/sandbox/restructure
+function linkPrefix () {
+  if (!process.env.DOCS_PUBLISH_URL) return null
   try {
-    return new URL(args[idx].slice('site-url='.length)).origin
+    const url = new URL(process.env.DOCS_PUBLISH_URL)
+    return url.origin + url.pathname.replace(/\/docs\/?$/, '')
   } catch {
     return null
   }
@@ -176,8 +187,8 @@ const extraArgs = [
   '--extension', COLOPHON_POSTPROCESSOR,
   '--extension', ABSOLUTE_LINKS_POSTPROCESSOR,
 ]
-const origin = siteOrigin()
-if (origin) extraArgs.push('-a', `absolute-link-origin=${origin}`)
+const prefix = linkPrefix()
+if (prefix) extraArgs.push('-a', `absolute-link-prefix=${prefix}`)
 if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
 // Reading from stdin (this is piped the merged .adoc, not a real file - see
 // below), asciidoctor-web-pdf invents a fictive input path rooted at

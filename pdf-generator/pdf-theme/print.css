@@ -192,7 +192,7 @@ body.book {
   line-height: 1.4;
 }
 #toc a {
-  display: flex;
+  display: block;
   color: var(--brand-text);
   text-decoration: none;
   font-size: 10.5pt;

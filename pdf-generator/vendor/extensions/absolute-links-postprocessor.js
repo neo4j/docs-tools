@@ -29,13 +29,13 @@ const { Postprocessor } = require('asciidoctor')
 class AbsoluteLinksPostprocessor extends Postprocessor {
   process (document, output) {
     if (!output.includes('href="/')) return output
-    // convert.js reads this back out of the docset's own publish.yml site.url
-    // (the same canonical production URL reusable-docs-build.yml's HTML build
-    // uses) and passes it on as this attribute - see its own siteOrigin()
-    // comment. Falls back to the real production origin if that ever isn't
-    // available, rather than leaving a root-relative, unusable link in a
-    // downloaded, standalone PDF.
-    const origin = document.getAttribute('absolute-link-origin') || 'https://neo4j.com'
+    // reusable-docs-pdf-build.yml passes DOCS_PUBLISH_URL through (the exact
+    // value its HTML build equivalent resolves - dev sandbox vs prod), and
+    // convert.js turns it into this attribute - see its own linkPrefix()
+    // comment for why this is more than just an origin. Falls back to the
+    // real production origin if that ever isn't available, rather than
+    // leaving a root-relative, unusable link in a downloaded, standalone PDF.
+    const prefix = document.getAttribute('absolute-link-prefix') || 'https://neo4j.com'
     const root = parseHTML(output)
     root.querySelectorAll('a[href]').forEach((a) => {
       const href = a.getAttribute('href')
@@ -43,7 +43,7 @@ class AbsoluteLinksPostprocessor extends Postprocessor {
       // a different origin entirely) and everything else (full URLs,
       // same-page "#fragment"s, "mailto:", ...) untouched.
       if (href.startsWith('/') && !href.startsWith('//')) {
-        a.setAttribute('href', origin + href)
+        a.setAttribute('href', prefix + href)
       }
     })
     return root.toString()
