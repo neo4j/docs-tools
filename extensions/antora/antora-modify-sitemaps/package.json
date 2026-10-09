@@ -13,5 +13,10 @@
   "license": "MIT",
   "dependencies": {
     "semver": "7.8.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
+    "directory": "extensions/antora/antora-modify-sitemaps"
   }
 }
