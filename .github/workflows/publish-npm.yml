@@ -15,7 +15,6 @@ on:
     - 'pdf-generator/package.json'
     - 'extensions/antora/*/package.json'
     - 'extensions/asciidoc/*/package.json'
-  workflow_dispatch:
 
 concurrency:
   group: publish-npm
@@ -46,7 +45,6 @@ jobs:
       id: find
       env:
         BEFORE: ${{ github.event.before }}
-        EVENT: ${{ github.event_name }}
       run: |
         set -euo pipefail
         if [ -n "${BEFORE:-}" ] && ! [[ "$BEFORE" =~ ^0+$ ]] && git cat-file -e "$BEFORE" 2>/dev/null; then
@@ -55,12 +53,7 @@ jobs:
           base="HEAD^"
         fi
         globs=('pdf-generator/package.json' 'extensions/antora/*/package.json' 'extensions/asciidoc/*/package.json')
-        # workflow_dispatch has no diff to rely on: consider every publishable package
-        if [ "$EVENT" = "workflow_dispatch" ]; then
-          files=$(git ls-files -- "${globs[@]}")
-        else
-          files=$(git diff --name-only "$base" HEAD -- "${globs[@]}")
-        fi
+        files=$(git diff --name-only "$base" HEAD -- "${globs[@]}")
         dirs=""
         for f in $files; do
           [ -f "$f" ] || continue
