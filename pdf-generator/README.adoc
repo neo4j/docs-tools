@@ -65,18 +65,31 @@ override individual assembler settings if needed.
   Also works around a real bug (`ifndef::backend-pdf[]` not evaluating
   correctly under this pipeline) for docsets using that idiom - a no-op for
   any docset that doesn't.
-- `pdf-theme/print.css` - print stylesheet targeting Asciidoctor's standard
-  HTML5 backend class names (`sect1`, `admonitionblock`, `listingblock`,
-  `tableblock`, `label`, ...), using colour/font tokens copied from
-  `docs-ui`'s `src/css/vars.css` (itself resolving to raw Needle design
-  system tokens in `@neo4j-ndl/base`'s `tokens/css/tokens.css`) and
-  `docs-ui`'s `src/css/labels.css`. Not a fork of the real site CSS wholesale
-  - Asciidoctor's default HTML5 output doesn't have Antora's `.doc` wrapper
-    markup most of the site CSS's selectors are written against, so most of
-    it wouldn't match anything here anyway. Fonts are vendored into
-    `pdf-theme/assets/fonts/` rather than read from a docset's own HTML
-    build output, so this theme has no dependency on that build having
-    already run.
+- `pdf-theme/print.css` - combined at build time (see `convert.js`'s
+  `buildStylesheet()`) with the real, live site's own `assets/css/site.css`
+  (fetched fresh from whichever environment `DOCS_PUBLISH_URL` points at -
+  dev sandbox vs prod have different CSS, not just a different host) and
+  Google Fonts' own Public Sans CSS - real site.css supplies almost all
+  content styling (admonitions, labels, tables, images, syntax-highlighting
+  token colours, ...) for free, kept automatically in sync with the live
+  site as it evolves, rather than this theme hand-reimplementing (and
+  inevitably drifting from) each one individually. `print.css` itself is
+  only what's genuinely paged-media-specific (page size/margins, the cover/
+  colophon/TOC, footnote floats) plus a deliberate, documented set of
+  overrides for places real site.css assumes a live, scripted browser page
+  this static render doesn't have - most prominently, several `display:
+  flex` layouts (`.imageblock`, `.sect2`, ...) that this renderer
+  (Vivliostyle) doesn't paginate correctly at book length, overridden back
+  to `display: block` (see `doc-wrapper-postprocessor.js` for why these
+  selectors, written against Antora's own `.doc`-wrapped HTML, match this
+  pipeline's plain Asciidoctor HTML5 output at all). Asciidoctor's own HTML5
+  backend has no Cypher syntax-highlighting grammar; `vendor/languages/
+  cypher.js` vendors the same community `highlightjs-cypher` grammar the
+  real site itself bundles (confirmed byte-for-byte), registered via
+  `cypher-language-adapter.js`. Fonts are vendored into
+  `pdf-theme/assets/fonts/` rather than read from a docset's own HTML
+  build output, so this theme has no dependency on that build having
+  already run.
 - `extensions/` - `roles-labels-postprocessor.js` ports the essential parts
   of the Antora extension of the same name (see "Known limitations" below);
   `macros-adapter.js` and `remote-include-adapter.js` wrap the real
@@ -152,7 +165,20 @@ override individual assembler settings if needed.
   (e.g. the cover or a colophon page) instead of inline marks. Needs a call
   on the right behaviour before doing the (otherwise straightforward)
   registration work.
-- This package's `print.css` label colours are hand-resolved from
-  `docs-ui`'s source files, not read from them live - if the Needle tokens or
-  `docs-ui`'s `vars.css`/`labels.css` change, this drifts until someone
-  notices and re-syncs it by hand.
+- This package's `print.css` still carries its own hand-resolved copy of
+  `docs-ui`'s label colours (`span.label--*`) as a fallback for when the
+  real site.css fetch fails (see `buildStylesheet()`'s own comment) - those,
+  not read from `docs-ui` live, can drift from the Needle tokens/`labels.css`
+  they were resolved from until someone notices and re-syncs them by hand.
+  Normal builds (the fetch succeeding) get live label colours from the real
+  site.css instead, same as everything else.
+- A table with many columns and no `cols=` width hints (Asciidoctor then
+  emits no `<colgroup>` at all) can still wrap a column's own header word
+  mid-word even when the column is visually wide enough for it, because
+  this renderer's table layout starves a short-content column's width in
+  favour of a sibling column holding a long, unbreakable value (e.g. a
+  `"RELATIONSHIP"`-length string) - `table-layout: fixed` (the standard CSS
+  fix for exactly this) has no visible effect here, suggesting Vivliostyle's
+  own paginated-table layout doesn't fully implement it. Not yet resolved -
+  a very-many-column result table is a real, pre-existing edge case, not a
+  regression from the real-site.css-reuse work above.

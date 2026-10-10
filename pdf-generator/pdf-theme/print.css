@@ -1,9 +1,20 @@
 /* Print-specific stylesheet shared by every docset's PDF export (see
    docs-tools/pdf/README - checked out into each repo's build by
-   reusable-pdf-build.yml). Reuses brand tokens read from the real site.css
-   (build/site/assets/css/site.css) rather than forking that file, since
-   Asciidoctor's HTML5 backend (used by asciidoctor-web-pdf) does not produce
-   Antora's `.doc` wrapper markup.
+   reusable-pdf-build.yml).
+
+   convert.js fetches the real, live site.css and concatenates it before this
+   file into one combined stylesheet - real site.css supplies almost all real
+   content styling (admonitions, labels, tables, quoteblocks, images, examples,
+   ...) for free, kept automatically in sync with the live site as it evolves,
+   rather than this theme hand-reimplementing (and inevitably drifting from)
+   each one individually - doc-wrapper-postprocessor.js adds the `docs`/`doc`
+   classes real site.css's selectors expect but plain Asciidoctor html5 output
+   doesn't have on its own. This file only has what's genuinely paged-media
+   specific and has no browser equivalent at all: @page size/margins, the
+   cover/colophon/license pages, the TOC's leader() dots, footnote floats,
+   and page-break rules - plus a handful of small, deliberate overrides (see
+   their own comments) for places real site.css assumes a live, scripted
+   browser page this static render doesn't have.
 
    Every asset path below is relative to this file's own location, not to
    whatever repo/cwd the build runs in - a browser resolves CSS url()s
@@ -11,6 +22,15 @@
    wherever docs-tools gets checked out. Font files are vendored into
    assets/fonts/ here (not read from a docset's own build output) so this
    theme has no dependency on that docset's HTML build having already run. */
+:root {
+  /* Real site.css declares `color-scheme: light dark` (supports both, picked by
+     the viewer's own OS/browser preference) - meaningless for a static, downloaded
+     PDF with no "viewer preference" of its own, and left unset would be at the
+     mercy of whatever default the renderer's own environment happens to have.
+     Forced to light explicitly, after real site.css (loads first in the combined
+     stylesheet - see convert.js) so this wins on equal specificity. */
+  color-scheme: light;
+}
 @font-face {
   font-family: 'Roboto Mono';
   font-weight: 400;
@@ -37,6 +57,9 @@
   --brand-danger-bg: #fdf1ef;
   --brand-warning: #8a5a00;
   --brand-warning-bg: #fdf6e8;
+  --brand-success: #3f7824;
+  --brand-success-border: #90cb62;
+  --brand-success-bg: #e7fcd7;
   --font-body: 'Public Sans', 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-mono: 'Roboto Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
@@ -96,6 +119,13 @@ body.book {
   color: var(--brand-text);
   font-size: 10.5pt;
   line-height: 1.5;
+  /* Real site.css sets a bare `body{font-weight:var(--weight-light)}` (300) - meant for
+     its own Public Sans webfont (see the Google Fonts @import this theme adds below),
+     not whatever this static PDF render actually has loaded, and reads as faint, thin
+     text next to this theme's own headings. `body.book` (element+class) already
+     outranks that bare `body` (element-only) rule, so this alone is enough to win -
+     reported directly: "text is just thin". */
+  font-weight: 400;
 }
 
 #cover.title-page {
@@ -211,12 +241,34 @@ body.book {
 .sect1 { break-before: page; }
 .sect1:first-child { break-before: avoid; }
 
+/* The sandbox/restructure site.css (docs-ui, not yet in production) lays every level-2
+   section's own wrapper div out as `body.docs .sect2{display:flex;flex-direction:column;
+   border-radius:16px;...}` - our own doc-wrapper-postprocessor.js already adds `docs` to
+   <body>, so this matches every single `.sect2` directly. Harmless for one or two
+   sections in a browser, but this renderer (Vivliostyle) can't paginate a long document
+   with dozens/hundreds of `.sect2`s all laid out as flex columns - confirmed directly: a
+   real multi-chapter book (production site.css: 305 pages, ~200s, succeeds) hard-fails
+   (180s timeout, no PDF at all) the moment just this one rule is present, same root
+   cause and same fix as the `.toc a`/`.imageblock` `display:flex` bugs already fixed
+   above - block layout gives the same visual stacking without the flex layout this
+   renderer can't handle at this scale. */
+#pdf-export .sect2 { display: block; }
+
 /* The closing License page (convert.js always appends one - see its own comment) is a
    [discrete] heading, so it isn't wrapped in a .sect1 div the way every real chapter is,
    and therefore doesn't inherit the page-break-before rule above. */
 #license { break-before: page; }
 
-h1, h2, h3, h4, h5, h6 {
+/* `#pdf-export` (the id doc-wrapper-postprocessor.js adds to <body>) prefixes every
+   heading/code/table/admonition/quoteblock/label selector below - real site.css styles
+   all of these the same way, under its own `.doc <thing>` (or deeper, e.g.
+   `.doc h2:not(.discrete)`, `.doc table.tableblock>:not(thead) th`) selectors, which
+   otherwise out-specificity this theme's own plain element/single-class selectors for
+   the same property regardless of load order, and silently win - reported directly:
+   headings far too small, no table borders/stripes, malformed admonition/code-block
+   corners. See doc-wrapper-postprocessor.js's own comment on why an id (rather than
+   fixing each individually, as happened first with .imageblock below) is the right fix. */
+#pdf-export h1, #pdf-export h2, #pdf-export h3, #pdf-export h4, #pdf-export h5, #pdf-export h6 {
   font-family: var(--font-body);
   color: var(--brand-primary-strong);
   font-weight: 700;
@@ -226,9 +278,9 @@ h1, h2, h3, h4, h5, h6 {
    convert.js's own comment on heading levels) - testing locally against docs-java-reference
    per a style pass comparing against the legacy pipeline's own output, where chapter
    titles were much more prominent than this theme's original 18pt. */
-h2 { font-size: 26pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 6pt; }
-h3 { font-size: 18pt; }
-h4 { font-size: 14pt; }
+#pdf-export h2 { font-size: 26pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 6pt; }
+#pdf-export h3 { font-size: 18pt; }
+#pdf-export h4 { font-size: 14pt; }
 /* A page nested two levels deep in its component's nav (e.g. a page under a sub-chapter)
    has its own internal headings shifted down by that same nav depth once merged into this
    book, same as the page's own top heading is (see convert.js's comment on heading
@@ -238,30 +290,70 @@ h4 { font-size: 14pt; }
    possible heading level, so it gets no further room to shrink into here; italicizing it
    instead of sizing it down keeps it readable as a heading at a size this close to body
    text. */
-h5 { font-size: 12pt; }
-h6 { font-size: 11pt; font-style: italic; }
+#pdf-export h5 { font-size: 12pt; }
+#pdf-export h6 { font-size: 11pt; font-style: italic; }
 
-a { color: var(--brand-primary); text-decoration: none; }
+#pdf-export a { color: var(--brand-primary); text-decoration: none; }
 
 /* code */
-pre, code, kbd, tt {
+#pdf-export pre, #pdf-export code, #pdf-export kbd, #pdf-export tt {
   font-family: var(--font-mono);
 }
+/* Real site.css's own `.doc pre:not(.highlight){height:100%;overflow-x:auto;...}` is
+   written for a `pre` sitting inside its own scrollable widget in a browser (the
+   `.listingblock` card below) - a fixed/percentage height a renderer can scroll inside
+   is the opposite of what a paginated PDF needs, and this renderer (Vivliostyle) doesn't
+   grow or fragment a box constrained to `height:100%` across a page break, it just stops
+   - this, not the `.listingblock` break-inside rule below, is what was actually losing
+   the rest of a long listing's content: reported directly, still truncated on page 47
+   even after that rule was changed to `auto`. Reset to a real, unconstrained height so
+   the block can grow across as many pages as its content needs. */
+#pdf-export pre {
+  height: auto;
+}
 .listingblock {
-  break-inside: avoid-page;
+  /* A listing long enough to fill more than one page (reported directly: "codeblock in
+     Create the Movie Graph is truncated") can't have its own break avoided - forcing
+     avoid-page onto something taller than a full page doesn't push it to a fresh page,
+     it has nowhere that fits, and this renderer (Vivliostyle) drops the overflow instead
+     of falling back to breaking it, silently losing the rest of the block's content.
+     `auto` lets a long block break across pages like a normal paragraph would; a short
+     block (the common case) still naturally avoids breaking, since there's no pressure
+     to split something that already fits on one page. */
+  break-inside: auto;
   margin: 1em 0;
 }
-.listingblock pre {
+/* Real site.css's own `.doc .listingblock{border:1px solid ...;border-radius:.5rem}`
+   draws its own card border+radius on the OUTER wrapper div, a completely different
+   element from the `pre` this theme styles below - rather than one competing rule
+   losing the cascade, both simply painted, nested (reported directly: "rounded corners
+   which don't look right" - two slightly different rounded boxes, one just inside the
+   other). Reset to nothing here so the `pre`'s own border below is the only box drawn -
+   same root cause, same fix, as `.admonitionblock` further down. */
+#pdf-export .listingblock {
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+#pdf-export .listingblock pre {
   background: var(--brand-bg-strong);
   border: 0.5pt solid var(--brand-border);
   border-radius: 3pt;
+  /* Pairing a border-radius with a background on a box this renderer may slice across a
+     page break: without this, the background was observed painting fractionally past the
+     border's own inner edge at the rounded corners (most visible on the corner nearest a
+     page break), giving the border a broken/disappearing look right at the corner -
+     reported directly: "the bold border seems to disappear right in the corner".
+     background-clip: padding-box keeps the background strictly inside the border instead
+     of under it. */
+  background-clip: padding-box;
   padding: 8pt 10pt;
   font-size: 9pt;
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
 }
-.listingblock .title {
+#pdf-export .listingblock .title {
   font-weight: 600;
   color: var(--brand-text-weak);
   font-size: 9.5pt;
@@ -277,55 +369,137 @@ pre, code, kbd, tt {
    a wrapper class, since that covers both Asciidoctor's block (.imageblock) and inline
    (.image) image markup the same way. An image with an explicit width: attribute in
    its own image::[] macro still honours that (this only caps it, never upscales). */
-img {
+#pdf-export img {
   max-width: 100%;
   height: auto;
 }
+/* Real site.css lays `.doc .imageblock` out as `display: flex; flex-direction: column`
+   (centers the image, then its title/caption, beneath it) - harmless in a browser, but
+   Vivliostyle (this renderer's paged-media engine) doesn't size a flex column against the
+   page's content height the same way, and instead stretches the block to fill the entire
+   remaining page, leaving the image rendered tiny somewhere inside that oversized box. The
+   same category of bug as the TOC's `display: flex` (see #toc a above) - block + text-align
+   gets the same centered result without the flex layout Vivliostyle mishandles. */
+#pdf-export .imageblock {
+  display: block;
+  text-align: center;
+}
 
 /* tables */
-table.tableblock {
+#pdf-export table.tableblock {
   border-collapse: collapse;
+  /* `table-layout: auto` (the default) sizes each column by its own longest unbreakable
+     piece of content (here, a value like "RELATIONSHIP" or "token-lookup-1.0") - with
+     wrapping always allowed (`white-space`/`word-break` below), the renderer happily
+     starves a column with only short content (a header like "lastRead", data like "null")
+     down to far less than even its own header needs, to give that width to a column
+     whose longest token can't wrap - reported directly, precisely: "not even enough room
+     in the same column for the word null". `fixed` (with no per-column `width` set via
+     colgroup) instead divides the table's own width evenly across every column,
+     regardless of what any individual cell contains. */
+  table-layout: fixed;
+  /* Real site.css's own `table.tableblock` sets `border-radius:.25em;overflow:hidden`
+     (rounds and clips the table for its own un-collapsed card look) - border-collapse
+     and a clipping overflow don't agree on where a collapsed border actually paints in
+     this renderer, and the result was the table's own outer edge (left/right/bottom -
+     anywhere not already covered by the thead's own border-bottom) being clipped away
+     entirely, leaving only the inner grid lines visible - reported directly: "tables
+     have no left or right border". Resetting both, plus an explicit border on the table
+     element itself (belt-and-braces - the perimeter cells' own borders, below, already
+     cover this in a spec-conformant border-collapse implementation), removes the clip
+     and restores a plain, complete outer edge. */
+  border-radius: 0;
+  overflow: visible;
+  border: 0.5pt solid var(--brand-border);
   width: 100%;
   break-inside: auto;
   font-size: 9.5pt;
 }
-table.tableblock th, table.tableblock td {
+#pdf-export table.tableblock th, #pdf-export table.tableblock td {
   border: 0.5pt solid var(--brand-border);
   padding: 5pt 7pt;
   vertical-align: top;
+  /* Same box-sizing bug as the admonition-in-table-cell fix above, just unfixed here for
+     every ordinary cell - with no explicit box-sizing, border+padding (15pt total: 2x7pt
+     padding + 2x0.5pt border) are added on top of whatever width this renderer's table
+     layout resolves for the column, instead of being carved out of it, leaving less
+     actual room for text than the column's own visible width implies - reported
+     directly, precisely: "lastRead" wraps after just "lastR" in a column visibly wide
+     enough for the whole word. border-box keeps padding+border inside the resolved
+     width instead. */
+  box-sizing: border-box;
 }
-table.tableblock thead th {
+#pdf-export table.tableblock thead th {
   background: var(--brand-bg-strong);
   color: var(--brand-text);
   font-weight: 600;
 }
-tr { break-inside: avoid; }
+/* Zebra-striped data rows - reported directly: "tables are not striped". */
+#pdf-export table.tableblock > tbody > tr:nth-child(even) > td {
+  background: var(--brand-bg-strong);
+}
+#pdf-export tr { break-inside: avoid; }
 
 /* admonitions */
 .admonitionblock { break-inside: avoid-page; margin: 1em 0; }
-.admonitionblock table { width: 100%; border: none; }
+/* Same double-box bug as .listingblock above: real site.css's own
+   `.doc .admonitionblock{border-radius:.5rem;border-style:solid;border-width:1px}` draws
+   its own card border+radius on this outer wrapper, a different element from the
+   `td.content` box this theme styles below - both paint, nested (reported directly:
+   "same with admonitions"). Reset to nothing so td.content's own border below is the
+   only box drawn. */
+#pdf-export .admonitionblock {
+  border: none;
+  border-radius: 0;
+  background: none;
+  /* Moved here from td.content (still a real table-cell element structurally, even once
+     `display: block` below changes how it lays out) rather than there - an admonition
+     nested inside a real table cell (Asciidoctor's `a|` syntax) was rendering this as a
+     plain default-grey border on every side instead of the intended coloured left
+     accent, as if the `<td>`'s own border-resolution (inherited from being part of an
+     HTML `<table>`, regardless of its CSS display type) was overriding the explicit
+     border property - reported directly: admonition in a table "does not have the dark
+     left border like it normally does". `.admonitionblock` is a plain `<div>`, with no
+     such ambiguity, in or out of a table. */
+  border-left: 3pt solid var(--brand-border-strong);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+#pdf-export .admonitionblock table { width: 100%; border: none; }
 /* Asciidoctor renders an admonition as a table (icon cell + content cell). Laid out as a
    real table, a content table (or anything else with a footnote) inside it is a table
    nested in a table, and Vivliostyle then never finishes paginating a floated footnote in
    there - the build waits out the 180 s rendering timeout and produces no PDF at all.
    Only the content cell is shown (the icon cell is hidden below), so lay the admonition
    out as plain blocks instead. */
-.admonitionblock > table,
-.admonitionblock > table > tbody,
-.admonitionblock > table > tbody > tr,
-.admonitionblock td.content { display: block; }
-.admonitionblock td.icon { display: none; }
-.admonitionblock td.content {
-  border-left: 3pt solid var(--brand-border-strong);
+#pdf-export .admonitionblock > table,
+#pdf-export .admonitionblock > table > tbody,
+#pdf-export .admonitionblock > table > tbody > tr,
+#pdf-export .admonitionblock td.content { display: block; }
+#pdf-export .admonitionblock td.icon { display: none; }
+#pdf-export .admonitionblock td.content {
   padding: 6pt 10pt;
   background: var(--brand-bg-strong);
+  /* An admonition nested inside a table cell (Asciidoctor's `a|` cell syntax - reported
+     directly: an admonition "overlapping the edge of the table") renders its padding
+     added on top of the cell's own already-resolved width rather than inside it, pushing
+     the box past the table's own right edge - this renderer's table-cell layout doesn't
+     carry the real site.css's own `box-sizing: border-box` reset (confirmed present,
+     `html{box-sizing:border-box}` + `*,::before,::after{box-sizing:inherit}`) through
+     correctly once `td.content` is forced to `display: block` above (no longer a real
+     table-cell Vivliostyle's own table layout algorithm sizes the normal way).
+     Re-asserting both directly on the one box that actually has padding keeps it within
+     whatever width its container (a real table-cell, not touched here, or a plain page
+     column otherwise) actually resolved to. */
+  box-sizing: border-box;
+  max-width: 100%;
 }
 /* Style only the admonition's own title (a direct child of its content cell), not every
    `.title` inside it. A table in an admonition has its caption as `caption.title`; with
    these rules applied to it, the caption was made `display: block` (so it was laid out
    after the header row instead of above it) and shown in capitals and the admonition
    colour. */
-.admonitionblock td.content > .title {
+#pdf-export .admonitionblock td.content > .title {
   font-weight: 700;
   text-transform: uppercase;
   font-size: 8.5pt;
@@ -334,25 +508,34 @@ tr { break-inside: avoid; }
   display: block;
   margin-bottom: 3pt;
 }
-.admonitionblock.warning td.content,
-.admonitionblock.caution td.content {
+#pdf-export .admonitionblock.warning,
+#pdf-export .admonitionblock.caution {
   border-left-color: var(--brand-warning);
+}
+#pdf-export .admonitionblock.warning td.content,
+#pdf-export .admonitionblock.caution td.content {
   background: var(--brand-warning-bg);
 }
-.admonitionblock.warning td.content > .title,
-.admonitionblock.caution td.content > .title { color: var(--brand-warning); }
-.admonitionblock.important td.content {
-  border-left-color: var(--brand-danger);
+#pdf-export .admonitionblock.warning td.content > .title,
+#pdf-export .admonitionblock.caution td.content > .title { color: var(--brand-warning); }
+#pdf-export .admonitionblock.important { border-left-color: var(--brand-danger); }
+#pdf-export .admonitionblock.important td.content {
   background: var(--brand-danger-bg);
 }
-.admonitionblock.important td.content > .title { color: var(--brand-danger); }
-.admonitionblock.note td.content,
-.admonitionblock.tip td.content {
-  border-left-color: var(--brand-primary);
+#pdf-export .admonitionblock.important td.content > .title { color: var(--brand-danger); }
+#pdf-export .admonitionblock.note { border-left-color: var(--brand-primary); }
+#pdf-export .admonitionblock.note td.content {
   background: var(--brand-primary-weak);
 }
-.admonitionblock.note td.content > .title,
-.admonitionblock.tip td.content > .title { color: var(--brand-primary-strong); }
+#pdf-export .admonitionblock.note td.content > .title { color: var(--brand-primary-strong); }
+/* tip is its own colour (green/success) on the real site, not a reuse of note's blue -
+   reported directly: "there's a tip admon that is green in the old pdf but blue in the
+   new one". */
+#pdf-export .admonitionblock.tip { border-left-color: var(--brand-success-border); }
+#pdf-export .admonitionblock.tip td.content {
+  background: var(--brand-success-bg);
+}
+#pdf-export .admonitionblock.tip td.content > .title { color: var(--brand-success); }
 
 /* quoteblocks - includes a page's own [abstract]/{description} block (every page
    authors `[abstract]\n{description}` right after its own title), which Asciidoctor

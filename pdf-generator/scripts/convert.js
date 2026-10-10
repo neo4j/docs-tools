@@ -9,6 +9,7 @@
 const { spawn } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
+const os = require('node:os')
 
 // asciidoctor-pdf needs @asciidoctor/core 4.x while Antora needs 2.x, and it
 // doesn't declare @asciidoctor/core as its own dependency (only a peerDep on
@@ -26,13 +27,15 @@ const path = require('node:path')
 // through vendor/'s node_modules to the consumer's normal install, since
 // those have no such conflict and should stay deduped normally.
 const RENDERER = path.join(__dirname, '../vendor/node_modules/asciidoctor-pdf/bin/asciidoctor-web-pdf')
-const STYLESHEET = path.join(__dirname, '../pdf-theme/print.css')
+const PRINT_CSS = path.join(__dirname, '../pdf-theme/print.css')
 const ROLES_LABELS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/roles-labels-postprocessor.js')
 const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../vendor/extensions/remote-include-adapter.js')
 const MACROS_ADAPTER = path.join(__dirname, '../vendor/extensions/macros-adapter.js')
 const MATHJAX_ADAPTER = path.join(__dirname, '../vendor/extensions/mathjax-adapter.js')
 const COLOPHON_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/colophon-postprocessor.js')
 const ABSOLUTE_LINKS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/absolute-links-postprocessor.js')
+const DOC_WRAPPER_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/doc-wrapper-postprocessor.js')
+const CYPHER_LANGUAGE_ADAPTER = path.join(__dirname, '../vendor/extensions/cypher-language-adapter.js')
 
 // Unlike the extensions above, `@djencks/asciidoctor-mathjax` isn't a
 // dependency of this package - it's an opt-in feature a docset adds itself
@@ -118,6 +121,89 @@ function dedupeGlossary (adoc) {
 // needs a dedicated rule in print.css.
 const LICENSE_PAGE = fs.readFileSync(path.join(__dirname, '../pages/license.adoc'), 'utf8')
 
+// Fetched fresh at build time rather than vendored, so it can never drift from what
+// the live site actually looks like (see the print theme's own top comment for why
+// this pipeline reuses it at all) - the tradeoff is a new network dependency at build
+// time, consistent with this pipeline's existing ones (npm installs, the HTML build's
+// own UI bundle fetch). Same base DOCS_PUBLISH_URL as absolute-links-postprocessor.js's
+// own rewrite prefix (see linkPrefix() below), so this always matches whichever
+// environment's real site this PDF is standing in for - dev sandbox vs prod have
+// completely different site.css content (different nav, different feature flags), not
+// just a different URL for the "same" file.
+async function fetchRealSiteCss () {
+  const base = (process.env.DOCS_PUBLISH_URL || 'https://neo4j.com/docs').replace(/\/$/, '')
+  const url = `${base}/assets/css/site.css`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`)
+  return res.text()
+}
+
+// The real site's own body copy and headings are all set in Public Sans (see real
+// site.css's own font-family rules) - but, unlike Roboto Mono (vendored as local font
+// files - see print.css's own @font-face rules) or every other font real site.css
+// references (Roboto Mono, FontAwesome, Syne Neo - all declared via their own @font-face
+// with real font file URLs), Public Sans is never declared in site.css at all. The real
+// HTML page loads it from a separate <link> Antora's own template adds to <head>
+// (fonts.googleapis.com/css2?family=Public+Sans...), which this pipeline has no
+// equivalent of - nothing here ever fetches that second stylesheet, so Public Sans was
+// never actually available to any PDF this pipeline has built with real site.css, and
+// every reference to it silently fell through to its own fallback stack (Helvetica/
+// Arial), rendered at real site.css's own `font-weight:300` body default - reported
+// directly as "we seem to have lost the main font" / "text is just thin" (a generic
+// sans-serif has no true light weight to fall back to the way Public Sans does, so the
+// renderer fakes a thinner line weight instead).
+async function fetchGoogleFontCss () {
+  const url = 'https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap'
+  const res = await fetch(url, {
+    headers: {
+      // Google's font CSS endpoint serves different @font-face formats depending on
+      // the requesting User-Agent (old EOT/TTF for legacy browsers, WOFF2 otherwise) -
+      // the default fetch() UA here reads as neither to Google, and gets served a
+      // very old format Chromium (what this renderer actually uses) has no use for. A
+      // plain desktop Chrome UA string is enough to get the modern WOFF2 response.
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    },
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`)
+  return res.text()
+}
+
+// Written into print.css's own directory, not a generic temp dir - print.css's own
+// font/logo `url(...)` references are relative to wherever the stylesheet file itself
+// ends up (see its own top comment), so moving the combined file elsewhere would break
+// them. Real site.css's own url()s are already absolute (served from a CDN), so they're
+// unaffected either way. Named per-process so two concurrent builds sharing this same
+// install (unusual, but not impossible) can't clobber each other's file mid-write.
+async function buildStylesheet () {
+  const ownCss = fs.readFileSync(PRINT_CSS, 'utf8')
+  let realCss
+  try {
+    realCss = await fetchRealSiteCss()
+  } catch (err) {
+    // A docset's own content is still perfectly buildable without the real site's
+    // styling - degrade to this package's own (much thinner) print-only rules rather
+    // than failing the whole PDF over a transient network blip, the same tradeoff
+    // in-document `link:` targets failing to resolve would get in a live HTML build.
+    console.error(`::warning::Could not fetch the real site.css (${err.message}) - falling back to this package's own print-only styles, which cover far less (no admonition/label/table/example colors, etc.)`)
+    realCss = ''
+  }
+  let fontCss = ''
+  try {
+    fontCss = await fetchGoogleFontCss()
+  } catch (err) {
+    // Same degrade-gracefully tradeoff as site.css above - Public Sans not loading
+    // falls back to real site.css's own fallback stack (Helvetica/Arial), not a broken
+    // build.
+    console.error(`::warning::Could not fetch the Public Sans font CSS (${err.message}) - falling back to real site.css's own fallback font stack`)
+  }
+  const combined = realCss
+    ? `/* ---- Public Sans (fetched at build time - see fetchGoogleFontCss's own comment) ---- */\n${fontCss}\n\n/* ---- real site.css (fetched at build time) ---- */\n${realCss}\n\n/* ---- print.css (paged-media overrides) ---- */\n${ownCss}`
+    : ownCss
+  const outPath = path.join(path.dirname(PRINT_CSS), `.combined-stylesheet.${process.pid}.css`)
+  fs.writeFileSync(outPath, combined)
+  return outPath
+}
+
 function readStdin () {
   const chunks = []
   return new Promise((resolve, reject) => {
@@ -171,49 +257,68 @@ function linkPrefix () {
     return null
   }
 }
-// roles-labels-postprocessor.js and colophon-postprocessor.js port/add
-// behavior of their own (see those files); macros-adapter.js and
-// remote-include-adapter.js wrap the real @neo4j-documentation packages -
-// added here, __dirname-computed, for the same reason as the stylesheet
-// above. (table-footnotes has no equivalent here: CSS `float: footnote` -
-// see the print theme's own comment - already places a footnote on whatever
-// page its table lands on, natively, so there's nothing for a postprocessor
-// to move.)
-const extraArgs = [
-  '-a', `stylesheet=${STYLESHEET}`,
-  '--extension', ROLES_LABELS_POSTPROCESSOR,
-  '--extension', REMOTE_INCLUDE_ADAPTER,
-  '--extension', MACROS_ADAPTER,
-  '--extension', COLOPHON_POSTPROCESSOR,
-  '--extension', ABSOLUTE_LINKS_POSTPROCESSOR,
-]
-const prefix = linkPrefix()
-if (prefix) extraArgs.push('-a', `absolute-link-prefix=${prefix}`)
-if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
-// Reading from stdin (this is piped the merged .adoc, not a real file - see
-// below), asciidoctor-web-pdf invents a fictive input path rooted at
-// `--base-dir`/`-B` if given, else its own cwd (lib/cli.js's
-// _convertFromStdin), and writes its temporary intermediate HTML file next
-// to THAT path (lib/converter.js's getTemporaryHtmlFile), not next to the
-// real docdir the assembler passes via `-a docdir=...`. Without `-B`, that
-// temp HTML ends up sitting in whatever directory this script itself was
-// invoked from (the docset's own root, since that's antora's cwd) - one or
-// more levels away from `-a docdir`/`-a imagesoutdir`. Every image target,
-// resolved correctly as relative to the real docdir (e.g. `../_images/
-// foo.png`), then resolves relative to the WRONG directory when the
-// browser loads that temp HTML via file://, so every image in the PDF is
-// silently broken. Passing the same docdir here as `-B` puts the temp HTML
-// file where the image paths actually expect it to be.
-const docdirIdx = args.findIndex((arg) => arg.startsWith('docdir='))
-if (docdirIdx > 0 && args[docdirIdx - 1] === '-a') {
-  extraArgs.push('-B', args[docdirIdx].slice('docdir='.length))
-}
-const finalArgs =
-  stdinMarkerIdx === -1
-    ? [...args, ...extraArgs]
-    : [...args.slice(0, stdinMarkerIdx), ...extraArgs, ...args.slice(stdinMarkerIdx)]
+// roles-labels-postprocessor.js, colophon-postprocessor.js and
+// doc-wrapper-postprocessor.js port/add behavior of their own (see those
+// files); macros-adapter.js and remote-include-adapter.js wrap the real
+// @neo4j-documentation packages - added here, __dirname-computed, for the
+// same reason as the stylesheet above. (table-footnotes has no equivalent
+// here: CSS `float: footnote` - see the print theme's own comment - already
+// places a footnote on whatever page its table lands on, natively, so
+// there's nothing for a postprocessor to move.)
+Promise.all([buildStylesheet(), readStdin()]).then(([stylesheet, adoc]) => {
+  const extraArgs = [
+    '-a', `stylesheet=${stylesheet}`,
+    // Without this, asciidoctor-web-pdf never actually colors a code block -
+    // Antora's own template still adds class="language-x hljs" to every <code>
+    // regardless, since that's also the hook the real HTML site's client-side
+    // highlight.js looks for, but nothing in a static PDF ever runs that script.
+    // asciidoctor-web-pdf bundles its own server-side highlight.js adapter
+    // (registered under this exact name - see its own syntax-highlighter.js)
+    // that runs highlight.js in Node during conversion instead, embedding real
+    // colored spans directly in the HTML before Vivliostyle ever sees it - this
+    // pipeline has never turned it on, so no PDF it has ever produced has had
+    // real syntax highlighting, confirmed directly: plain monochrome code in
+    // every rebuild tried, with or without this package's own recent changes.
+    // Token *colors* (the `.hljs-*` rules) come from the real site.css in the
+    // combined stylesheet above, not this adapter's own bundled default theme.
+    '-a', 'source-highlighter=highlightjs',
+    // Must load before any document content is actually highlighted (asciidoctor-web-pdf
+    // loads every `--extension` up front, before conversion starts, so position in this
+    // list doesn't matter beyond that) - see cypher-language-adapter.js's own comment.
+    '--extension', CYPHER_LANGUAGE_ADAPTER,
+    '--extension', ROLES_LABELS_POSTPROCESSOR,
+    '--extension', REMOTE_INCLUDE_ADAPTER,
+    '--extension', MACROS_ADAPTER,
+    '--extension', COLOPHON_POSTPROCESSOR,
+    '--extension', ABSOLUTE_LINKS_POSTPROCESSOR,
+    '--extension', DOC_WRAPPER_POSTPROCESSOR,
+  ]
+  const prefix = linkPrefix()
+  if (prefix) extraArgs.push('-a', `absolute-link-prefix=${prefix}`)
+  if (mathjaxAvailable()) extraArgs.push('--extension', MATHJAX_ADAPTER)
+  // Reading from stdin (this is piped the merged .adoc, not a real file - see
+  // below), asciidoctor-web-pdf invents a fictive input path rooted at
+  // `--base-dir`/`-B` if given, else its own cwd (lib/cli.js's
+  // _convertFromStdin), and writes its temporary intermediate HTML file next
+  // to THAT path (lib/converter.js's getTemporaryHtmlFile), not next to the
+  // real docdir the assembler passes via `-a docdir=...`. Without `-B`, that
+  // temp HTML ends up sitting in whatever directory this script itself was
+  // invoked from (the docset's own root, since that's antora's cwd) - one or
+  // more levels away from `-a docdir`/`-a imagesoutdir`. Every image target,
+  // resolved correctly as relative to the real docdir (e.g. `../_images/
+  // foo.png`), then resolves relative to the WRONG directory when the
+  // browser loads that temp HTML via file://, so every image in the PDF is
+  // silently broken. Passing the same docdir here as `-B` puts the temp HTML
+  // file where the image paths actually expect it to be.
+  const docdirIdx = args.findIndex((arg) => arg.startsWith('docdir='))
+  if (docdirIdx > 0 && args[docdirIdx - 1] === '-a') {
+    extraArgs.push('-B', args[docdirIdx].slice('docdir='.length))
+  }
+  const finalArgs =
+    stdinMarkerIdx === -1
+      ? [...args, ...extraArgs]
+      : [...args.slice(0, stdinMarkerIdx), ...extraArgs, ...args.slice(stdinMarkerIdx)]
 
-readStdin().then((adoc) => {
   const child = spawn(RENDERER, finalArgs, {
     stdio: ['pipe', 'inherit', 'inherit'],
     env: { ...PUPPETEER_TIMEOUT_ENV, ...process.env },
@@ -222,6 +327,9 @@ readStdin().then((adoc) => {
     console.error(err)
     process.exit(1)
   })
-  child.on('close', (status) => process.exit(status ?? 1))
+  child.on('close', (status) => {
+    fs.rmSync(stylesheet, { force: true })
+    process.exit(status ?? 1)
+  })
   child.stdin.end(dedupeGlossary(adoc).trimEnd() + '\n\n' + LICENSE_PAGE)
 })
