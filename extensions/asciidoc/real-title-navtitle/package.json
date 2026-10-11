@@ -1,0 +1,21 @@
+{
+  "name": "@neo4j-antora/real-title-navtitle",
+  "version": "1.0.0",
+  "description": "Makes @antora/assembler (e.g. PDF export) use each page's own document title instead of its nav.adoc link text",
+  "main": "real-title-navtitle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "antora",
+    "asciidoctor",
+    "pdf"
+  ],
+  "author": "Neo4j",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
+    "directory": "extensions/asciidoc/real-title-navtitle"
+  }
+}
