@@ -27,6 +27,10 @@ on:
         description: "Sticky-comment header; identifies the one comment to update in place."
         type: string
         default: "docs-style-review"
+      cost-budget-usd:
+        description: "Warn (never fail) when one review costs more than this many US dollars."
+        type: string
+        default: "0.50"
       changed-files-globs:
         description: "Newline-separated globs of files to review."
         type: string
@@ -200,3 +204,32 @@ jobs:
           number: ${{ github.event.pull_request.number }}
           path: style-review-comment.md
           GITHUB_TOKEN: ${{ secrets.DOCS_PR_COMMENT_TOKEN }}
+
+      # What the review cost. The action records total_cost_usd in its execution log and
+      # nothing else reads it, so a review that loops up to the turn cap would be invisible
+      # until the Anthropic bill. Runs even when an earlier step failed (a failed run is the
+      # one you want the number for), but only when the review step was reached. Reports and
+      # warns; never fails the job, so it can't mask a real result.
+      - name: Report review cost
+        if: always() && steps.changes.outputs.any_changed == 'true' && steps.changes.outputs.all_changed_files_count <= inputs.max-files
+        env:
+          COST_BUDGET_USD: ${{ inputs.cost-budget-usd }}
+        run: |
+          log="${RUNNER_TEMP}/claude-execution-output.json"
+          if [ ! -f "$log" ]; then
+            echo "No execution log at $log — cannot report cost."
+            exit 0
+          fi
+          cost="$(jq -r 'first(.. | objects | select(has("total_cost_usd")) | .total_cost_usd)' "$log" 2>/dev/null)"
+          turns="$(jq -r 'first(.. | objects | select(has("num_turns")) | .num_turns) // "?"' "$log" 2>/dev/null)"
+          if [ -z "$cost" ] || [ "$cost" = "null" ]; then
+            echo "No total_cost_usd in the execution log — cannot report cost."
+            exit 0
+          fi
+          shown="$(printf '%.2f' "$cost")"   # the raw value carries float noise
+          printf '### Style review cost\n\n**$%s** across %s turns (budget $%s).\n' \
+            "$shown" "$turns" "$COST_BUDGET_USD" >> "$GITHUB_STEP_SUMMARY"
+          echo "Review cost: \$$shown across $turns turns."
+          if [ "$(awk -v c="$cost" -v b="$COST_BUDGET_USD" 'BEGIN{print (c+0>b+0)?1:0}')" = "1" ]; then
+            echo "::warning::Review cost \$$cost exceeded the \$$COST_BUDGET_USD budget — check whether the review looped before the next run."
+          fi
