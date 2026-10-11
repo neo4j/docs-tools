@@ -434,10 +434,13 @@ body.book {
   color: var(--brand-text);
   font-weight: 600;
 }
-/* Zebra-striped data rows - reported directly: "tables are not striped". */
-#pdf-export table.tableblock > tbody > tr:nth-child(even) > td {
-  background: var(--brand-bg-strong);
-}
+/* Zebra-striping was added here once (reported directly: "tables are not striped"), then
+   removed again - the real site itself doesn't stripe tables at all (just header shading
+   + row borders), and `--brand-bg-strong` is also this theme's own code-block background
+   colour, so a striped row's background was pixel-identical to an inline `code` span's
+   own background inside it, making the code span stop reading as a distinct element
+   (reported directly: "the table row background color is the same as code background
+   color"). Matching the real site's own un-striped look avoids the clash entirely. */
 #pdf-export tr { break-inside: avoid; }
 
 /* admonitions */
