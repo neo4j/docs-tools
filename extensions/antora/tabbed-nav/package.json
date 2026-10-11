@@ -31,7 +31,7 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neo4j/docs-tabbed-nav-poc.git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
     "directory": "extensions/antora/tabbed-nav"
   },
   "engines": {

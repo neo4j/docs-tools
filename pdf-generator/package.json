@@ -1,6 +1,6 @@
 {
   "name": "@neo4j-antora/pdf-generator",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Generates a PDF export from an Antora docset, styled to match the real Neo4j docs site, via @antora/assembler + @antora/pdf-extension and asciidoctor-web-pdf",
   "main": "extension.js",
   "files": [
@@ -28,5 +28,10 @@
     "@neo4j-documentation/macros": "1.0.4",
     "@neo4j-documentation/remote-include": "1.0.0",
     "node-html-parser": "9.0.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
+    "directory": "pdf-generator"
   }
 }

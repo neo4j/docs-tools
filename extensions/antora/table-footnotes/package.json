@@ -13,5 +13,10 @@
   "license": "MIT",
   "dependencies": {
     "node-html-parser": "7.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neo4j/docs-tools.git",
+    "directory": "extensions/antora/table-footnotes"
   }
 }

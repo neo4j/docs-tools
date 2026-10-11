@@ -354,6 +354,32 @@ tr { break-inside: avoid; }
 .admonitionblock.note td.content > .title,
 .admonitionblock.tip td.content > .title { color: var(--brand-primary-strong); }
 
+/* quoteblocks - includes a page's own [abstract]/{description} block (every page
+   authors `[abstract]\n{description}` right after its own title), which Asciidoctor
+   renders as a plain, unstyled quoteblock - this theme never styled quoteblocks at all,
+   so it rendered as nothing but the renderer's own default blockquote indent, no visual
+   distinction from body text. Styled as a neutral callout box, same visual language as a
+   plain (non-colored) admonition above, matching how the real site styles this exact
+   block (#preamble .abstract) as a distinct box rather than a plain paragraph. */
+.quoteblock { break-inside: avoid-page; margin: 1em 0; }
+.quoteblock blockquote {
+  margin: 0;
+  border-left: 3pt solid var(--brand-border-strong);
+  padding: 8pt 12pt;
+  background: var(--brand-bg-strong);
+  font-style: italic;
+  color: var(--brand-text-weak);
+}
+.quoteblock blockquote .paragraph:last-child { margin-bottom: 0; }
+.quoteblock .attribution {
+  margin-top: 6pt;
+  font-size: 9.5pt;
+  font-style: normal;
+  color: var(--brand-text-weaker);
+  text-align: right;
+}
+.quoteblock .attribution cite { font-style: italic; }
+
 /* lists */
 .ulist, .olist, .dlist { margin: 0.5em 0; }
 
