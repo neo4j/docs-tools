@@ -53,6 +53,17 @@ Either form picks up this package's own `antora-assembler-pdf.yml` as the
 default `configFile` - pass a `config:` block in the playbook form to
 override individual assembler settings if needed.
 
+=== Optional: PDF headings/TOC use each page's own title, not its nav title
+
+`@antora/assembler` builds every merged page's own heading (and, from that,
+the PDF's own table of contents) from the page's *nav* title, not the page's
+own `= Real Title` document title - see
+`@neo4j-antora/real-title-navtitle` (a standalone package, deliberately not
+nested in this one - this one's own `postinstall` sets up a full
+`asciidoctor-pdf`/Puppeteer vendor tree, too heavy to be a permanent
+dependency of a docset's plain HTML build, which this fix also needs to run
+during) for the fix and the full explanation.
+
 == Layout
 
 - `antora-assembler-pdf.yml` - Assembler config, pointed at from a docset's
