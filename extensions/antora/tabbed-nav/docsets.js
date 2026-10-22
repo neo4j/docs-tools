@@ -50,7 +50,7 @@ function compareVersions (a, b) {
 // Entries ({ name, title, group, versions: [{ version, latest, url }] }) from an
 // aggregated tabs.json. A component's latest entry lists all its versions in
 // docsetVersions; tabs.json's own version keys (the latest, plus every version of docsets
-// that set page-version-group) fill in anything else, which is all there is for a component
+// that set page-docset-version-group) fill in anything else, which is all there is for a component
 // published before docsetVersions existed.
 function entriesFromTabs (tabs) {
   const entries = new Map()
@@ -108,7 +108,7 @@ function finalizeDocsets (entries, pdfExists = () => false) {
     .map(([name, { title, group, versions }]) => ({
       name,
       title,
-      // From the docset's page-docset-group attribute; empty when it doesn't set one.
+      // From the docset's page-docset-display-group attribute; empty when it doesn't set one.
       group,
       versions: Array.from(versions.entries())
         .map(([version, { latest, url }]) => ({ version, latest, url }))

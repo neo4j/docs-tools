@@ -111,13 +111,13 @@ module.exports.register = function ({ config }) {
 
     this.once('navigationBuilt', async ({ contentCatalog, siteCatalog, playbook }) => {
 
-      // page-version-group is the preferred name for page-tabs-group (the UI and its nav
+      // page-docset-version-group is the preferred name for page-tabs-group (the UI and its nav
       // helpers still read the latter), so copy it across for any page that only sets the
-      // new one. When both are set, page-version-group wins.
+      // new one. When both are set, page-docset-version-group wins.
       for (const page of contentCatalog.findBy({ family: 'page' })) {
         const attrs = page.asciidoc && page.asciidoc.attributes
-        if (attrs && attrs['page-version-group'] !== undefined) {
-          attrs['page-tabs-group'] = attrs['page-version-group']
+        if (attrs && attrs['page-docset-version-group'] !== undefined) {
+          attrs['page-tabs-group'] = attrs['page-docset-version-group']
         }
       }
 
@@ -468,8 +468,8 @@ module.exports.register = function ({ config }) {
 
             const docsetGroup = versionGroupAttr(asciidoc, playbook.asciidoc)
             // Which group the docset is listed under in the "All Neo4j documentation" modal
-            // (docsets.json). Unrelated to page-version-group above, which groups versions.
-            const menuGroupRaw = componentWideAttr('page-docset-group', asciidoc, playbook.asciidoc)
+            // (docsets.json). Unrelated to page-docset-version-group above, which groups versions.
+            const menuGroupRaw = componentWideAttr('page-docset-display-group', asciidoc, playbook.asciidoc)
             const menuGroup = menuGroupRaw && String(menuGroupRaw).replace(/@$/, '')
 
             for (const nav of navigation) {
@@ -873,11 +873,11 @@ module.exports.register = function ({ config }) {
 
 }
 
-// `page-version-group` is the preferred name for `page-tabs-group`; either works, and the
+// `page-docset-version-group` is the preferred name for `page-tabs-group`; either works, and the
 // new one wins when both are set. Read the same way as the other component-wide attributes
 // (antora.yml, then the playbook).
 function versionGroupAttr (componentAsciidoc, playbookAsciidoc) {
-  const preferred = componentWideAttr('page-version-group', componentAsciidoc, playbookAsciidoc)
+  const preferred = componentWideAttr('page-docset-version-group', componentAsciidoc, playbookAsciidoc)
   return preferred !== undefined ? preferred : componentWideAttr('page-tabs-group', componentAsciidoc, playbookAsciidoc)
 }
 
