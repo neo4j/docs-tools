@@ -2,7 +2,7 @@ const { posix: path, resolve } = require('path')
 const File = require('vinyl')
 const fs = require('fs')
 const { title } = require('process')
-const { DOCSETS_FILE, buildDocsets, pdfStoragePath } = require('./docsets')
+const { DOCSETS_FILE, DOCSET_SHARD_FILENAME, finalizeDocsets, findFirstUrl, pdfStoragePath } = require('./docsets')
 
 // Filename used for per-component nav shards. The same name is referenced by
 // the S3 aggregator (./aggregate.js) when discovering shards.
@@ -71,6 +71,11 @@ module.exports.register = function ({ config }) {
   // Shards collected by generateNav (and, in the future, by fetchNav). aggregateNav
   // deep-merges them into a single tabs.json.
   const navShards = []
+
+  // Docset entries (see ./docsets.js): from the docsets.json next to a fetched tabs.json
+  // (other docsets on the site), and from the components in this build.
+  const fetchedDocsets = []
+  const localDocsets = []
 
   // Holds the merged tab nav produced by aggregateNav so consumeNav can read it
   // from memory in the same Antora invocation (avoids reading from disk before
@@ -416,12 +421,43 @@ module.exports.register = function ({ config }) {
           }
           navShards.push(data)
           logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
+
+          // The docsets listing lives next to tabs.json; fetch it too so the docsets.json
+          // written below still lists the other docsets on the site. Best effort.
+          if (docsetsFile && /\/tabs\.json$/.test(resolvedNavUrl)) {
+            const docsetsUrl = resolvedNavUrl.replace(/\/tabs\.json$/, '/' + docsetsFile.split('/').pop())
+            try {
+              const dres = await fetch(docsetsUrl, { headers: navFetchHeaders() })
+              const dbody = dres.status === 200 ? JSON.parse(await dres.text()) : null
+              if (Array.isArray(dbody)) fetchedDocsets.push(...dbody)
+              else logger.info('No docsets listing at %s (status %d)', docsetsUrl, dres.status)
+            } catch (e) {
+              logger.info('Could not fetch docsets listing from %s: %s', docsetsUrl, e.message)
+            }
+          }
         } catch (e) {
           // info, not warn: the build carries on with the nav of just the docsets being built, which
           // is an acceptable fallback, and a warning would fail checks that fail on warnings (e.g.
           // the log-report step of Generate HTML) and block publishing for what is only a degraded nav.
           logger.info('Could not fetch nav from %s, continuing with only the nav of the docsets in this build: %s', resolvedNavUrl, e.message)
         }
+      }
+
+      // One entry per component in this build, listing every version of it (unlike
+      // tabs.json, which skips non-latest versions). Written as per-component shards
+      // below and merged into docsets.json.
+      if (docsetsFile && (generateNav || aggregateNav)) {
+        contentCatalog.getComponents().forEach(({ name, latest, versions }) => {
+          let group = ''
+          const entryVersions = versions.map(({ version, navigation, url, asciidoc }) => {
+            const raw = componentWideAttr('page-docset-group', asciidoc, playbook.asciidoc)
+            const versionGroup = raw ? String(raw).replace(/@$/, '') : ''
+            if (versionGroup && (!group || version === latest.version)) group = versionGroup
+            const navUrl = findFirstUrl((navigation || []).flatMap((nav) => nav.items || []))
+            return { version: version || '', latest: version === latest.version, url: navUrl || url || null }
+          })
+          localDocsets.push({ name, title: latest.title, group, versions: entryVersions })
+        })
       }
 
       if (generateNav) {
@@ -529,6 +565,13 @@ module.exports.register = function ({ config }) {
         }
         logger[logLevel]('Generated %d per-component nav shards', componentNames.size)
 
+        if (docsetsFile) {
+          for (const entry of localDocsets) {
+            siteCatalog.addFile(generateTabNavFile(entry, `${entry.name}/${DOCSET_SHARD_FILENAME}`))
+          }
+          logger[logLevel]('Generated %d per-component docset shards', localDocsets.length)
+        }
+
       }
 
       if (aggregateNav) {
@@ -545,7 +588,7 @@ module.exports.register = function ({ config }) {
           // listed here if it already sits in this build's output (the post-publish
           // aggregator checks the published bucket instead).
           const outputDir = playbook.output.dir || '.'
-          const docsets = buildDocsets(merged, (component, version) =>
+          const docsets = finalizeDocsets([...fetchedDocsets, ...localDocsets], (component, version) =>
             fs.existsSync(resolve(outputDir, pdfStoragePath(component, version))))
           siteCatalog.addFile(generateTabNavFile(docsets, docsetsFile))
           logger[logLevel]({ file: docsetsFile, docsets: docsets.length }, 'Docsets file written')

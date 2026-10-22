@@ -1,21 +1,27 @@
 'use strict'
 
 // Builds docsets.json, the flat per-docset listing behind the "All Neo4j documentation"
-// modal in the UI bundle, from an aggregated tabs.json. Shared by the in-build stage
-// (./index.js) and the post-publish S3 aggregator (./aggregate.js) so both produce the
-// same file.
+// modal in the UI bundle. Shared by the in-build stage (./index.js) and the post-publish
+// S3 aggregator (./aggregate.js) so both produce the same file.
 //
-// Shape - one entry per Antora component, merged across tabs:
+// Shape - one entry per Antora component, listing every version of it:
 //   [{ name, title, group, versions: [{ version, latest, url, pdf? }] }]
+//
+// Each component's build writes its own entry as a shard (<component>/docset.json); the
+// aggregator and the in-build aggregate stage merge shards, then add the pdf links.
 
 // Default output path, and the default for the tabbed-nav `docsetsFile` option.
 const DOCSETS_FILE = 'nav/docsets.json'
 
+// Per-component docset shard filename. Must match the one the aggregator discovers.
+const DOCSET_SHARD_FILENAME = 'docset.json'
+
 // The first item with a url, recursing into children when an item has none of its own.
+// External links are skipped: this is the docset's own first page.
 function findFirstUrl (items) {
   if (!items || !items.length) return null
   for (const item of items) {
-    if (item.url) return item.url
+    if (item.url && item.urlType !== 'external') return item.url
     const deeper = findFirstUrl(item.items)
     if (deeper) return deeper
   }
@@ -44,23 +50,22 @@ function compareVersions (a, b) {
   return b.version.localeCompare(a.version, undefined, { numeric: true })
 }
 
-// tabs: the aggregated tabs.json object ({ tab: { component: { version: { title, latest, items } } } }).
-// pdfExists(component, version) -> boolean: whether a PDF is present for that docset version.
-// Called once per version; `pdf` is only set when it returns true.
-function buildDocsets (tabs, pdfExists = () => false) {
-  const components = new Map()
+// Entries ({ name, title, group, versions: [{ version, latest, url }] }) from an
+// aggregated tabs.json. tabs.json only carries a component's latest version (plus all
+// versions of docsets that set page-tabs-group), so this is the fallback for components
+// published before they wrote their own docset shard.
+function entriesFromTabs (tabs) {
+  const entries = new Map()
   for (const compMap of Object.values(tabs || {})) {
     for (const [name, versions] of Object.entries(compMap)) {
-      if (!components.has(name)) components.set(name, { title: name, group: '', versions: new Map() })
-      const entry = components.get(name)
+      if (!entries.has(name)) entries.set(name, { name, title: name, group: '', versions: [] })
+      const entry = entries.get(name)
       for (const [version, data] of Object.entries(versions)) {
-        // A component can appear under several tabs; the first title wins, and a later
-        // tab backfills a url the first one (often a provisional entry) lacked.
         if (entry.title === name && data.title) entry.title = data.title
         if (!entry.group && data.menuGroup) entry.group = data.menuGroup
-        const existing = entry.versions.get(version)
+        const existing = entry.versions.find((v) => v.version === version)
         if (!existing) {
-          entry.versions.set(version, { latest: !!data.latest, url: findFirstUrl(data.items) })
+          entry.versions.push({ version, latest: !!data.latest, url: findFirstUrl(data.items) })
         } else {
           if (data.latest) existing.latest = true
           if (!existing.url) existing.url = findFirstUrl(data.items)
@@ -68,8 +73,36 @@ function buildDocsets (tabs, pdfExists = () => false) {
       }
     }
   }
+  return Array.from(entries.values())
+}
 
-  return Array.from(components.entries())
+// Merges entries by component name, versions by version, and adds the pdf links.
+// Later entries win over earlier ones (a version's url/latest are replaced; a group or
+// title is only replaced by a non-empty one), so pass the lower-priority source first.
+// pdfExists(component, version) -> boolean is called once per version; `pdf` is only set
+// when it returns true.
+function finalizeDocsets (entries, pdfExists = () => false) {
+  const merged = new Map()
+  for (const entry of entries) {
+    if (!entry || !entry.name) continue
+    if (!merged.has(entry.name)) {
+      merged.set(entry.name, { title: entry.name, group: '', versions: new Map() })
+    }
+    const target = merged.get(entry.name)
+    if (entry.title) target.title = entry.title
+    if (entry.group) target.group = entry.group
+    for (const v of entry.versions || []) {
+      const version = v.version || ''
+      const existing = target.versions.get(version)
+      target.versions.set(version, {
+        latest: !!v.latest,
+        // keep a url the other source had if this one has none
+        url: v.url || (existing && existing.url) || null,
+      })
+    }
+  }
+
+  return Array.from(merged.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, { title, group, versions }]) => ({
       name,
@@ -88,4 +121,12 @@ function buildDocsets (tabs, pdfExists = () => false) {
     }))
 }
 
-module.exports = { DOCSETS_FILE, buildDocsets, pdfStoragePath, pdfPublicUrl }
+module.exports = {
+  DOCSETS_FILE,
+  DOCSET_SHARD_FILENAME,
+  entriesFromTabs,
+  finalizeDocsets,
+  findFirstUrl,
+  pdfStoragePath,
+  pdfPublicUrl,
+}
