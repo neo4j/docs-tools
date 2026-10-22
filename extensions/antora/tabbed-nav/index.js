@@ -111,6 +111,16 @@ module.exports.register = function ({ config }) {
 
     this.once('navigationBuilt', async ({ contentCatalog, siteCatalog, playbook }) => {
 
+      // page-version-group is the preferred name for page-tabs-group (the UI and its nav
+      // helpers still read the latter), so copy it across for any page that only sets the
+      // new one. When both are set, page-version-group wins.
+      for (const page of contentCatalog.findBy({ family: 'page' })) {
+        const attrs = page.asciidoc && page.asciidoc.attributes
+        if (attrs && attrs['page-version-group'] !== undefined) {
+          attrs['page-tabs-group'] = attrs['page-version-group']
+        }
+      }
+
       // we need to do stuff to the nav for the thing we are building, regardless of whether we are generating
       // an aggregate nav or consuming it
 
@@ -456,9 +466,9 @@ module.exports.register = function ({ config }) {
 
             if (!navigation || !navigation.length) return
 
-            const docsetGroup = componentWideAttr('page-tabs-group', asciidoc, playbook.asciidoc)
+            const docsetGroup = versionGroupAttr(asciidoc, playbook.asciidoc)
             // Which group the docset is listed under in the "All Neo4j documentation" modal
-            // (docsets.json). Unrelated to page-tabs-group above, which groups versions.
+            // (docsets.json). Unrelated to page-version-group above, which groups versions.
             const menuGroupRaw = componentWideAttr('page-docset-group', asciidoc, playbook.asciidoc)
             const menuGroup = menuGroupRaw && String(menuGroupRaw).replace(/@$/, '')
 
@@ -861,6 +871,14 @@ module.exports.register = function ({ config }) {
     // })
 
 
+}
+
+// `page-version-group` is the preferred name for `page-tabs-group`; either works, and the
+// new one wins when both are set. Read the same way as the other component-wide attributes
+// (antora.yml, then the playbook).
+function versionGroupAttr (componentAsciidoc, playbookAsciidoc) {
+  const preferred = componentWideAttr('page-version-group', componentAsciidoc, playbookAsciidoc)
+  return preferred !== undefined ? preferred : componentWideAttr('page-tabs-group', componentAsciidoc, playbookAsciidoc)
 }
 
 // `page-nav-promote` was the original name for this attribute; `page-tabs-promote` is
