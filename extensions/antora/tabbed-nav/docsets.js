@@ -51,12 +51,13 @@ function buildDocsets (tabs, pdfExists = () => false) {
   const components = new Map()
   for (const compMap of Object.values(tabs || {})) {
     for (const [name, versions] of Object.entries(compMap)) {
-      if (!components.has(name)) components.set(name, { title: name, versions: new Map() })
+      if (!components.has(name)) components.set(name, { title: name, group: '', versions: new Map() })
       const entry = components.get(name)
       for (const [version, data] of Object.entries(versions)) {
         // A component can appear under several tabs; the first title wins, and a later
         // tab backfills a url the first one (often a provisional entry) lacked.
         if (entry.title === name && data.title) entry.title = data.title
+        if (!entry.group && data.menuGroup) entry.group = data.menuGroup
         const existing = entry.versions.get(version)
         if (!existing) {
           entry.versions.set(version, { latest: !!data.latest, url: findFirstUrl(data.items) })
@@ -70,11 +71,11 @@ function buildDocsets (tabs, pdfExists = () => false) {
 
   return Array.from(components.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, { title, versions }]) => ({
+    .map(([name, { title, group, versions }]) => ({
       name,
       title,
-      // Empty until a central mapping mirroring the neo4j.com/docs dropdown exists.
-      group: '',
+      // From the docset's page-docset-group attribute; empty when it doesn't set one.
+      group,
       versions: Array.from(versions.entries())
         .map(([version, { latest, url }]) => ({ version, latest, url }))
         .sort(compareVersions)

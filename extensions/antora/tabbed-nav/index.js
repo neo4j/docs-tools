@@ -443,6 +443,10 @@ module.exports.register = function ({ config }) {
             if (!navigation || !navigation.length) return
 
             const docsetGroup = componentWideAttr('page-tabs-group', asciidoc, playbook.asciidoc)
+            // Which group the docset is listed under in the "All Neo4j documentation" modal
+            // (docsets.json). Unrelated to page-tabs-group above, which groups versions.
+            const menuGroupRaw = componentWideAttr('page-docset-group', asciidoc, playbook.asciidoc)
+            const menuGroup = menuGroupRaw && String(menuGroupRaw).replace(/@$/, '')
 
             for (const nav of navigation) {
               for (const item of nav.items) {
@@ -472,6 +476,7 @@ module.exports.register = function ({ config }) {
                         tabIndex: item.tabIndex || 99999,
                         latest: version === latest.version,
                         ...(docsetGroup && { docsetGroup }),
+                        ...(menuGroup && { menuGroup }),
                         items: []
                       }
                     }
