@@ -2,6 +2,7 @@ const { posix: path, resolve } = require('path')
 const File = require('vinyl')
 const fs = require('fs')
 const { title } = require('process')
+const { DOCSETS_FILE, buildDocsets, pdfStoragePath } = require('./docsets')
 
 // Filename used for per-component nav shards. The same name is referenced by
 // the S3 aggregator (./aggregate.js) when discovering shards.
@@ -34,6 +35,10 @@ module.exports.register = function ({ config }) {
   const {
     logLevel = 'info',
     tabNavFile = 'nav/tabs.json',
+    // docsetsFile: where the flat per-docset listing (docsets.json, read by the UI's
+    // "All Neo4j documentation" modal) is written alongside the aggregated tabs.json.
+    // Only written when aggregateNav is on. Set to false to skip it.
+    docsetsFile = DOCSETS_FILE,
     // generateNav/aggregateNav/consumeNav default to true so the canonical writer
     // workflow ("antora preview --extension nav.js") gets the full local-content
     // pipeline with no extra config. Actors that need a subset (central aggregator
@@ -529,6 +534,17 @@ module.exports.register = function ({ config }) {
         mergedTabNav = merged
         siteCatalog.addFile(generateTabNavFile(merged, tabNavFile))
         logger[logLevel]({ file: tabNavFile, shards: navShards.length }, 'Aggregated nav file written')
+
+        if (docsetsFile) {
+          // PDFs are normally built and published by a separate job, so one is only
+          // listed here if it already sits in this build's output (the post-publish
+          // aggregator checks the published bucket instead).
+          const outputDir = playbook.output.dir || '.'
+          const docsets = buildDocsets(merged, (component, version) =>
+            fs.existsSync(resolve(outputDir, pdfStoragePath(component, version))))
+          siteCatalog.addFile(generateTabNavFile(docsets, docsetsFile))
+          logger[logLevel]({ file: docsetsFile, docsets: docsets.length }, 'Docsets file written')
+        }
       }
 
       if (emitLocalManifest || process.env.DOCS_EMIT_LOCAL_MANIFEST) {
