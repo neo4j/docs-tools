@@ -2,6 +2,7 @@ const { posix: path, resolve } = require('path')
 const File = require('vinyl')
 const fs = require('fs')
 const { title } = require('process')
+const { DOCSETS_FILE, entriesFromTabs, finalizeDocsets, findFirstUrl, pdfStoragePath } = require('./docsets')
 
 // Filename used for per-component nav shards. The same name is referenced by
 // the S3 aggregator (./aggregate.js) when discovering shards.
@@ -34,6 +35,10 @@ module.exports.register = function ({ config }) {
   const {
     logLevel = 'info',
     tabNavFile = 'nav/tabs.json',
+    // docsetsFile: where the flat per-docset listing (docsets.json, read by the UI's
+    // "All Neo4j documentation" modal) is written alongside the aggregated tabs.json.
+    // Only written when aggregateNav is on. Set to false to skip it.
+    docsetsFile = DOCSETS_FILE,
     // generateNav/aggregateNav/consumeNav default to true so the canonical writer
     // workflow ("antora preview --extension nav.js") gets the full local-content
     // pipeline with no extra config. Actors that need a subset (central aggregator
@@ -105,6 +110,16 @@ module.exports.register = function ({ config }) {
     })
 
     this.once('navigationBuilt', async ({ contentCatalog, siteCatalog, playbook }) => {
+
+      // page-docset-version-group is the preferred name for page-tabs-group (the UI and its nav
+      // helpers still read the latter), so copy it across for any page that only sets the
+      // new one. When both are set, page-docset-version-group wins.
+      for (const page of contentCatalog.findBy({ family: 'page' })) {
+        const attrs = page.asciidoc && page.asciidoc.attributes
+        if (attrs && attrs['page-docset-version-group'] !== undefined) {
+          attrs['page-tabs-group'] = attrs['page-docset-version-group']
+        }
+      }
 
       // we need to do stuff to the nav for the thing we are building, regardless of whether we are generating
       // an aggregate nav or consuming it
@@ -411,6 +426,7 @@ module.exports.register = function ({ config }) {
           }
           navShards.push(data)
           logger[logLevel]({ url: resolvedNavUrl }, 'Fetched aggregated nav from URL')
+
         } catch (e) {
           // info, not warn: the build carries on with the nav of just the docsets being built, which
           // is an acceptable fallback, and a warning would fail checks that fail on warnings (e.g.
@@ -418,6 +434,19 @@ module.exports.register = function ({ config }) {
           logger.info('Could not fetch nav from %s, continuing with only the nav of the docsets in this build: %s', resolvedNavUrl, e.message)
         }
       }
+
+      // Every version of each component in this build with its first page, unlike tabs.json
+      // itself, which skips non-latest versions. Carried on each component's latest tabs.json
+      // entry (docsetVersions) so docsets.json can list them all from tabs.json alone. Taken
+      // here, before the loop below trims nav items.
+      const docsetVersionsByComponent = new Map()
+      contentCatalog.getComponents().forEach(({ name, latest, versions }) => {
+        docsetVersionsByComponent.set(name, versions.map(({ version, navigation, url }) => ({
+          version: version || '',
+          latest: version === latest.version,
+          url: findFirstUrl((navigation || []).flatMap((nav) => nav.items || [])) || url || null,
+        })))
+      })
 
       if (generateNav) {
 
@@ -437,7 +466,11 @@ module.exports.register = function ({ config }) {
 
             if (!navigation || !navigation.length) return
 
-            const docsetGroup = componentWideAttr('page-tabs-group', asciidoc, playbook.asciidoc)
+            const docsetGroup = versionGroupAttr(asciidoc, playbook.asciidoc)
+            // Which group the docset is listed under in the "All Neo4j documentation" modal
+            // (docsets.json). Unrelated to page-docset-version-group above, which groups versions.
+            const menuGroupRaw = componentWideAttr('page-docset-display-group', asciidoc, playbook.asciidoc)
+            const menuGroup = menuGroupRaw && String(menuGroupRaw).replace(/@$/, '')
 
             for (const nav of navigation) {
               for (const item of nav.items) {
@@ -467,6 +500,8 @@ module.exports.register = function ({ config }) {
                         tabIndex: item.tabIndex || 99999,
                         latest: version === latest.version,
                         ...(docsetGroup && { docsetGroup }),
+                        ...(menuGroup && { menuGroup }),
+                        ...(version === latest.version && { docsetVersions: docsetVersionsByComponent.get(component) }),
                         items: []
                       }
                     }
@@ -529,6 +564,17 @@ module.exports.register = function ({ config }) {
         mergedTabNav = merged
         siteCatalog.addFile(generateTabNavFile(merged, tabNavFile))
         logger[logLevel]({ file: tabNavFile, shards: navShards.length }, 'Aggregated nav file written')
+
+        if (docsetsFile) {
+          // PDFs are normally built and published by a separate job, so one is only
+          // listed here if it already sits in this build's output (the post-publish
+          // aggregator checks the published bucket instead).
+          const outputDir = playbook.output.dir || '.'
+          const docsets = finalizeDocsets(entriesFromTabs(merged), (component, version) =>
+            fs.existsSync(resolve(outputDir, pdfStoragePath(component, version))))
+          siteCatalog.addFile(generateTabNavFile(docsets, docsetsFile))
+          logger[logLevel]({ file: docsetsFile, docsets: docsets.length }, 'Docsets file written')
+        }
       }
 
       if (emitLocalManifest || process.env.DOCS_EMIT_LOCAL_MANIFEST) {
@@ -825,6 +871,14 @@ module.exports.register = function ({ config }) {
     // })
 
 
+}
+
+// `page-docset-version-group` is the preferred name for `page-tabs-group`; either works, and the
+// new one wins when both are set. Read the same way as the other component-wide attributes
+// (antora.yml, then the playbook).
+function versionGroupAttr (componentAsciidoc, playbookAsciidoc) {
+  const preferred = componentWideAttr('page-docset-version-group', componentAsciidoc, playbookAsciidoc)
+  return preferred !== undefined ? preferred : componentWideAttr('page-tabs-group', componentAsciidoc, playbookAsciidoc)
 }
 
 // `page-nav-promote` was the original name for this attribute; `page-tabs-promote` is

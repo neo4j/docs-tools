@@ -28,6 +28,8 @@ try {
 // generate stage in ./index.js.
 const SHARD_FILENAME = 'nav.json'
 
+const { DOCSETS_FILE, entriesFromTabs, finalizeDocsets, pdfStoragePath } = require('./docsets')
+
 const BUCKET = process.env.AWS_BUCKET
 const PREFIX = process.env.DOCS_PREFIX
 const REGION = process.env.AWS_REGION || 'us-east-1'
@@ -38,10 +40,11 @@ if (!BUCKET || !PREFIX) {
 }
 
 const TABS_KEY = PREFIX.replace(/\/+$/, '') + '/nav/tabs.json'
+const DOCSETS_KEY = PREFIX.replace(/\/+$/, '') + '/' + DOCSETS_FILE
 
 const s3 = new S3Client({ region: REGION })
 
-async function listShardKeys () {
+async function listShardKeys (pdfKeys) {
   const keys = []
   let ContinuationToken
   do {
@@ -53,6 +56,10 @@ async function listShardKeys () {
     for (const obj of res.Contents || []) {
       if (obj.Key.endsWith('/' + SHARD_FILENAME) && obj.Key !== TABS_KEY) {
         keys.push(obj.Key)
+      } else if (obj.Key.endsWith('.pdf') && obj.Key.includes('/_exports/')) {
+        // Collected from the same listing: PDFs are published by a separate job,
+        // so what is in the bucket now is what docsets.json can link to.
+        pdfKeys.add(obj.Key)
       }
     }
     ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined
@@ -103,7 +110,8 @@ function deepMerge (target, source) {
 
 ;(async () => {
   console.log(`Listing shards in s3://${BUCKET}/${PREFIX}`)
-  const keys = await listShardKeys()
+  const pdfKeys = new Set()
+  const keys = await listShardKeys(pdfKeys)
   console.log(`Found ${keys.length} shards`)
   if (!keys.length) {
     console.error('No shards found; aborting.')
@@ -125,6 +133,14 @@ function deepMerge (target, source) {
 
   console.log(`Writing merged tabs.json to s3://${BUCKET}/${TABS_KEY}`)
   await putJson(TABS_KEY, merged)
+
+  const base = PREFIX.replace(/\/+$/, '') + '/'
+  const docsets = finalizeDocsets(
+    entriesFromTabs(merged),
+    (component, version) => pdfKeys.has(base + pdfStoragePath(component, version))
+  )
+  console.log(`Writing docsets.json (${docsets.length} docsets) to s3://${BUCKET}/${DOCSETS_KEY}`)
+  await putJson(DOCSETS_KEY, docsets)
   console.log('Done')
 })().catch((err) => {
   console.error('Aggregator failed:', err)
