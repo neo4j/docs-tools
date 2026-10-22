@@ -28,7 +28,7 @@ try {
 // generate stage in ./index.js.
 const SHARD_FILENAME = 'nav.json'
 
-const { DOCSETS_FILE, DOCSET_SHARD_FILENAME, entriesFromTabs, finalizeDocsets, pdfStoragePath } = require('./docsets')
+const { DOCSETS_FILE, entriesFromTabs, finalizeDocsets, pdfStoragePath } = require('./docsets')
 
 const BUCKET = process.env.AWS_BUCKET
 const PREFIX = process.env.DOCS_PREFIX
@@ -44,7 +44,7 @@ const DOCSETS_KEY = PREFIX.replace(/\/+$/, '') + '/' + DOCSETS_FILE
 
 const s3 = new S3Client({ region: REGION })
 
-async function listShardKeys (pdfKeys, docsetKeys) {
+async function listShardKeys (pdfKeys) {
   const keys = []
   let ContinuationToken
   do {
@@ -56,9 +56,6 @@ async function listShardKeys (pdfKeys, docsetKeys) {
     for (const obj of res.Contents || []) {
       if (obj.Key.endsWith('/' + SHARD_FILENAME) && obj.Key !== TABS_KEY) {
         keys.push(obj.Key)
-      } else if (obj.Key.endsWith('/' + DOCSET_SHARD_FILENAME)) {
-        // One docset entry per component, listing every version of it.
-        docsetKeys.push(obj.Key)
       } else if (obj.Key.endsWith('.pdf') && obj.Key.includes('/_exports/')) {
         // Collected from the same listing: PDFs are published by a separate job,
         // so what is in the bucket now is what docsets.json can link to.
@@ -114,8 +111,7 @@ function deepMerge (target, source) {
 ;(async () => {
   console.log(`Listing shards in s3://${BUCKET}/${PREFIX}`)
   const pdfKeys = new Set()
-  const docsetKeys = []
-  const keys = await listShardKeys(pdfKeys, docsetKeys)
+  const keys = await listShardKeys(pdfKeys)
   console.log(`Found ${keys.length} shards`)
   if (!keys.length) {
     console.error('No shards found; aborting.')
@@ -139,19 +135,8 @@ function deepMerge (target, source) {
   await putJson(TABS_KEY, merged)
 
   const base = PREFIX.replace(/\/+$/, '') + '/'
-  // Components published before they wrote a docset shard fall back to what tabs.json
-  // knows (latest version only); shards override that per version.
-  const shardEntries = []
-  for (const key of docsetKeys) {
-    try {
-      shardEntries.push(await getJson(key))
-    } catch (e) {
-      console.warn(`  skipping ${key}: ${e.message}`)
-    }
-  }
-  console.log(`Merged ${shardEntries.length}/${docsetKeys.length} docset shards`)
   const docsets = finalizeDocsets(
-    [...entriesFromTabs(merged), ...shardEntries],
+    entriesFromTabs(merged),
     (component, version) => pdfKeys.has(base + pdfStoragePath(component, version))
   )
   console.log(`Writing docsets.json (${docsets.length} docsets) to s3://${BUCKET}/${DOCSETS_KEY}`)

@@ -7,14 +7,11 @@
 // Shape - one entry per Antora component, listing every version of it:
 //   [{ name, title, group, versions: [{ version, latest, url, pdf? }] }]
 //
-// Each component's build writes its own entry as a shard (<component>/docset.json); the
-// aggregator and the in-build aggregate stage merge shards, then add the pdf links.
+// Built from the aggregated tabs.json alone: each component's latest entry there carries
+// docsetVersions (every version with its first page), and the pdf links are added here.
 
 // Default output path, and the default for the tabbed-nav `docsetsFile` option.
 const DOCSETS_FILE = 'nav/docsets.json'
-
-// Per-component docset shard filename. Must match the one the aggregator discovers.
-const DOCSET_SHARD_FILENAME = 'docset.json'
 
 // The first item with a url, recursing into children when an item has none of its own.
 // External links are skipped: this is the docset's own first page.
@@ -51,9 +48,10 @@ function compareVersions (a, b) {
 }
 
 // Entries ({ name, title, group, versions: [{ version, latest, url }] }) from an
-// aggregated tabs.json. tabs.json only carries a component's latest version (plus all
-// versions of docsets that set page-tabs-group), so this is the fallback for components
-// published before they wrote their own docset shard.
+// aggregated tabs.json. A component's latest entry lists all its versions in
+// docsetVersions; tabs.json's own version keys (the latest, plus every version of docsets
+// that set page-tabs-group) fill in anything else, which is all there is for a component
+// published before docsetVersions existed.
 function entriesFromTabs (tabs) {
   const entries = new Map()
   for (const compMap of Object.values(tabs || {})) {
@@ -63,6 +61,9 @@ function entriesFromTabs (tabs) {
       for (const [version, data] of Object.entries(versions)) {
         if (entry.title === name && data.title) entry.title = data.title
         if (!entry.group && data.menuGroup) entry.group = data.menuGroup
+        for (const v of data.docsetVersions || []) {
+          if (!entry.versions.some((e) => e.version === v.version)) entry.versions.push({ ...v })
+        }
         const existing = entry.versions.find((v) => v.version === version)
         if (!existing) {
           entry.versions.push({ version, latest: !!data.latest, url: findFirstUrl(data.items) })
@@ -123,7 +124,6 @@ function finalizeDocsets (entries, pdfExists = () => false) {
 
 module.exports = {
   DOCSETS_FILE,
-  DOCSET_SHARD_FILENAME,
   entriesFromTabs,
   finalizeDocsets,
   findFirstUrl,
