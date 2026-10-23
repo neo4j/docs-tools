@@ -441,9 +441,14 @@ module.exports.register = function ({ config }) {
       // here, before the loop below trims nav items.
       const docsetVersionsByComponent = new Map()
       contentCatalog.getComponents().forEach(({ name, latest, versions }) => {
-        docsetVersionsByComponent.set(name, versions.map(({ version, navigation, url }) => ({
+        docsetVersionsByComponent.set(name, versions.map(({ version, navigation, url, selectorText }) => ({
           version: version || '',
           latest: version === latest.version,
+          // The text the page's version selector shows after the version, e.g. "(Current)",
+          // "(LTS)" or both, set on the component version by the selector-labels extension
+          // (which runs before this one). '' when there is none, so a docset that has been
+          // built since this existed can be told apart from one that has not.
+          selectorText: selectorText || '',
           url: findFirstUrl((navigation || []).flatMap((nav) => nav.items || [])) || url || null,
         })))
       })

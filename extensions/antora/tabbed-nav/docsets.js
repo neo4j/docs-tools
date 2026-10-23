@@ -5,7 +5,9 @@
 // S3 aggregator (./aggregate.js) so both produce the same file.
 //
 // Shape - one entry per Antora component, listing every version of it:
-//   [{ name, title, group, versions: [{ version, latest, url, pdf? }] }]
+//   [{ name, title, group, versions: [{ version, latest, selectorText?, url, pdf? }] }]
+// selectorText is what the page's version selector shows after the version, e.g. "(Current)"
+// or "(LTS)"; it is absent for a docset that has not been built since it was added.
 //
 // Built from the aggregated tabs.json alone: each component's latest entry there carries
 // docsetVersions (every version with its first page), and the pdf links are added here.
@@ -99,6 +101,8 @@ function finalizeDocsets (entries, pdfExists = () => false) {
         latest: !!v.latest,
         // keep a url the other source had if this one has none
         url: v.url || (existing && existing.url) || null,
+        // the version selector's text for it; undefined when the docset predates the field
+        selectorText: v.selectorText !== undefined ? v.selectorText : existing && existing.selectorText,
       })
     }
   }
@@ -111,11 +115,12 @@ function finalizeDocsets (entries, pdfExists = () => false) {
       // From the docset's page-docset-display-group attribute; empty when it doesn't set one.
       group,
       versions: Array.from(versions.entries())
-        .map(([version, { latest, url }]) => ({ version, latest, url }))
+        .map(([version, { latest, url, selectorText }]) => ({ version, latest, url, selectorText }))
         .sort(compareVersions)
-        .map(({ version, latest, url }) => ({
+        .map(({ version, latest, url, selectorText }) => ({
           version,
           latest,
+          ...(selectorText !== undefined && { selectorText }),
           url,
           ...(pdfExists(name, version) && { pdf: pdfPublicUrl(name, version) }),
         })),
