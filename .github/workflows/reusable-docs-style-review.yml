@@ -58,6 +58,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Refresh CA certificates (eMudhra CA compromise)
+        # Upgrades the Ubuntu ca-certificates package and rebuilds the system trust
+        # store. This only takes effect once Ubuntu has published a package that drops
+        # the eMudhra root. It does not change Node's bundled CA list (npm, Antora),
+        # and it warns rather than fails so a lagging package cannot break builds.
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --only-upgrade -y -qq ca-certificates
+          sudo update-ca-certificates --fresh
+          if ls /etc/ssl/certs | grep -qiE 'emudhra|emsign'; then
+            echo "::warning::eMudhra/emSign root is still in the system trust store; the Ubuntu ca-certificates package does not yet remove it."
+          else
+            echo "eMudhra/emSign roots not present in the system trust store."
+          fi
+
       - name: Checkout PR repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
