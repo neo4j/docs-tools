@@ -23,10 +23,10 @@ on:
         type: string
         default: '.'
       node-version:
-        description: 'The Node.js version to use'
+        description: 'The Node.js version to use. Must be a patched release (>= 22.23.4, 24.22.1 or 26.12.1); older versions fail the build.'
         required: false
         type: string
-        default: '24'
+        default: '24.22.1'
       antora-version:
         description: 'The Antora version to install'
         required: false
@@ -311,6 +311,29 @@ jobs:
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         node-version: ${{ env.NODE_VERSION }}
+
+    - name: Check Node.js and Antora versions are patched
+      shell: bash
+      run: |
+        # Node 22.23.4 / 24.22.1 / 26.12.1 carry the October 2026 security fixes,
+        # including the eMudhra intermediate CA update. Older Node fails here.
+        node_v=$(node -p process.versions.node)
+        case "${node_v%%.*}" in
+          22) min=22.23.4 ;;
+          24) min=24.22.1 ;;
+          26) min=26.12.1 ;;
+          *)  min= ;;
+        esac
+        if [ -z "$min" ] || [ "$(printf '%s\n%s\n' "$min" "$node_v" | sort -V | head -1)" != "$min" ]; then
+          echo "::error::Node.js $node_v is not a patched release (need >= 22.23.4, 24.22.1 or 26.12.1)."
+          exit 1
+        fi
+        # Antora 3.1.14 and earlier silently hang on Node 24.16+ (yauzl stream stall).
+        if [ "$(printf '%s\n%s\n' "3.1.15" "$ANTORA_VERSION" | sort -V | head -1)" != "3.1.15" ]; then
+          echo "::error::Antora $ANTORA_VERSION hangs on current Node.js; use 3.1.15 or later."
+          exit 1
+        fi
+        echo "Node.js $node_v and Antora $ANTORA_VERSION are acceptable."
 
     - name: Install required extensions - except any excluded by the workflow input
       working-directory: ${{ env.DOCS_DIR }}
