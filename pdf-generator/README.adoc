@@ -103,6 +103,12 @@ during) for the fix and the full explanation.
   already run.
 - `extensions/` - `roles-labels-postprocessor.js` ports the essential parts
   of the Antora extension of the same name (see "Known limitations" below);
+  `tabbed-example-postprocessor.js` labels each alternative of a
+  `[.tabbed-example]`/`[.include-with-X]` group with its own real-site tab
+  text (ported directly from the real site's own client-side JS, which
+  derives it the same way - never runs in a static PDF) and un-nests the
+  real site's own double border on the group, since both come from a
+  client-side tab widget this renderer has no equivalent of;
   `macros-adapter.js` and `remote-include-adapter.js` wrap the real
   `@neo4j-documentation/macros`/`remote-include` packages, fixing a
   pre-4.x-Asciidoctor.js API incompatibility in each at runtime (see their
