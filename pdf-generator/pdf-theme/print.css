@@ -540,6 +540,40 @@ body.book {
 }
 #pdf-export .admonitionblock.tip td.content > .title { color: var(--brand-success); }
 
+/* tabbed examples - `[.tabbed-example]` wraps several `[.include-with-X]` example
+   blocks; the real site's own client-side JS (site.js) turns these into an actual
+   clickable tab widget - see tabbed-example-postprocessor.js's own comment for the full
+   explanation and where the `.tabbed-example-label` div it inserts comes from. Real
+   site.css's own plain, unscoped `.exampleblock{border:1px solid ...;border-radius:8px}`
+   applies to both the outer wrapper and each inner alternative, since both carry the base
+   `exampleblock` class - the real site has its own fix for this
+   (`.tabbed-container>.exampleblock>.content{border:none}`), scoped to a wrapper class
+   client-side JS adds at runtime, which never exists in this static render. Stripping the
+   outer wrapper's own border/background/padding here leaves only each inner alternative
+   with its own single, clean box - reported directly: nested double borders, "ugly". */
+#pdf-export .exampleblock.tabbed-example {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+#pdf-export .exampleblock.tabbed-example > .content {
+  padding: 0;
+}
+/* A bold, non-italic label reads better here than real site.css's own generic
+   `.exampleblock .title` caption style (small, italic - built for a figure caption, not
+   for "which of these alternatives is this"), so this is deliberately its own rule
+   rather than reusing that one, even though the postprocessor also adds the genuine
+   `title` class alongside it (for docsets that prefer the plain caption look without
+   this override). */
+#pdf-export .tabbed-example-label {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 9.5pt;
+  color: var(--brand-primary-strong);
+  margin-bottom: 4pt;
+}
+
 /* quoteblocks - includes a page's own [abstract]/{description} block (every page
    authors `[abstract]\n{description}` right after its own title), which Asciidoctor
    renders as a plain, unstyled quoteblock - this theme never styled quoteblocks at all,

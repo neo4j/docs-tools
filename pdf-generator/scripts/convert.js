@@ -36,6 +36,7 @@ const COLOPHON_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/coloph
 const ABSOLUTE_LINKS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/absolute-links-postprocessor.js')
 const DOC_WRAPPER_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/doc-wrapper-postprocessor.js')
 const CYPHER_LANGUAGE_ADAPTER = path.join(__dirname, '../vendor/extensions/cypher-language-adapter.js')
+const TABBED_EXAMPLE_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/tabbed-example-postprocessor.js')
 
 // Unlike the extensions above, `@djencks/asciidoctor-mathjax` isn't a
 // dependency of this package - it's an opt-in feature a docset adds itself
@@ -292,6 +293,7 @@ Promise.all([buildStylesheet(), readStdin()]).then(([stylesheet, adoc]) => {
     '--extension', COLOPHON_POSTPROCESSOR,
     '--extension', ABSOLUTE_LINKS_POSTPROCESSOR,
     '--extension', DOC_WRAPPER_POSTPROCESSOR,
+    '--extension', TABBED_EXAMPLE_POSTPROCESSOR,
   ]
   const prefix = linkPrefix()
   if (prefix) extraArgs.push('-a', `absolute-link-prefix=${prefix}`)
