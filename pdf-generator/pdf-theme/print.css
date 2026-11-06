@@ -560,6 +560,57 @@ body.book {
 #pdf-export .exampleblock.tabbed-example > .content {
   padding: 0;
 }
+/* No border/box at all on each alternative - the postprocessor's own jump-list (just
+   below) now does the job a border/accent bar was standing in for, making the grouping
+   explicit and navigable rather than merely visual. A box or accent bar also always had
+   an edge to look visibly cut when an alternative started near the bottom of a page and
+   flowed onto the next one; a plain block in the normal page flow has no such edge.
+   A thin rule between alternatives (same weight/colour as the rule under the jump-list)
+   still marks where one ends and the next begins, without a box's open top/bottom edge
+   problem - omitted after the last alternative, since real content already follows there. */
+#pdf-export .exampleblock.tabbed-example > .content > .exampleblock {
+  border: none;
+  background: none;
+  padding: 0 0 1em;
+  margin: 0 0 1em;
+}
+#pdf-export .exampleblock.tabbed-example > .content > .exampleblock:not(:last-child) {
+  border-bottom: 0.5pt solid var(--brand-border-strong);
+}
+/* Each alternative's own nested `.content` carries real site.css's default exampleblock
+   padding, which otherwise left the section title/body sitting further right than the
+   surrounding body copy - zeroed so a section's title/body flush-aligns with ordinary
+   paragraphs outside the group, same as the jump-list below. */
+#pdf-export .exampleblock.tabbed-example > .content > .exampleblock > .content {
+  padding: 0;
+}
+/* The jump-list the postprocessor inserts at the top of each group, one link per
+   alternative, jumping down to that alternative's own anchor - stands in for the real
+   site's clickable tab strip, and is what now carries the "these are alternatives of the
+   same thing" signal that a border/accent bar used to carry on its own. Styled distinctly
+   from an ordinary body list - smaller, numbers and link text in the same brand colour as
+   `.tabbed-example-label` below (visually tying the two together as one feature), with a
+   thin rule underneath to cap the group off as a single self-contained unit, rather than
+   reading as a stray numbered list dropped into the middle of running prose.
+   `list-style-position: inside` (rather than a left `padding`) keeps the numbers flush
+   with the surrounding body margin instead of hanging further left or indenting the text
+   further right - full left-align with everything else on the page, including the
+   sections themselves. */
+#pdf-export .tabbed-example-list {
+  margin: 0 0 1em;
+  padding: 0 0 0.75em;
+  list-style-position: inside;
+  font-size: 9.5pt;
+  border-bottom: 0.5pt solid var(--brand-border-strong);
+}
+#pdf-export .tabbed-example-list > li::marker {
+  color: var(--brand-primary-strong);
+  font-weight: 700;
+}
+#pdf-export .tabbed-example-list a {
+  color: var(--brand-primary-strong);
+  font-weight: 600;
+}
 /* A bold, non-italic label reads better here than real site.css's own generic
    `.exampleblock .title` caption style (small, italic - built for a figure caption, not
    for "which of these alternatives is this"), so this is deliberately its own rule
