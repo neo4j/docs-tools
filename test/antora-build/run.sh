@@ -4,14 +4,14 @@
 # extensions before the workflow default changes.
 #
 #   ./run.sh --antora-version 3.2.2 [--repo neo4j/docs-aura] [--ref console]
-#            [--mode preview|publish] [--local-extensions] [--out DIR]
+#            [--mode preview|publish] [--local-extensions] [--drop-override NAME] [--out DIR]
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TOOLS_ROOT="$(cd "$HERE/../.." && pwd)"
 WORKFLOW="$TOOLS_ROOT/.github/workflows/reusable-docs-build.yml"
 
-ANTORA_VERSION=""; REPO="neo4j/docs-aura"; REF=""; MODE="preview"; LOCAL_EXT=false; OUT=""
+ANTORA_VERSION=""; REPO="neo4j/docs-aura"; REF=""; MODE="preview"; LOCAL_EXT=false; OUT=""; DROP_OVERRIDES=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --antora-version) ANTORA_VERSION="$2"; shift 2 ;;
@@ -19,6 +19,7 @@ while [ $# -gt 0 ]; do
     --ref) REF="$2"; shift 2 ;;
     --mode) MODE="$2"; shift 2 ;;
     --local-extensions) LOCAL_EXT=true; shift ;;
+    --drop-override) DROP_OVERRIDES+=("$2"); shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     *) echo "Unknown option $1" >&2; exit 2 ;;
   esac
@@ -56,6 +57,14 @@ echo "== $REPO @ ${REF:-default branch}, $MODE, Antora $ANTORA_VERSION"
 # --- Checkout ---------------------------------------------------------------------
 git clone --quiet --depth 1 ${REF:+--branch "$REF"} "https://github.com/$REPO.git" "$SRC"
 echo "$(git -C "$SRC" rev-parse HEAD)" > "$OUT/source-commit.txt"
+
+# Optionally remove a package.json "overrides" entry from the checkout (e.g. a pinned js-yaml
+# that blocks an Antora version which needs a different major).
+for o in ${DROP_OVERRIDES[@]+"${DROP_OVERRIDES[@]}"}; do
+  echo "Dropping override: $o"
+  (cd "$SRC" && npm pkg delete "overrides.$o")
+done
+NAME_SUFFIX=""
 
 # --- npm: same 7-day cooldown as CI ------------------------------------------------
 NPMRC="$OUT/npmrc"
