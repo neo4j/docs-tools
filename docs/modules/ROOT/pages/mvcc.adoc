@@ -1,0 +1,13 @@
+= MVCC Label
+:page-role: not-on-mvcc
+
+
+[role=label--not-on-mvcc]
+== Incompatible with MVCC
+
+Section with heading label
+
+[role=label--not-on-mvcc]
+This section is marked as incompatible with MVCC.
+
+Inline label example follows this text: label:not-on-mvcc[]

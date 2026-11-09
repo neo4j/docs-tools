@@ -4,3 +4,7 @@
 
 * xref:administration.adoc[]
 * xref:administration-advanced.adoc[]
+
+* *Label examples*
+
+* xref:mvcc.adoc[]
