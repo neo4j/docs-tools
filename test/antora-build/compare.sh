@@ -29,11 +29,11 @@ echo; echo "### Site content diff"
 # Normalisations (each is reported, never silent):
 #  - generator version strings
 #  - ordering only: nginx redirect files (sorted), .meta/pageList (jq -S)
-#  - page-nav-data: nav items gaining "roles":["page"] (Antora 3.2 nav item roles) are counted
+#  - page-nav-data: nav items gaining "roles":["page"] and "pathname" (keys Antora 3.2 adds to nav items) are counted
 #    separately, and the remaining JSON is compared exactly
 norm() { sed -E 's#<lastmod>[^<]*</lastmod>#<lastmod>T</lastmod>#; s#(<meta name="generator" content="Antora )[0-9.]+#\1X#; s#Antora [0-9]+\.[0-9]+\.[0-9]+#Antora X#g'; }
 navjson() { grep -o '<script type="application/json" id="page-nav-data">.*</script>' "$1" | sed -E 's#^[^>]*>##; s#</script>$##'; }
-strip_roles() { jq -cS 'walk(if type=="object" and .roles==["page"] then del(.roles) else . end)'; }
+strip_roles() { jq -cS 'walk(if type=="object" then (if .roles==["page"] then del(.roles) else . end | del(.pathname)) else . end)'; }
 changed=0; roles_only=0
 while IFS= read -r f; do
   a="$A/site/$f"; b="$B/site/$f"
@@ -54,7 +54,7 @@ while IFS= read -r f; do
     *) cmp -s "$a" "$b" || { changed=$((changed+1)); echo "differs: $f"; } ;;
   esac
 done < <(cd "$A/site" && find . -type f | sort | sed 's#^\./##')
-echo "files differing only by nav roles:[page]: $roles_only"
+echo "files differing only by added nav keys (roles, pathname): $roles_only"
 echo "files with other differences: $changed"
 [ "$changed" = 0 ] || rc=1
 exit $rc

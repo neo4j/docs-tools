@@ -26,15 +26,19 @@ Needs `node`, `npm`, `git`, `yq`, `jq` and `rsync`, plus network access. Output 
 `compare.sh` exits non-zero on a failed build, any warn/error/fatal in the candidate log,
 a different file list, or content differences. It ignores generator version strings,
 sitemap `lastmod`, ordering in redirect files and `.meta/pageList`, and reports separately
-any page where the only change is `"roles":["page"]` on nav items.
+any file where the only change is the `roles` and `pathname` keys Antora 3.2 adds to nav items.
 
 Both runs must use the same source commit. Re-run the baseline if the target repo moved.
 
-## Result: Antora 3.1.15 vs 3.2.2 on neo4j/docs-aura (Node 24.22.1)
+## Result: Antora 3.1.15 vs 3.2.2 (Node 24.22.1, default extension list)
 
-- Preview and publish builds: exit 0, no warn/error/fatal, identical log counts and file list.
-- Building with the extensions from this checkout (`--local-extensions`) gives the same site
-  as the published ones.
-- The only change: Antora 3.2 adds `"roles":["page"]` to nav items in the `page-nav-data`
-  block of every page, in `nav.json`, and in `nav/tabs.json`. Check that the UI bundle and
-  anything reading these files tolerates the new key before upgrading.
+Tested on `neo4j/docs-aura` and `neo4j/docs-operations`, in preview and publish mode:
+
+- All builds exit 0 with no warn/error/fatal, identical log counts and identical file lists.
+- Building with the extensions from this checkout (`--local-extensions`, docs-aura) gives the
+  same site as the published ones.
+- The only change is additive nav data. Antora 3.2 adds `"roles":["page"]` to nav items, and
+  `"pathname"` to nav items that link to a heading (`url` with a `#fragment`). It shows up in
+  each page's embedded `page-nav-data` block, in `aura/nav.json`-style nav files and in
+  `nav/tabs.json`. docs-operations: 516 nav blocks compared, none differ beyond those two keys.
+  Check that the UI bundle and anything reading these files tolerates the new keys before upgrading.
