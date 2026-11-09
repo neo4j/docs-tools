@@ -36,7 +36,7 @@ SRC="$OUT/src"
 wf() { yq eval ".on.workflow_call.inputs.\"$1\".default" "$WORKFLOW"; }
 EXTENSIONS="$(wf antora-extensions | tr -s '[:space:]' ' ')"
 NODE_EXPECTED="$(wf node-version)"
-UI_BUNDLE="https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip"
+UI_BUNDLE="${UI_BUNDLE_URL:-https://static-content.neo4j.com/build/ui-bundle-docs-restructure.zip}"  # override to test a local UI bundle
 ATTRIBUTES="$(wf antora-attributes)"
 if [ "$MODE" = publish ]; then
   SCRIPT="verify:publish"

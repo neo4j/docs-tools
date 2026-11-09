@@ -42,3 +42,12 @@ Tested on `neo4j/docs-aura` and `neo4j/docs-operations`, in preview and publish 
   each page's embedded `page-nav-data` block, in `aura/nav.json`-style nav files and in
   `nav/tabs.json`. docs-operations: 516 nav blocks compared, none differ beyond those two keys.
   Check that the UI bundle and anything reading these files tolerates the new keys before upgrading.
+
+## Testing a local UI bundle
+
+Set `UI_BUNDLE_URL` to a path or URL to build with a different UI bundle than the workflow's
+`ui-bundle-docs-restructure.zip`, for example one built from a docs-ui branch:
+
+```sh
+UI_BUNDLE_URL=/path/to/docs-ui/build/ui-bundle.zip ./run.sh --antora-version 3.2.2 --repo neo4j/docs-operations
+```
