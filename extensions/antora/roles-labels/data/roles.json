@@ -398,6 +398,22 @@
                 ]
             }
         },
+        "not-on-mvcc":{
+            "description": "Feature is not compatible with MVCC",
+            "labelCategory": "product",
+            "displayText": "Incompatible with MVCC",
+            "usage": {
+                "page-role": [
+                    ":page-role: not-on-mvcc"
+                ],
+                "role": [
+                    "[role=label--not-on-mvcc]"
+                ],
+                "inline": [
+                    "label:not-on-mvcc[]"
+                ]
+            }
+        },
         "not-on-aura":{
             "description": "Function or feature is not available on Aura",
             "labelCategory": "product",
