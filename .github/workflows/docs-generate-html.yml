@@ -16,17 +16,25 @@ on:
         type: string
         required: true
       publish-env:
-        description: 'Override for dev/prod. Leave blank to derive it from build-ref against vars.DOCS_PROD_BRANCH - only needs setting explicitly when DOCS_DEV_BRANCH == DOCS_PROD_BRANCH, where build-ref alone cannot tell the two builds apart.'
+        description: 'Override for dev/prod. Leave blank to derive it from build-ref against the prod branch in the branch record - only needs setting explicitly when the dev and prod branch are the same, where build-ref alone cannot tell the two builds apart.'
         type: string
         required: false
         default: ''
 
 jobs:
 
+  # The dev and prod branch of this repository, from the branch record in docs-publish.
+  resolve:
+    name: Resolve branches
+    uses: ./.github/workflows/reusable-docs-resolve.yml
+    secrets:
+      DOCS_DISPATCH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+
   # Resolves publish-env (dev/prod) once, so neither docs-build nor publish-html
   # duplicates the override-or-derive logic.
   resolve-env:
     name: Resolve environment
+    needs: resolve
     runs-on: ubuntu-latest
     outputs:
       publish-env: ${{ steps.resolve.outputs.publish-env }}
@@ -36,7 +44,7 @@ jobs:
         env:
           PUBLISH_ENV_OVERRIDE: ${{ inputs.publish-env }}
           BUILD_REF: ${{ inputs.build-ref }}
-          PROD_BRANCH: ${{ vars.DOCS_PROD_BRANCH }}
+          PROD_BRANCH: ${{ needs.resolve.outputs.prod-branch }}
         run: |
           if [[ -n "${PUBLISH_ENV_OVERRIDE}" ]]; then
             publish_env="${PUBLISH_ENV_OVERRIDE}"
