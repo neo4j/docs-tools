@@ -103,6 +103,12 @@ during) for the fix and the full explanation.
   already run.
 - `extensions/` - `roles-labels-postprocessor.js` ports the essential parts
   of the Antora extension of the same name (see "Known limitations" below);
+  `page-role-preprocessor.js` carries a page's `:page-role:` across to the
+  PDF as the label under that page's title (on the real site the page layout
+  puts the role on the page's `<h1>`, which this pipeline never goes through,
+  and the assembler leaves the role as an attribute entry before the page
+  title that never reaches the converted HTML - so it is copied onto the
+  title as a role first, for the postprocessor above to turn into a label);
   `tabbed-example-postprocessor.js` labels each alternative of a
   `[.tabbed-example]`/`[.include-with-X]` group with its own real-site tab
   text (ported directly from the real site's own client-side JS, which
