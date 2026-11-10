@@ -1,0 +1,63 @@
+name: Resolve docs branches
+
+# Reads the dev and prod branch of the calling repository from the branch record in
+# docs-publish (config/branch-record.yml). The repository is the key, and inside a
+# reusable workflow github.repository is the caller, so the caller does not pass it.
+#
+# docs-publish is an internal repository, which the default workflow token of the caller
+# cannot read, so the caller passes DOCS_DISPATCH_TOKEN (the same secret it already uses
+# to dispatch to docs-publish).
+#
+# A repository that is not in the record fails here with a message saying so. A repository
+# that has an entry for only one environment gets an empty output for the other.
+
+on:
+  workflow_call:
+    inputs:
+      record-ref:
+        description: "The branch of docs-publish to read the record from."
+        type: string
+        default: dev
+    secrets:
+      DOCS_DISPATCH_TOKEN:
+        required: true
+    outputs:
+      dev-branch:
+        description: "The dev branch of the calling repository, or empty if it has no dev entry."
+        value: ${{ jobs.resolve.outputs.dev-branch }}
+      prod-branch:
+        description: "The prod branch of the calling repository, or empty if it has no prod entry."
+        value: ${{ jobs.resolve.outputs.prod-branch }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve branches
+    runs-on: ubuntu-latest
+    outputs:
+      dev-branch: ${{ steps.read.outputs.dev-branch }}
+      prod-branch: ${{ steps.read.outputs.prod-branch }}
+    steps:
+      - name: Read the branch record
+        id: read
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          REPO: ${{ github.repository }}
+          RECORD_REF: ${{ inputs.record-ref }}
+        run: |
+          record=$(gh api -H "Accept: application/vnd.github.raw" \
+            "repos/neo4j/docs-publish/contents/config/branch-record.yml?ref=${RECORD_REF}")
+
+          if [[ "$(yq ".\"${REPO}\" | type" <<< "${record}")" != "!!map" ]]; then
+            echo "::error::${REPO} is not in config/branch-record.yml of neo4j/docs-publish. Add it there to publish from it."
+            exit 1
+          fi
+
+          dev=$(yq ".\"${REPO}\".dev.ref // \"\"" <<< "${record}")
+          prod=$(yq ".\"${REPO}\".prod.ref // \"\"" <<< "${record}")
+
+          echo "dev-branch=${dev}" >> "${GITHUB_OUTPUT}"
+          echo "prod-branch=${prod}" >> "${GITHUB_OUTPUT}"
+          echo "${REPO}: dev=${dev:-none} prod=${prod:-none} (record read from ${RECORD_REF})"
