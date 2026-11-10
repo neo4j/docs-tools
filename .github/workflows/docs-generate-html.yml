@@ -8,6 +8,12 @@ permissions:
 # of any other environment's run. Triggered (via the API, not a workflow_call) by
 # docs-trigger-builds.yml, once per environment that applies to a given push (dev, prod, or both) -
 # so if dev's run fails, prod's run is completely unaffected, and vice versa.
+#
+# Do not run this by hand. It has a workflow_dispatch trigger only because the API call
+# that starts it needs one, and it must run as its own run so that its head_branch is the
+# branch being built (which docs-publish checks), so it cannot be a workflow_call either.
+# To build now, run docs-trigger-builds.yml from the branch instead: it works out the
+# environments the same way it does for a push.
 on:
   workflow_dispatch:
     inputs:
