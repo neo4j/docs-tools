@@ -7,8 +7,8 @@ name: "Trigger docs builds"
 #
 # Use this (docs-trigger-builds.yml -> docs-generate-html.yml) when a single trigger might
 # legitimately need to build more than one environment - e.g. a manual "rebuild
-# everything" workflow_dispatch, or a repo where DOCS_DEV_BRANCH == DOCS_PROD_BRANCH (one
-# branch serving both, so every push to it always means both).
+# everything" workflow_dispatch, or a repo where the dev and prod branch in the branch record
+# are the same (one branch serving both, so every push to it always means both).
 #
 # If your repo instead has clean, separate dev/prod branches (e.g. dev and main), you
 # almost certainly do NOT want this: a commit to dev should only ever build staging, and
@@ -31,8 +31,8 @@ permissions:
 #
 # This list is a plain, static YAML value, not an expression - GitHub Actions doesn't
 # allow `vars.*` (or any expression) in a trigger definition, so it can't be read
-# from vars.DOCS_DEV_BRANCH/DOCS_PROD_BRANCH the way the job logic below does. Keep it
-# in sync with those two variables by hand.
+# from the branch record the way the job logic below does. Keep it in sync with the
+# record by hand.
 on:
   push:
     branches:
@@ -41,24 +41,32 @@ on:
 
 jobs:
 
+  # The dev and prod branch of this repository, from the branch record in docs-publish.
+  resolve:
+    name: Resolve branches
+    uses: ./.github/workflows/reusable-docs-resolve.yml
+    secrets:
+      DOCS_DISPATCH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+
   prepare-builds:
     name: Set builds to trigger
+    needs: resolve
     runs-on: ubuntu-latest
     outputs:
       # JSON array of {workflow, buildRef, publishEnv} - one entry per independent
-      # dispatch to make. publishEnv is left '' for docs-generate-html.yml except in
-      # the one case where it's genuinely ambiguous (see below) - that workflow
-      # derives it itself from build-ref against its own vars.DOCS_PROD_BRANCH
-      # whenever publishEnv is blank. docs-generate-pdf.yml has no such ambiguous
-      # case (a PDF build is always exactly the branch that triggered this run), so
-      # its publishEnv is always resolved explicitly here, the same way.
+      # dispatch to make. publishEnv is always set explicitly (dev or prod), so the
+      # dispatched workflow never has to work it out from the branch - which it
+      # couldn't do anyway when dev and prod are the same branch.
       builds: ${{ steps.set-builds.outputs.builds }}
     steps:
       - name: Set builds
         id: set-builds
+        env:
+          DEV_BRANCH: ${{ needs.resolve.outputs.dev-branch }}
+          PROD_BRANCH: ${{ needs.resolve.outputs.prod-branch }}
         run: |
-          dev_branch="${{ vars.DOCS_DEV_BRANCH }}"
-          prod_branch="${{ vars.DOCS_PROD_BRANCH }}"
+          dev_branch="${DEV_BRANCH}"
+          prod_branch="${PROD_BRANCH}"
 
           # HTML rules:
           # - No separate prod branch configured -> staging only, always (nothing to
@@ -75,19 +83,17 @@ jobs:
           #   know for certain doesn't affect prod.
           if [[ -z "${prod_branch}" ]]; then
             html_builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:""}]')
+              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"}]')
           elif [[ "${dev_branch}" == "${prod_branch}" ]]; then
-            # build-ref alone can't distinguish these two - same branch - so publishEnv
-            # has to be passed explicitly here, or docs-generate-html.yml's derivation
-            # would resolve both to the same environment.
+            # Same branch for both, so the two builds differ only in publishEnv.
             html_builds=$(jq -nc --arg b "$dev_branch" \
               '[{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"dev"},{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"prod"}]')
           elif [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
             html_builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:""}]')
+              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"}]')
           else
             html_builds=$(jq -nc --arg dev "$dev_branch" --arg prod "$prod_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:""},{workflow:"docs-generate-html.yml",buildRef:$prod,publishEnv:""}]')
+              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"},{workflow:"docs-generate-html.yml",buildRef:$prod,publishEnv:"prod"}]')
           fi
 
           # PDF always builds from the branch that triggered this run - no dev/prod
@@ -128,11 +134,9 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           BUILD: ${{ toJson(matrix.build) }}
-          PROD_BRANCH: ${{ vars.DOCS_PROD_BRANCH }}
         with:
           script: |
             const build = JSON.parse(process.env.BUILD)
-            const prodBranch = process.env.PROD_BRANCH
             // Both docs-generate-html.yml and docs-generate-pdf.yml accept publish-env.
             const inputs = { 'build-ref': build.buildRef, 'publish-env': build.publishEnv }
             await github.rest.actions.createWorkflowDispatch({
@@ -152,11 +156,5 @@ jobs:
               ref: build.buildRef,
               inputs,
             })
-            // Mirrors docs-generate-html.yml's own publish-env derivation for
-            // display purposes only - the real derivation happens inside the
-            // dispatched run, this is just to show what it will resolve to when no
-            // explicit override was passed (the empty-string case, only possible for
-            // an HTML build - see prepare-builds above).
-            const env = build.publishEnv || (build.buildRef === prodBranch ? 'prod' : 'dev')
-            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\` for \`${env}\``, true)
+            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\` for \`${build.publishEnv}\``, true)
             await core.summary.write()
