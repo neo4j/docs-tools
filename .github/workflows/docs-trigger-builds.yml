@@ -1,38 +1,23 @@
 name: "Trigger docs builds"
 
-# This workflow's job is dispatching docs-generate-html.yml with the right build-ref(s)
-# for whatever just happened - it is NOT the only valid way to wire this up, and isn't
-# always the right choice. It doesn't publish anything itself - docs-generate-html.yml
-# hands off to the (separate) docs-publish repo for that.
+# Dispatches docs-generate-html.yml and docs-generate-pdf.yml for whatever just happened. The
+# logic (which environments a branch belongs to, and the dispatching) is in the reusable
+# workflow, so this file only keeps what has to be local to the repository.
 #
-# Use this (docs-trigger-builds.yml -> docs-generate-html.yml) when a single trigger might
-# legitimately need to build more than one environment - e.g. a manual "rebuild
-# everything" workflow_dispatch, or a repo where the dev and prod branch in the branch record
-# are the same (one branch serving both, so every push to it always means both).
-#
-# If your repo instead has clean, separate dev/prod branches (e.g. dev and main), you
-# almost certainly do NOT want this: a commit to dev should only ever build staging, and
-# a commit to main should only ever build prod - never both from one commit, since
-# they're different content on different branches. For that shape, skip this file
-# entirely and give docs-generate-html.yml its own direct `on: push: branches: [...]`
-# trigger per environment instead (see docs-aura's docs-generate-html.yml for that
-# pattern) - simpler, and structurally can't build the wrong branch's content into the
-# wrong environment.
+# Use this when a single trigger might legitimately need to build more than one environment,
+# for example a manual "rebuild everything" run, or a repo where the dev and prod branch in
+# the branch record are the same. If your repo has clean, separate dev/prod branches, you
+# may not need it: give docs-generate-html.yml its own `on: push: branches: [...]` trigger
+# per environment instead (see docs-aura for that pattern).
 
 permissions:
   contents: read
   actions: write
 
-# Edit the branches list below to match your repository: it must be the union of every
-# branch listed in BOTH your staging and prod Antora publish.yml playbooks (content
-# sources' `branches`). prepare-ref-env's logic below assumes this - it doesn't inspect
-# the playbooks itself, it just trusts that if this workflow ran at all, the branch that
-# triggered it is a real content branch for at least one of the two environments.
-#
-# This list is a plain, static YAML value, not an expression - GitHub Actions doesn't
-# allow `vars.*` (or any expression) in a trigger definition, so it can't be read
-# from the branch record the way the job logic below does. Keep it in sync with the
-# record by hand.
+# Edit the branches list to match your repository: every branch listed in BOTH your dev and
+# prod publish.yml playbooks (content sources' `branches`), so that a push to any of them runs
+# this at all. A branch that belongs to neither environment builds nothing. It can't be read
+# from the branch record, because a trigger can't take an expression: keep it in sync by hand.
 on:
   push:
     branches:
@@ -40,121 +25,11 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  # The dev and prod branch of this repository, from the branch record in docs-publish.
-  resolve:
-    name: Resolve branches
-    uses: ./.github/workflows/reusable-docs-resolve.yml
+  trigger:
+    name: Trigger builds
+    uses: ./.github/workflows/reusable-docs-trigger-builds.yml
+    with:
+      # The same docs-dir that docs-generate-html.yml builds with. The playbook is publish.yml in it.
+      docs-dir: docs
     secrets:
       DOCS_DISPATCH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
-
-  prepare-builds:
-    name: Set builds to trigger
-    needs: resolve
-    runs-on: ubuntu-latest
-    outputs:
-      # JSON array of {workflow, buildRef, publishEnv} - one entry per independent
-      # dispatch to make. publishEnv is always set explicitly (dev or prod), so the
-      # dispatched workflow never has to work it out from the branch - which it
-      # couldn't do anyway when dev and prod are the same branch.
-      builds: ${{ steps.set-builds.outputs.builds }}
-    steps:
-      - name: Set builds
-        id: set-builds
-        env:
-          DEV_BRANCH: ${{ needs.resolve.outputs.dev-branch }}
-          PROD_BRANCH: ${{ needs.resolve.outputs.prod-branch }}
-        run: |
-          dev_branch="${DEV_BRANCH}"
-          prod_branch="${PROD_BRANCH}"
-
-          # HTML rules:
-          # - No separate prod branch configured -> staging only, always (nothing to
-          #   double up).
-          # - DEV_BRANCH == PROD_BRANCH -> both, always (one branch serves both, so
-          #   there's no "the other one didn't change" case to worry about).
-          # - The triggering branch IS the dev branch -> staging only (a change on dev
-          #   has no bearing on prod's already-published content).
-          # - Anything else (including a push to the prod branch, or any other branch)
-          #   -> both. We deliberately don't try to be clever about only rebuilding
-          #   the one that "actually changed" - e.g. a branch that's fallen out of the
-          #   dev set but is still in the prod set would be misdetected either way, so
-          #   we just always rebuild everything except the one case (dev branch) we
-          #   know for certain doesn't affect prod.
-          if [[ -z "${prod_branch}" ]]; then
-            html_builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"}]')
-          elif [[ "${dev_branch}" == "${prod_branch}" ]]; then
-            # Same branch for both, so the two builds differ only in publishEnv.
-            html_builds=$(jq -nc --arg b "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"dev"},{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"prod"}]')
-          elif [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
-            html_builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"}]')
-          else
-            html_builds=$(jq -nc --arg dev "$dev_branch" --arg prod "$prod_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"},{workflow:"docs-generate-html.yml",buildRef:$prod,publishEnv:"prod"}]')
-          fi
-
-          # PDF always builds from the branch that triggered this run - no dev/prod
-          # pairing to work out the way HTML has to (there's only ever one PDF build
-          # per trigger). Its publish-env is still dev or prod, though, resolved with
-          # the same conservative default the HTML rules above use: the dev branch is
-          # the one case known for certain not to affect prod, so it's the only one
-          # that resolves to dev - every other branch (the real prod branch, a third
-          # long-lived branch, a typo, ...) resolves to prod, the same "assume prod
-          # unless we're sure it's dev-only" policy, not the opposite.
-          if [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
-            pdf_publish_env="dev"
-          else
-            pdf_publish_env="prod"
-          fi
-          pdf_build=$(jq -nc --arg ref "${GITHUB_REF_NAME}" --arg env "$pdf_publish_env" \
-            '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env}]')
-
-          builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
-          echo "builds=${builds}" >> $GITHUB_OUTPUT
-
-  # One matrix job instance per build prepare-builds resolved, each dispatching its
-  # target workflow as its own separate run - not a workflow_call (which would keep
-  # them all in this one run), so each is fully independent: fail-fast: false means
-  # one matrix instance failing to dispatch doesn't cancel the others, and each
-  # dispatched run ends up with its own normally-named artifacts (no collisions, since
-  # they're separate runs, not jobs sharing one run).
-  trigger-builds:
-    name: Trigger ${{ matrix.build.workflow }} (${{ matrix.build.buildRef }})
-    needs: prepare-builds
-    strategy:
-      fail-fast: false
-      matrix:
-        build: ${{ fromJson(needs.prepare-builds.outputs.builds) }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dispatch
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        env:
-          BUILD: ${{ toJson(matrix.build) }}
-        with:
-          script: |
-            const build = JSON.parse(process.env.BUILD)
-            // Both docs-generate-html.yml and docs-generate-pdf.yml accept publish-env.
-            const inputs = { 'build-ref': build.buildRef, 'publish-env': build.publishEnv }
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: build.workflow,
-              // Dispatch from build.buildRef itself, NOT the branch that triggered
-              // this workflow - a dispatched run's ref becomes its real head_branch,
-              // which is exactly what docs-publish's check-build-branch inspects.
-              // Using a single fixed ref for every build here would make every
-              // dispatched run's head_branch equal whatever branch triggered THIS
-              // workflow, regardless of which environment it's actually building for
-              // - so a trigger from any branch other than build.buildRef (e.g. a
-              // versioned content branch, or the "other" HTML build when both are
-              // triggered) would always fail that check downstream, even for an
-              // otherwise-legitimate build.
-              ref: build.buildRef,
-              inputs,
-            })
-            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\` for \`${build.publishEnv}\``, true)
-            await core.summary.write()

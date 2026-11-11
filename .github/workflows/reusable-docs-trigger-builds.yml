@@ -1,0 +1,248 @@
+name: Trigger docs builds
+
+# Works out which environments a push (or a manual run) should build, and dispatches
+# docs-generate-html.yml and docs-generate-pdf.yml of the calling repository for each.
+# It doesn't publish anything itself - those workflows hand off to docs-publish for that.
+# This is the whole of the logic, so a repository keeps only its own trigger (the list of
+# branches, which cannot be an expression) and a call to this workflow.
+#
+# For the branch the run is on (github.ref_name of the caller), each environment is
+# asked independently whether it belongs to it:
+# - dev: the branch is the dev branch, or is listed in the playbook on the dev branch
+#   -> build from the dev branch and publish to dev.
+# - prod: the branch is the prod branch, or is listed in the playbook on the prod branch
+#   -> build from the prod branch and publish to prod.
+# - Neither -> nothing is built.
+# A branch can belong to both (for example when dev and prod are the same branch), and
+# then both are built, as two runs from their own branches. The dev and prod branch come
+# from the branch record in docs-publish (config/branch-record.yml), which docs-publish
+# is internal to, so the caller passes DOCS_DISPATCH_TOKEN to read it.
+
+on:
+  workflow_call:
+    inputs:
+      docs-dir:
+        description: "The directory the docs live in, relative to the repository root: the same docs-dir that docs-generate-html.yml builds with. Docs are triggered from here, so the playbook is looked for in it."
+        type: string
+        default: "."
+      antora-playbook:
+        description: "The Antora playbook, relative to docs-dir: the same one that docs-generate-html.yml builds with. It is read from the dev and prod branch to see which branches each one lists."
+        type: string
+        default: publish.yml
+      record-ref:
+        description: "The branch of docs-publish to read the record from."
+        type: string
+        default: dev
+      pdf:
+        description: "Whether to also build the PDF (docs-generate-pdf.yml). On by default, because the PDF workflow is standard; set it to false for a repository that does not have one yet, which would otherwise fail to dispatch it."
+        type: boolean
+        default: true
+    secrets:
+      DOCS_DISPATCH_TOKEN:
+        required: true
+
+# The dispatch needs actions: write, which the calling workflow has to grant too.
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+
+  plan:
+    name: Set builds to trigger
+    runs-on: ubuntu-latest
+    outputs:
+      # JSON array of {workflow, buildRef, publishEnv} - one entry per independent
+      # dispatch to make. publishEnv is always set explicitly (dev or prod), so the
+      # dispatched workflow never has to work it out from the branch - which it
+      # couldn't do anyway when dev and prod are the same branch. '[]' when there is
+      # nothing to build.
+      builds: ${{ steps.set-builds.outputs.builds }}
+    steps:
+
+      # The dev and prod branch of this repository, from the branch record in docs-publish.
+      # A repository that is not in the record fails here with a message saying so.
+      - name: Read the branch record
+        id: record
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          REPO: ${{ github.repository }}
+          RECORD_REF: ${{ inputs.record-ref }}
+        run: |
+          record=$(gh api -H "Accept: application/vnd.github.raw" \
+            "repos/neo4j/docs-publish/contents/config/branch-record.yml?ref=${RECORD_REF}")
+
+          if [[ "$(yq ".\"${REPO}\" | type" <<< "${record}")" != "!!map" ]]; then
+            echo "::error::${REPO} is not in config/branch-record.yml of neo4j/docs-publish. Add it there to publish from it."
+            exit 1
+          fi
+
+          dev=$(yq ".\"${REPO}\".dev.ref // \"\"" <<< "${record}")
+          prod=$(yq ".\"${REPO}\".prod.ref // \"\"" <<< "${record}")
+
+          echo "dev-branch=${dev}" >> "${GITHUB_OUTPUT}"
+          echo "prod-branch=${prod}" >> "${GITHUB_OUTPUT}"
+          echo "${REPO}: dev=${dev:-none} prod=${prod:-none} (record read from ${RECORD_REF})"
+
+      - name: Set builds
+        id: set-builds
+        env:
+          DEV_BRANCH: ${{ steps.record.outputs.dev-branch }}
+          PROD_BRANCH: ${{ steps.record.outputs.prod-branch }}
+          GH_TOKEN: ${{ github.token }}
+          DOCS_DIR: ${{ inputs.docs-dir }}
+          ANTORA_PLAYBOOK: ${{ inputs.antora-playbook }}
+          PDF: ${{ inputs.pdf }}
+        run: |
+          dev_branch="${DEV_BRANCH}"
+          prod_branch="${PROD_BRANCH}"
+          my_branch="${GITHUB_REF_NAME}"
+          repo=$(tr '[:upper:]' '[:lower:]' <<< "${GITHUB_REPOSITORY}")
+
+          # The playbook is in docs-dir, as the build finds it ("." means the repository root).
+          if [[ -z "${DOCS_DIR}" || "${DOCS_DIR}" == "." ]]; then
+            playbook="${ANTORA_PLAYBOOK}"
+          else
+            playbook="${DOCS_DIR%/}/${ANTORA_PLAYBOOK}"
+          fi
+
+          # Does the playbook on branch $1 list my_branch as a branch of this repository?
+          # Only content sources that are this repository count (a relative path, or its own
+          # GitHub URL). HEAD is the branch itself, which the caller has already compared.
+          # A branch pattern (*, ?, [], {}, !) is not evaluated.
+          lists_branch () {
+            local ref="$1" text rows url url_lc branch
+            if ! text=$(gh api -H "Accept: application/vnd.github.raw" "repos/${GITHUB_REPOSITORY}/contents/${playbook}?ref=${ref}" 2>/dev/null); then
+              echo "::warning::Could not read ${playbook} on ${ref}, so ${my_branch} is treated as not listed in it."
+              return 1
+            fi
+            # shellcheck disable=SC2016 # $u is a yq variable, not a shell one
+            if ! rows=$(yq -r '.content.sources[] | .url as $u | [.branches] | flatten | .[] | $u + "\t" + (. | tostring)' <<< "${text}" 2>/dev/null); then
+              echo "::warning::Could not read the sources in ${playbook} on ${ref}, so ${my_branch} is treated as not listed in it."
+              return 1
+            fi
+            while IFS=$'\t' read -r url branch; do
+              url_lc=$(tr '[:upper:]' '[:lower:]' <<< "${url}")
+              case "${url_lc}" in
+                .*) ;;
+                "https://github.com/${repo}"|"https://github.com/${repo}.git"|"https://github.com/${repo}/"|"git@github.com:${repo}"|"git@github.com:${repo}.git") ;;
+                *) continue ;;
+              esac
+              [[ -z "${branch}" || "${branch}" == "HEAD" || "${branch}" == "null" ]] && continue
+              if [[ "${branch}" =~ [][*?{}!] ]]; then
+                echo "::notice::The branch pattern ${branch} in ${playbook} on ${ref} is not evaluated."
+                continue
+              fi
+              [[ "${branch}" == "${my_branch}" ]] && return 0
+            done <<< "${rows}"
+            return 1
+          }
+
+          # Does my_branch belong to the environment whose branch is $1? It does if it is
+          # that branch, or is listed in the playbook on it. The comparison comes first, so
+          # the playbook is only read for a branch that is neither dev nor prod.
+          belongs () {
+            local ref="$1"
+            [[ -z "${ref}" ]] && return 1
+            [[ "${my_branch}" == "${ref}" ]] && return 0
+            lists_branch "${ref}"
+          }
+
+          # HTML rules - two independent questions, one per environment (a branch can belong
+          # to both, for example when dev and prod are the same branch):
+          # - dev: my_branch is the dev branch, or is listed in the playbook on it
+          #   -> build from the dev branch and publish to dev.
+          # - prod: my_branch is the prod branch, or is listed in the playbook on it
+          #   -> build from the prod branch and publish to prod.
+          # - Neither -> nothing is built.
+          envs=()
+          belongs "${dev_branch}" && envs+=(dev)
+          belongs "${prod_branch}" && envs+=(prod)
+
+          if [[ "${#envs[@]}" -eq 0 ]]; then
+            echo "builds=[]" >> "${GITHUB_OUTPUT}"
+            {
+              echo "### Nothing to build"
+              echo
+              echo "\`${my_branch}\` is not the dev or prod branch of this repository and is not listed in the playbook on either, so no builds were triggered."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            echo "${my_branch} belongs to neither environment: nothing to build."
+            exit 0
+          fi
+
+          html_builds='[]'
+          for env in "${envs[@]}"; do
+            ref="${dev_branch}"
+            [[ "${env}" == "prod" ]] && ref="${prod_branch}"
+            html_builds=$(jq -c --arg ref "${ref}" --arg env "${env}" \
+              '. + [{workflow:"docs-generate-html.yml",buildRef:$ref,publishEnv:$env}]' <<< "${html_builds}")
+          done
+
+          # PDF always builds from the branch that triggered this run - no dev/prod
+          # pairing to work out the way HTML has to (there's only ever one PDF build
+          # per trigger). Its publish-env is still dev or prod, though, resolved with
+          # the same conservative default the HTML rules above use: the dev branch is
+          # the one case known for certain not to affect prod, so it's the only one
+          # that resolves to dev - every other branch (the real prod branch, a third
+          # long-lived branch, a typo, ...) resolves to prod, the same "assume prod
+          # unless we're sure it's dev-only" policy, not the opposite.
+          pdf_build='[]'
+          if [[ "${PDF}" == "true" ]]; then
+            if [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
+              pdf_publish_env="dev"
+            else
+              pdf_publish_env="prod"
+            fi
+            pdf_build=$(jq -nc --arg ref "${GITHUB_REF_NAME}" --arg env "${pdf_publish_env}" \
+              '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env}]')
+          fi
+
+          builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
+          echo "builds=${builds}" >> "${GITHUB_OUTPUT}"
+
+  # One matrix job instance per build plan resolved, each dispatching its target workflow
+  # as its own separate run - not a workflow_call (which would keep them all in this one
+  # run), so each is fully independent: fail-fast: false means one matrix instance failing
+  # to dispatch doesn't cancel the others, and each dispatched run ends up with its own
+  # normally-named artifacts (no collisions, since they're separate runs, not jobs sharing
+  # one run). Skipped when there is nothing to build, because an empty matrix is an error.
+  trigger:
+    name: Trigger ${{ matrix.build.workflow }} (${{ matrix.build.buildRef }})
+    needs: plan
+    if: ${{ needs.plan.outputs.builds != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build: ${{ fromJson(needs.plan.outputs.builds) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          BUILD: ${{ toJson(matrix.build) }}
+        with:
+          script: |
+            const build = JSON.parse(process.env.BUILD)
+            // Both docs-generate-html.yml and docs-generate-pdf.yml accept publish-env and nothing
+            // else. Neither has a build-ref input: the ref below is the branch the dispatched run
+            // is on, so it builds github.ref_name.
+            const inputs = { 'publish-env': build.publishEnv }
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: build.workflow,
+              // Dispatch from build.buildRef itself, NOT the branch that triggered
+              // this workflow - a dispatched run's ref becomes its real head_branch,
+              // which is exactly what docs-publish's check-build-branch inspects.
+              // Using a single fixed ref for every build here would make every
+              // dispatched run's head_branch equal whatever branch triggered THIS
+              // workflow, regardless of which environment it's actually building for
+              // - so a trigger from any branch other than build.buildRef (e.g. a
+              // versioned content branch, or the "other" HTML build when both are
+              // triggered) would always fail that check downstream, even for an
+              // otherwise-legitimate build.
+              ref: build.buildRef,
+              inputs,
+            })
+            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\` for \`${build.publishEnv}\``, true)
+            await core.summary.write()

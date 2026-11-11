@@ -1,5 +1,5 @@
 name: "Generate HTML"
-run-name: "Generate ${{ inputs.publish-env }} HTML from ${{ inputs.build-ref }}"
+run-name: "Generate ${{ inputs.publish-env }} HTML from ${{ github.ref_name }}"
 
 permissions:
   contents: read
@@ -17,10 +17,6 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      build-ref:
-        description: 'The git ref to build from'
-        type: string
-        required: true
       publish-env:
         description: 'The environment to publish to'
         type: choice
@@ -37,7 +33,7 @@ jobs:
     with:
       docs-dir: 'docs'
       package-script: 'verify:publish'
-      build-ref: ${{ inputs.build-ref }}
+      build-ref: ${{ github.ref_name }}
       fetch-depth: 0
       publish-env: ${{ inputs.publish-env }}
     # A called workflow does not get the caller's secrets automatically. Pass just these

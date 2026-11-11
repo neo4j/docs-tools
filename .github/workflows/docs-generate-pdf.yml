@@ -1,11 +1,12 @@
 name: "Generate PDF"
-run-name: "Generate ${{ inputs.publish-env != '' && inputs.publish-env || (inputs.build-ref == vars.DOCS_PROD_BRANCH && 'prod' || 'dev') }} PDF from ${{ inputs.build-ref }}"
+run-name: "Generate ${{ inputs.publish-env != '' && inputs.publish-env || (github.ref_name == vars.DOCS_PROD_BRANCH && 'prod' || 'dev') }} PDF from ${{ github.ref_name }}"
 
 permissions:
   contents: read
 
-# Mirrors docs-generate-html.yml's trigger shape (workflow_dispatch with build-ref and
-# publish-env inputs) and its resolve-env -> build -> publish shape. Still simpler than
+# Mirrors docs-generate-html.yml's trigger shape (workflow_dispatch with a publish-env
+# input) and its resolve-env -> build -> publish shape. There is no build-ref input: the
+# branch to build is the one this run was dispatched on (github.ref_name). Still simpler than
 # that workflow in one way: there's no docs-verify step (no equivalent check exists yet
 # for a PDF), and build/publish are two plain jobs rather than a reusable-workflow call
 # plus a verify call. Uses a relative path (this workflow lives in the same repo as
@@ -15,12 +16,8 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      build-ref:
-        description: 'The git ref to build from'
-        type: string
-        required: true
       publish-env:
-        description: 'Override for dev/prod. Leave blank to derive it from build-ref against vars.DOCS_PROD_BRANCH - only needs setting explicitly when DOCS_DEV_BRANCH == DOCS_PROD_BRANCH, where build-ref alone cannot tell the two builds apart.'
+        description: 'Override for dev/prod. Leave blank to derive it from the branch against vars.DOCS_PROD_BRANCH - only needs setting explicitly when DOCS_DEV_BRANCH == DOCS_PROD_BRANCH, where the branch alone cannot tell the two builds apart.'
         type: string
         required: false
         default: ''
@@ -39,7 +36,7 @@ jobs:
         id: resolve
         env:
           PUBLISH_ENV_OVERRIDE: ${{ inputs.publish-env }}
-          BUILD_REF: ${{ inputs.build-ref }}
+          BUILD_REF: ${{ github.ref_name }}
           PROD_BRANCH: ${{ vars.DOCS_PROD_BRANCH }}
         run: |
           if [[ -n "${PUBLISH_ENV_OVERRIDE}" ]]; then
@@ -57,7 +54,7 @@ jobs:
     uses: ./.github/workflows/reusable-docs-pdf-build.yml
     with:
       docs-dir: 'docs'
-      build-ref: ${{ inputs.build-ref || github.ref_name }}
+      build-ref: ${{ github.ref_name }}
       fetch-depth: 0
 
   # Hand off to docs-publish (a separate repo) to actually publish this run's "pdf"
