@@ -29,6 +29,10 @@ on:
         description: "The branch of docs-publish to read the record from."
         type: string
         default: dev
+      pdf:
+        description: "Whether to also build the PDF (docs-generate-pdf.yml). On by default, because the PDF workflow is standard; set it to false for a repository that does not have one yet, which would otherwise fail to dispatch it."
+        type: boolean
+        default: true
     secrets:
       DOCS_DISPATCH_TOKEN:
         required: true
@@ -83,6 +87,7 @@ jobs:
           PROD_BRANCH: ${{ steps.record.outputs.prod-branch }}
           GH_TOKEN: ${{ github.token }}
           PLAYBOOK: ${{ inputs.playbook }}
+          PDF: ${{ inputs.pdf }}
         run: |
           dev_branch="${DEV_BRANCH}"
           prod_branch="${PROD_BRANCH}"
@@ -169,13 +174,16 @@ jobs:
           # that resolves to dev - every other branch (the real prod branch, a third
           # long-lived branch, a typo, ...) resolves to prod, the same "assume prod
           # unless we're sure it's dev-only" policy, not the opposite.
-          if [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
-            pdf_publish_env="dev"
-          else
-            pdf_publish_env="prod"
+          pdf_build='[]'
+          if [[ "${PDF}" == "true" ]]; then
+            if [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
+              pdf_publish_env="dev"
+            else
+              pdf_publish_env="prod"
+            fi
+            pdf_build=$(jq -nc --arg ref "${GITHUB_REF_NAME}" --arg env "${pdf_publish_env}" \
+              '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env}]')
           fi
-          pdf_build=$(jq -nc --arg ref "${GITHUB_REF_NAME}" --arg env "$pdf_publish_env" \
-            '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env}]')
 
           builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
           echo "builds=${builds}" >> "${GITHUB_OUTPUT}"
