@@ -223,8 +223,10 @@ jobs:
         with:
           script: |
             const build = JSON.parse(process.env.BUILD)
-            // Both docs-generate-html.yml and docs-generate-pdf.yml accept publish-env.
-            const inputs = { 'build-ref': build.buildRef, 'publish-env': build.publishEnv }
+            // Both docs-generate-html.yml and docs-generate-pdf.yml accept publish-env and nothing
+            // else. Neither has a build-ref input: the ref below is the branch the dispatched run
+            // is on, so it builds github.ref_name.
+            const inputs = { 'publish-env': build.publishEnv }
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
