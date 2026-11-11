@@ -24,15 +24,18 @@ permissions:
   actions: write
 
 # Edit the branches list below to match your repository: it must be the union of every
-# branch listed in BOTH your staging and prod Antora publish.yml playbooks (content
-# sources' `branches`). prepare-ref-env's logic below assumes this - it doesn't inspect
-# the playbooks itself, it just trusts that if this workflow ran at all, the branch that
-# triggered it is a real content branch for at least one of the two environments.
+# branch listed in BOTH your dev and prod Antora publish.yml playbooks (content sources'
+# `branches`), so that a push to any of them runs this workflow at all.
 #
 # This list is a plain, static YAML value, not an expression - GitHub Actions doesn't
 # allow `vars.*` (or any expression) in a trigger definition, so it can't be read
 # from the branch record the way the job logic below does. Keep it in sync with the
-# record by hand.
+# record and the playbooks by hand.
+#
+# What gets built is decided in prepare-builds from the branch this run is on (a push, or
+# the "Use workflow from" branch of a manual run), the dev and prod branch from the record,
+# and the playbooks: see the rules there. A branch that belongs to neither environment
+# builds nothing.
 on:
   push:
     branches:
@@ -64,37 +67,87 @@ jobs:
         env:
           DEV_BRANCH: ${{ needs.resolve.outputs.dev-branch }}
           PROD_BRANCH: ${{ needs.resolve.outputs.prod-branch }}
+          GH_TOKEN: ${{ github.token }}
+          # Where the playbook is: the same docs-dir and playbook that docs-generate-html.yml
+          # builds with (it passes docs-dir: 'docs' to the build and uses the default publish.yml).
+          PLAYBOOK: docs/publish.yml
         run: |
           dev_branch="${DEV_BRANCH}"
           prod_branch="${PROD_BRANCH}"
+          my_branch="${GITHUB_REF_NAME}"
+          repo=$(tr '[:upper:]' '[:lower:]' <<< "${GITHUB_REPOSITORY}")
 
-          # HTML rules:
-          # - No separate prod branch configured -> staging only, always (nothing to
-          #   double up).
-          # - DEV_BRANCH == PROD_BRANCH -> both, always (one branch serves both, so
-          #   there's no "the other one didn't change" case to worry about).
-          # - The triggering branch IS the dev branch -> staging only (a change on dev
-          #   has no bearing on prod's already-published content).
-          # - Anything else (including a push to the prod branch, or any other branch)
-          #   -> both. We deliberately don't try to be clever about only rebuilding
-          #   the one that "actually changed" - e.g. a branch that's fallen out of the
-          #   dev set but is still in the prod set would be misdetected either way, so
-          #   we just always rebuild everything except the one case (dev branch) we
-          #   know for certain doesn't affect prod.
-          if [[ -z "${prod_branch}" ]]; then
-            html_builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"}]')
-          elif [[ "${dev_branch}" == "${prod_branch}" ]]; then
-            # Same branch for both, so the two builds differ only in publishEnv.
-            html_builds=$(jq -nc --arg b "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"dev"},{workflow:"docs-generate-html.yml",buildRef:$b,publishEnv:"prod"}]')
-          elif [[ "${GITHUB_REF}" == "refs/heads/${dev_branch}" ]]; then
-            html_builds=$(jq -nc --arg dev "$dev_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"}]')
-          else
-            html_builds=$(jq -nc --arg dev "$dev_branch" --arg prod "$prod_branch" \
-              '[{workflow:"docs-generate-html.yml",buildRef:$dev,publishEnv:"dev"},{workflow:"docs-generate-html.yml",buildRef:$prod,publishEnv:"prod"}]')
+          # Does the playbook on branch $1 list my_branch as a branch of this repository?
+          # Only content sources that are this repository count (a relative path, or its own
+          # GitHub URL). HEAD is the branch itself, which the caller has already compared.
+          # A branch pattern (*, ?, [], {}, !) is not evaluated.
+          lists_branch () {
+            local ref="$1" text rows url url_lc branch
+            if ! text=$(gh api -H "Accept: application/vnd.github.raw" "repos/${GITHUB_REPOSITORY}/contents/${PLAYBOOK}?ref=${ref}" 2>/dev/null); then
+              echo "::warning::Could not read ${PLAYBOOK} on ${ref}, so ${my_branch} is treated as not listed in it."
+              return 1
+            fi
+            # shellcheck disable=SC2016 # $u is a yq variable, not a shell one
+            if ! rows=$(yq -r '.content.sources[] | .url as $u | [.branches] | flatten | .[] | $u + "\t" + (. | tostring)' <<< "${text}" 2>/dev/null); then
+              echo "::warning::Could not read the sources in ${PLAYBOOK} on ${ref}, so ${my_branch} is treated as not listed in it."
+              return 1
+            fi
+            while IFS=$'\t' read -r url branch; do
+              url_lc=$(tr '[:upper:]' '[:lower:]' <<< "${url}")
+              case "${url_lc}" in
+                .*) ;;
+                "https://github.com/${repo}"|"https://github.com/${repo}.git"|"https://github.com/${repo}/"|"git@github.com:${repo}"|"git@github.com:${repo}.git") ;;
+                *) continue ;;
+              esac
+              [[ -z "${branch}" || "${branch}" == "HEAD" || "${branch}" == "null" ]] && continue
+              if [[ "${branch}" =~ [][*?{}!] ]]; then
+                echo "::notice::The branch pattern ${branch} in ${PLAYBOOK} on ${ref} is not evaluated."
+                continue
+              fi
+              [[ "${branch}" == "${my_branch}" ]] && return 0
+            done <<< "${rows}"
+            return 1
+          }
+
+          # Does my_branch belong to the environment whose branch is $1? It does if it is
+          # that branch, or is listed in the playbook on it. The comparison comes first, so
+          # the playbook is only read for a branch that is neither dev nor prod.
+          belongs () {
+            local ref="$1"
+            [[ -z "${ref}" ]] && return 1
+            [[ "${my_branch}" == "${ref}" ]] && return 0
+            lists_branch "${ref}"
+          }
+
+          # HTML rules - two independent questions, one per environment (a branch can belong
+          # to both, for example when dev and prod are the same branch):
+          # - dev: my_branch is the dev branch, or is listed in the playbook on it
+          #   -> build from the dev branch and publish to dev.
+          # - prod: my_branch is the prod branch, or is listed in the playbook on it
+          #   -> build from the prod branch and publish to prod.
+          # - Neither -> nothing is built.
+          envs=()
+          belongs "${dev_branch}" && envs+=(dev)
+          belongs "${prod_branch}" && envs+=(prod)
+
+          if [[ "${#envs[@]}" -eq 0 ]]; then
+            echo "builds=[]" >> "${GITHUB_OUTPUT}"
+            {
+              echo "### Nothing to build"
+              echo
+              echo "\`${my_branch}\` is not the dev or prod branch of this repository and is not listed in the playbook on either, so no builds were triggered."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            echo "${my_branch} belongs to neither environment: nothing to build."
+            exit 0
           fi
+
+          html_builds='[]'
+          for env in "${envs[@]}"; do
+            ref="${dev_branch}"
+            [[ "${env}" == "prod" ]] && ref="${prod_branch}"
+            html_builds=$(jq -c --arg ref "${ref}" --arg env "${env}" \
+              '. + [{workflow:"docs-generate-html.yml",buildRef:$ref,publishEnv:$env}]' <<< "${html_builds}")
+          done
 
           # PDF always builds from the branch that triggered this run - no dev/prod
           # pairing to work out the way HTML has to (there's only ever one PDF build
@@ -113,7 +166,7 @@ jobs:
             '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env}]')
 
           builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
-          echo "builds=${builds}" >> $GITHUB_OUTPUT
+          echo "builds=${builds}" >> "${GITHUB_OUTPUT}"
 
   # One matrix job instance per build prepare-builds resolved, each dispatching its
   # target workflow as its own separate run - not a workflow_call (which would keep
@@ -124,6 +177,7 @@ jobs:
   trigger-builds:
     name: Trigger ${{ matrix.build.workflow }} (${{ matrix.build.buildRef }})
     needs: prepare-builds
+    if: ${{ needs.prepare-builds.outputs.builds != '[]' }}
     strategy:
       fail-fast: false
       matrix:
