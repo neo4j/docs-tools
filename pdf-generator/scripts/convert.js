@@ -28,6 +28,7 @@ const os = require('node:os')
 // those have no such conflict and should stay deduped normally.
 const RENDERER = path.join(__dirname, '../vendor/node_modules/asciidoctor-pdf/bin/asciidoctor-web-pdf')
 const PRINT_CSS = path.join(__dirname, '../pdf-theme/print.css')
+const PAGE_ROLE_PREPROCESSOR = path.join(__dirname, '../vendor/extensions/page-role-preprocessor.js')
 const ROLES_LABELS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/roles-labels-postprocessor.js')
 const REMOTE_INCLUDE_ADAPTER = path.join(__dirname, '../vendor/extensions/remote-include-adapter.js')
 const MACROS_ADAPTER = path.join(__dirname, '../vendor/extensions/macros-adapter.js')
@@ -287,6 +288,7 @@ Promise.all([buildStylesheet(), readStdin()]).then(([stylesheet, adoc]) => {
     // loads every `--extension` up front, before conversion starts, so position in this
     // list doesn't matter beyond that) - see cypher-language-adapter.js's own comment.
     '--extension', CYPHER_LANGUAGE_ADAPTER,
+    '--extension', PAGE_ROLE_PREPROCESSOR,
     '--extension', ROLES_LABELS_POSTPROCESSOR,
     '--extension', REMOTE_INCLUDE_ADAPTER,
     '--extension', MACROS_ADAPTER,
