@@ -21,10 +21,14 @@ name: Trigger docs builds
 on:
   workflow_call:
     inputs:
-      playbook:
-        description: "Path of the Antora playbook the HTML build uses, the same docs-dir and playbook that docs-generate-html.yml builds with (for example publish.yml, or docs/publish.yml)."
+      docs-dir:
+        description: "The directory the docs live in, relative to the repository root: the same docs-dir that docs-generate-html.yml builds with. Docs are triggered from here, so the playbook is looked for in it."
         type: string
-        required: true
+        default: "."
+      antora-playbook:
+        description: "The Antora playbook, relative to docs-dir: the same one that docs-generate-html.yml builds with. It is read from the dev and prod branch to see which branches each one lists."
+        type: string
+        default: publish.yml
       record-ref:
         description: "The branch of docs-publish to read the record from."
         type: string
@@ -86,7 +90,8 @@ jobs:
           DEV_BRANCH: ${{ steps.record.outputs.dev-branch }}
           PROD_BRANCH: ${{ steps.record.outputs.prod-branch }}
           GH_TOKEN: ${{ github.token }}
-          PLAYBOOK: ${{ inputs.playbook }}
+          DOCS_DIR: ${{ inputs.docs-dir }}
+          ANTORA_PLAYBOOK: ${{ inputs.antora-playbook }}
           PDF: ${{ inputs.pdf }}
         run: |
           dev_branch="${DEV_BRANCH}"
@@ -94,19 +99,26 @@ jobs:
           my_branch="${GITHUB_REF_NAME}"
           repo=$(tr '[:upper:]' '[:lower:]' <<< "${GITHUB_REPOSITORY}")
 
+          # The playbook is in docs-dir, as the build finds it ("." means the repository root).
+          if [[ -z "${DOCS_DIR}" || "${DOCS_DIR}" == "." ]]; then
+            playbook="${ANTORA_PLAYBOOK}"
+          else
+            playbook="${DOCS_DIR%/}/${ANTORA_PLAYBOOK}"
+          fi
+
           # Does the playbook on branch $1 list my_branch as a branch of this repository?
           # Only content sources that are this repository count (a relative path, or its own
           # GitHub URL). HEAD is the branch itself, which the caller has already compared.
           # A branch pattern (*, ?, [], {}, !) is not evaluated.
           lists_branch () {
             local ref="$1" text rows url url_lc branch
-            if ! text=$(gh api -H "Accept: application/vnd.github.raw" "repos/${GITHUB_REPOSITORY}/contents/${PLAYBOOK}?ref=${ref}" 2>/dev/null); then
-              echo "::warning::Could not read ${PLAYBOOK} on ${ref}, so ${my_branch} is treated as not listed in it."
+            if ! text=$(gh api -H "Accept: application/vnd.github.raw" "repos/${GITHUB_REPOSITORY}/contents/${playbook}?ref=${ref}" 2>/dev/null); then
+              echo "::warning::Could not read ${playbook} on ${ref}, so ${my_branch} is treated as not listed in it."
               return 1
             fi
             # shellcheck disable=SC2016 # $u is a yq variable, not a shell one
             if ! rows=$(yq -r '.content.sources[] | .url as $u | [.branches] | flatten | .[] | $u + "\t" + (. | tostring)' <<< "${text}" 2>/dev/null); then
-              echo "::warning::Could not read the sources in ${PLAYBOOK} on ${ref}, so ${my_branch} is treated as not listed in it."
+              echo "::warning::Could not read the sources in ${playbook} on ${ref}, so ${my_branch} is treated as not listed in it."
               return 1
             fi
             while IFS=$'\t' read -r url branch; do
@@ -118,7 +130,7 @@ jobs:
               esac
               [[ -z "${branch}" || "${branch}" == "HEAD" || "${branch}" == "null" ]] && continue
               if [[ "${branch}" =~ [][*?{}!] ]]; then
-                echo "::notice::The branch pattern ${branch} in ${PLAYBOOK} on ${ref} is not evaluated."
+                echo "::notice::The branch pattern ${branch} in ${playbook} on ${ref} is not evaluated."
                 continue
               fi
               [[ "${branch}" == "${my_branch}" ]] && return 0

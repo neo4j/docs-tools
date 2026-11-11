@@ -29,7 +29,7 @@ jobs:
     name: Trigger builds
     uses: ./.github/workflows/reusable-docs-trigger-builds.yml
     with:
-      # The same docs-dir and playbook that docs-generate-html.yml builds with.
-      playbook: docs/publish.yml
+      # The same docs-dir that docs-generate-html.yml builds with. The playbook is publish.yml in it.
+      docs-dir: docs
     secrets:
       DOCS_DISPATCH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
