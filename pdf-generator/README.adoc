@@ -34,6 +34,10 @@ antora publish.yml --extension @neo4j-antora/pdf-generator
 npm run verify:publish -- --extension @neo4j-antora/pdf-generator
 ----
 
+A PDF contains a single version: the one being built. When the playbook is built, every local content
+source (the repository being built) is limited to `branches: [HEAD]`, so the other versions the
+playbook lists are not collected or rendered. Remote content sources are left as they are.
+
 Generating a PDF this way always regenerates the full HTML site alongside
 it in the same Antora run (`@antora/assembler`/`@antora/pdf-extension` hook
 into normal site generation rather than replacing it) - there's no way to
