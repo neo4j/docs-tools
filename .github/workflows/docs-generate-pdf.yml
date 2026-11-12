@@ -1,5 +1,5 @@
 name: "Generate PDF"
-run-name: "Generate ${{ inputs.publish-env }} PDF from ${{ inputs.build-ref || github.ref_name }}"
+run-name: "Generate PDF from ${{ inputs.build-ref || github.ref_name }} for ${{ inputs.publish-env }}"
 
 permissions:
   contents: read
