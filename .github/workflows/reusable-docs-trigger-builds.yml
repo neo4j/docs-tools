@@ -34,7 +34,7 @@ on:
         type: string
         default: dev
       pdf:
-        description: "Whether to also build a PDF (docs-generate-pdf.yml) for the dev branch. On by default, because the PDF workflow is standard; set it to false for a repository that does not have one yet, which would otherwise fail to dispatch it."
+        description: "Whether to also build a PDF (docs-generate-pdf.yml) of the triggering branch, published to dev. On by default, because the PDF workflow is standard; set it to false for a repository that does not have one yet, which would otherwise fail to dispatch it."
         type: boolean
         default: true
     secrets:
@@ -178,12 +178,17 @@ jobs:
               '. + [{workflow:"docs-generate-html.yml",buildRef:$ref,publishEnv:$env}]' <<< "${html_builds}")
           done
 
-          # PDF: only for the dev branch, built from it and published to dev to verify.
-          # Prod PDFs are not published yet, so no other branch triggers one.
+          # PDF: one build for any branch that belongs to an environment, from the triggering
+          # branch, published to dev. It is dispatched from the dev branch, so the run is on the
+          # branch docs-publish checks, with the triggering branch in build-ref unless that is
+          # the dev branch itself. To also publish a PDF to prod, add an entry here with
+          # publishEnv prod, dispatched from the prod branch.
           pdf_build='[]'
-          if [[ "${PDF}" == "true" && "${my_branch}" == "${dev_branch}" ]]; then
-            pdf_build=$(jq -nc --arg ref "${dev_branch}" \
-              '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:"dev"}]')
+          if [[ "${PDF}" == "true" && -n "${dev_branch}" ]]; then
+            pdf_ref=""
+            [[ "${my_branch}" != "${dev_branch}" ]] && pdf_ref="${my_branch}"
+            pdf_build=$(jq -nc --arg ref "${dev_branch}" --arg pdf_ref "${pdf_ref}" \
+              '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:"dev",buildRefInput:$pdf_ref}]')
           fi
 
           builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
@@ -216,6 +221,8 @@ jobs:
             // else. Neither has a build-ref input: the ref below is the branch the dispatched run
             // is on, so it builds github.ref_name.
             const inputs = { 'publish-env': build.publishEnv }
+            // Only a PDF of a branch other than the one it is dispatched on has a build-ref.
+            if (build.buildRefInput) inputs['build-ref'] = build.buildRefInput
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
