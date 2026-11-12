@@ -34,7 +34,7 @@ on:
         type: string
         default: dev
       pdf:
-        description: "Whether to also build a PDF (docs-generate-pdf.yml) of the triggering branch, published to dev. On by default, because the PDF workflow is standard; set it to false for a repository that does not have one yet, which would otherwise fail to dispatch it."
+        description: "Whether to also build a PDF (docs-generate-pdf.yml) of the triggering branch. On by default, because the PDF workflow is standard; set it to false for a repository that does not have one yet, which would otherwise fail to dispatch it."
         type: boolean
         default: true
     secrets:
@@ -178,17 +178,20 @@ jobs:
               '. + [{workflow:"docs-generate-html.yml",buildRef:$ref,publishEnv:$env}]' <<< "${html_builds}")
           done
 
-          # PDF: one build for any branch that belongs to an environment, from the triggering
-          # branch, published to dev. It is dispatched from the dev branch, so the run is on the
-          # branch docs-publish checks, with the triggering branch in build-ref unless that is
-          # the dev branch itself. To also publish a PDF to prod, add an entry here with
-          # publishEnv prod, dispatched from the prod branch.
+          # PDF: one for each environment the HTML is built for, so it mirrors the HTML builds. It
+          # is built from the triggering branch and dispatched from that environment's branch,
+          # which is the branch docs-publish checks, with the triggering branch in build-ref
+          # unless it is that branch.
           pdf_build='[]'
-          if [[ "${PDF}" == "true" && -n "${dev_branch}" ]]; then
-            pdf_ref=""
-            [[ "${my_branch}" != "${dev_branch}" ]] && pdf_ref="${my_branch}"
-            pdf_build=$(jq -nc --arg ref "${dev_branch}" --arg pdf_ref "${pdf_ref}" \
-              '[{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:"dev",buildRefInput:$pdf_ref}]')
+          if [[ "${PDF}" == "true" ]]; then
+            for env in "${envs[@]}"; do
+              ref="${dev_branch}"
+              [[ "${env}" == "prod" ]] && ref="${prod_branch}"
+              pdf_ref=""
+              [[ "${my_branch}" != "${ref}" ]] && pdf_ref="${my_branch}"
+              pdf_build=$(jq -c --arg ref "${ref}" --arg env "${env}" --arg pdf_ref "${pdf_ref}" \
+                '. + [{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env,buildRefInput:$pdf_ref}]' <<< "${pdf_build}")
+            done
           fi
 
           builds=$(jq -nc --argjson html "$html_builds" --argjson pdf "$pdf_build" '$html + $pdf')
