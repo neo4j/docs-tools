@@ -41,8 +41,19 @@ function limitLocalSourcesToHead ({ playbook }) {
   }
 }
 
+// When the renderer fails, the assembler logs nothing, adds no PDF and Antora still exits 0, so the
+// failure only shows up later, when the workflow cannot find a PDF. Registered after
+// @antora/pdf-extension, this runs once the assembler has added its PDFs to the content catalog,
+// and fails the build if there are none.
+function requirePdf ({ contentCatalog }) {
+  const pdfs = contentCatalog.findBy({ family: 'export' }).filter((file) => file.out?.path?.endsWith('.pdf'))
+  if (!pdfs.length) throw new Error('@neo4j-antora/pdf-generator: no PDF was generated (see the renderer output above)')
+}
+
 module.exports.register = function ({ config = {} } = {}) {
   this.once('playbookBuilt', limitLocalSourcesToHead.bind(this))
   const resolvedConfig = Object.assign({ configFile: DEFAULT_CONFIG_FILE }, config)
-  return pdfExtension.register.call(this, { config: resolvedConfig })
+  const result = pdfExtension.register.call(this, { config: resolvedConfig })
+  this.once('navigationBuilt', requirePdf)
+  return result
 }

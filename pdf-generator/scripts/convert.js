@@ -218,10 +218,16 @@ function readStdin () {
 // asciidoctor-web-pdf only reads these from the environment (no -a attribute or
 // CLI flag equivalent - see lib/browser.js) and defaults to 30s, which a large
 // docset can easily exceed. Give it more headroom here rather than relying on
-// whoever runs the build to remember to export these.
+// whoever runs the build to remember to export these. Rendering, printing and
+// protocol calls (PUPPETEER_PROTOCOL_TIMEOUT, added by setup-vendor.js) all run
+// for as long as the whole layout takes, about 40 minutes for the Cypher Manual,
+// so they get 2 hours. Values already set in the environment win.
+const TWO_HOURS = String(2 * 60 * 60 * 1000)
 const PUPPETEER_TIMEOUT_ENV = {
   PUPPETEER_NAVIGATION_TIMEOUT: '180000',
-  PUPPETEER_RENDERING_TIMEOUT: '180000',
+  PUPPETEER_RENDERING_TIMEOUT: TWO_HOURS,
+  PUPPETEER_PRINT_TIMEOUT: TWO_HOURS,
+  PUPPETEER_PROTOCOL_TIMEOUT: TWO_HOURS,
 }
 
 // antora-assembler-pdf.yml deliberately does NOT set a `stylesheet` attribute

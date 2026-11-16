@@ -63,3 +63,22 @@ if (result.error || result.status !== 0) {
   console.error('@neo4j-antora/pdf-generator: failed to install its isolated asciidoctor-pdf renderer (see vendor/package.json)')
   process.exit(result.status || 1)
 }
+
+// asciidoctor-web-pdf launches Chromium without a protocolTimeout, so every call Puppeteer makes
+// to the page is limited to the Puppeteer default of 180 seconds. While Vivliostyle lays out a
+// large document, the page cannot answer the call that checks whether layout has finished, and
+// the conversion fails with "Waiting failed" (the Cypher Manual needs about 40 minutes). None of
+// the PUPPETEER_*_TIMEOUT variables that asciidoctor-web-pdf reads change this, so the launch
+// options are patched here to read PUPPETEER_PROTOCOL_TIMEOUT as well.
+const browserJs = path.join(vendorDir, 'node_modules/asciidoctor-pdf/lib/browser.js')
+const LAUNCH_OPTION = '      headless: !preview,\n'
+const PROTOCOL_TIMEOUT_OPTION =
+  '      protocolTimeout: process.env.PUPPETEER_PROTOCOL_TIMEOUT ? Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT) : undefined,\n'
+const browserSource = fs.readFileSync(browserJs, 'utf8')
+if (!browserSource.includes('protocolTimeout')) {
+  if (!browserSource.includes(LAUNCH_OPTION)) {
+    console.error(`@neo4j-antora/pdf-generator: cannot add protocolTimeout to ${browserJs}: launch options not found`)
+    process.exit(1)
+  }
+  fs.writeFileSync(browserJs, browserSource.replace(LAUNCH_OPTION, LAUNCH_OPTION + PROTOCOL_TIMEOUT_OPTION))
+}
