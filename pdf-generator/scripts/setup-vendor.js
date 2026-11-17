@@ -64,21 +64,40 @@ if (result.error || result.status !== 0) {
   process.exit(result.status || 1)
 }
 
-// asciidoctor-web-pdf launches Chromium without a protocolTimeout, so every call Puppeteer makes
-// to the page is limited to the Puppeteer default of 180 seconds. While Vivliostyle lays out a
-// large document, the page cannot answer the call that checks whether layout has finished, and
-// the conversion fails with "Waiting failed" (the Cypher Manual needs about 40 minutes). None of
-// the PUPPETEER_*_TIMEOUT variables that asciidoctor-web-pdf reads change this, so the launch
-// options are patched here to read PUPPETEER_PROTOCOL_TIMEOUT as well.
+// Two patches to asciidoctor-web-pdf's lib/browser.js. Each fails the install if its anchor is
+// missing, so a renderer upgrade cannot silently drop it.
+//
+// 1. protocolTimeout: Chromium is launched without one, so every call Puppeteer makes to the page
+//    is limited to the Puppeteer default of 180 seconds. While Vivliostyle lays out a large
+//    document, the page cannot answer the call that checks whether layout has finished, and the
+//    conversion fails with "Waiting failed" (the Cypher Manual needs about 30 minutes). None of
+//    the PUPPETEER_*_TIMEOUT variables that asciidoctor-web-pdf reads change this, so the launch
+//    options read PUPPETEER_PROTOCOL_TIMEOUT as well.
+// 2. polling: the check for finished layout polls on requestAnimationFrame by default. In long
+//    local builds the browser has stopped producing animation frames, so the check never ran again
+//    and the build hung after layout had finished. A 1-second timer does not depend on frames.
 const browserJs = path.join(vendorDir, 'node_modules/asciidoctor-pdf/lib/browser.js')
-const LAUNCH_OPTION = '      headless: !preview,\n'
-const PROTOCOL_TIMEOUT_OPTION =
-  '      protocolTimeout: process.env.PUPPETEER_PROTOCOL_TIMEOUT ? Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT) : undefined,\n'
-const browserSource = fs.readFileSync(browserJs, 'utf8')
-if (!browserSource.includes('protocolTimeout')) {
-  if (!browserSource.includes(LAUNCH_OPTION)) {
-    console.error(`@neo4j-antora/pdf-generator: cannot add protocolTimeout to ${browserJs}: launch options not found`)
+const PATCHES = [
+  {
+    done: 'protocolTimeout',
+    anchor: '      headless: !preview,\n',
+    replacement:
+      '      headless: !preview,\n' +
+      '      protocolTimeout: process.env.PUPPETEER_PROTOCOL_TIMEOUT ? Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT) : undefined,\n',
+  },
+  {
+    done: 'timeout: this.renderingTimeout, polling: 1000',
+    anchor: '      { timeout: this.renderingTimeout },\n',
+    replacement: '      { timeout: this.renderingTimeout, polling: 1000 },\n',
+  },
+]
+let browserSource = fs.readFileSync(browserJs, 'utf8')
+for (const { done, anchor, replacement } of PATCHES) {
+  if (browserSource.includes(done)) continue
+  if (browserSource.split(anchor).length !== 2) {
+    console.error(`@neo4j-antora/pdf-generator: cannot patch ${browserJs}: expected exactly one ${JSON.stringify(anchor.trim())}`)
     process.exit(1)
   }
-  fs.writeFileSync(browserJs, browserSource.replace(LAUNCH_OPTION, LAUNCH_OPTION + PROTOCOL_TIMEOUT_OPTION))
+  browserSource = browserSource.replace(anchor, replacement)
 }
+fs.writeFileSync(browserJs, browserSource)

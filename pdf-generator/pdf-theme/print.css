@@ -66,7 +66,7 @@
 
 @page {
   size: A4;
-  margin: 25mm 18mm 20mm 18mm;
+  margin: 15mm;
 }
 /* Verso (even/left) pages: page number on the outer (left) edge */
 @page :left {
@@ -117,8 +117,8 @@
 body.book {
   font-family: var(--font-body);
   color: var(--brand-text);
-  font-size: 10.5pt;
-  line-height: 1.5;
+  font-size: 10pt;
+  line-height: 1.35;
   /* Real site.css sets a bare `body{font-weight:var(--weight-light)}` (300) - meant for
      its own Public Sans webfont (see the Google Fonts @import this theme adds below),
      not whatever this static PDF render actually has loaded, and reads as faint, thin
@@ -161,13 +161,13 @@ body.book {
    own README).
    `height: 100%` doesn't resolve here - this renderer's Vivliostyle Viewer
    layout engine doesn't give this box a definite containing-block height
-   to be a percentage of, so centering silently no-ops. 252mm is the actual
+   to be a percentage of, so centering silently no-ops. 267mm is the actual
    per-page content height this theme produces: A4 (297mm) minus this
-   file's own `@page` rule above (25mm top margin, 20mm bottom) - update
+   file's own `@page` rule above (15mm top margin, 15mm bottom) - update
    this alongside that rule if it ever changes. */
 #colophon {
   page-break-after: always;
-  height: 252mm;
+  height: 267mm;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -279,8 +279,8 @@ body.book {
    per a style pass comparing against the legacy pipeline's own output, where chapter
    titles were much more prominent than this theme's original 18pt. */
 #pdf-export h2 { font-size: 26pt; border-bottom: 1pt solid var(--brand-border); padding-bottom: 6pt; }
-#pdf-export h3 { font-size: 18pt; }
-#pdf-export h4 { font-size: 14pt; }
+#pdf-export h3 { font-size: 16pt; }
+#pdf-export h4 { font-size: 13pt; }
 /* A page nested two levels deep in its component's nav (e.g. a page under a sub-chapter)
    has its own internal headings shifted down by that same nav depth once merged into this
    book, same as the page's own top heading is (see convert.js's comment on heading
@@ -347,9 +347,9 @@ body.book {
      background-clip: padding-box keeps the background strictly inside the border instead
      of under it. */
   background-clip: padding-box;
-  padding: 8pt 10pt;
-  font-size: 9pt;
-  line-height: 1.4;
+  padding: 6pt 8pt;
+  font-size: 8.5pt;
+  line-height: 1.3;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -413,11 +413,11 @@ body.book {
   border: 0.5pt solid var(--brand-border);
   width: 100%;
   break-inside: auto;
-  font-size: 9.5pt;
+  font-size: 9pt;
 }
 #pdf-export table.tableblock th, #pdf-export table.tableblock td {
   border: 0.5pt solid var(--brand-border);
-  padding: 5pt 7pt;
+  padding: 3pt 5pt;
   vertical-align: top;
   /* Same box-sizing bug as the admonition-in-table-cell fix above, just unfixed here for
      every ordinary cell - with no explicit box-sizing, border+padding (15pt total: 2x7pt
@@ -848,3 +848,21 @@ h2 > .flex-label {
 
 /* TOC (hidden fixed div rendered separately by asciidoctor-web-pdf's own TOC mechanism) */
 .toc-entry a { color: var(--brand-text); text-decoration: none; }
+
+/* Print density. Real site.css spaces content for a screen: a 1.8 line height on .doc (which
+   overrides body.book above), 1.5rem under every block, 2rem around tables, and 1.5rem of
+   padding inside the code element of every listing, on top of the padding of its pre. In print
+   that made a book about 1.5 times as long as the legacy pipeline produced for the same
+   content. These rules tighten the spacing for print only. */
+#pdf-export .doc { line-height: 1.5; padding-bottom: 0; }
+#pdf-export .doc table.tableblock, #pdf-export .doc td, #pdf-export .doc th { line-height: 1.45; }
+#pdf-export .doc pre.highlight > code, #pdf-export .doc pre > code { padding: 0; }
+#pdf-export .doc .paragraph, #pdf-export .doc .ulist, #pdf-export .doc .olist, #pdf-export .doc .dlist,
+#pdf-export .doc .listingblock, #pdf-export .doc .literalblock, #pdf-export .doc .exampleblock,
+#pdf-export .doc .imageblock, #pdf-export .doc .colist { margin: 0 0 1.25em; }
+#pdf-export .doc .admonitionblock { margin: 1.25em 0; }
+#pdf-export .doc table.tableblock { margin: 0.75em 0 1.25em; }
+#pdf-export .doc h3 { margin: 1.2em 0 0.5em; line-height: 1.25; }
+#pdf-export .doc h4, #pdf-export .doc h5, #pdf-export .doc h6 { margin: 1em 0 0.4em; line-height: 1.25; }
+/* Keep a block title (Query, Parameters, Result, ...) on the same page as its block. */
+#pdf-export .doc .listingblock > .title, #pdf-export .doc .tableblock > .title, #pdf-export .doc table.tableblock > caption { break-after: avoid; }
