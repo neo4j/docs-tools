@@ -192,6 +192,11 @@ jobs:
     - name: Install docset dependencies
       working-directory: ${{ env.DOCS_DIR }}
       run: |
+        # This build always uses Antora 3.2 or later, which needs js-yaml ~5.4. A js-yaml entry
+        # under "overrides" in the docset package.json pins 4.x, and Antora then fails to start
+        # (yaml.CORE_SCHEMA.withTags is not a function), so drop it for this build. Only the CI
+        # copy of package.json changes.
+        npm pkg delete overrides.js-yaml
         npm install --omit=dev
         # Ensure a correct version of Antora, the same way reusable-docs-build.yml
         # does for the HTML build - @antora/pdf-extension needs the assembler
