@@ -59,6 +59,9 @@ jobs:
         else
           base="HEAD^"
         fi
+        # git diff lists paths alphabetically, so extensions/* publish before pdf-generator, which
+        # depends on them. The Publish step stops at the first failure, so pdf-generator is never
+        # published pinned to a version that failed to publish.
         globs=('pdf-generator/package.json' 'extensions/antora/*/package.json' 'extensions/asciidoc/*/package.json')
         files=$(git diff --name-only "$base" HEAD -- "${globs[@]}")
         dirs=""

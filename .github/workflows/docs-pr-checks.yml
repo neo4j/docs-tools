@@ -41,6 +41,26 @@ jobs:
     with:
       failOnWarnings: true
 
+  # Fail if a package in this repo depends on another package in this repo at a version other
+  # than the one in the repo, for example pdf-generator pinning an older roles-labels
+  internal-deps-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          sparse-checkout: |
+            .github/scripts
+            pdf-generator
+            extensions
+
+      - name: Use Node.js version 24.22.1
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 24.22.1
+
+      - name: Check versions of dependencies on packages in this repo
+        run: node .github/scripts/check-internal-deps.mjs
+
   # Get lists of changes in the PR
   # - all updated asciidoc files
   # - all updated asciidoc pages
