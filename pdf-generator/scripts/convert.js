@@ -37,6 +37,7 @@ const COLOPHON_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/coloph
 const ABSOLUTE_LINKS_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/absolute-links-postprocessor.js')
 const DOC_WRAPPER_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/doc-wrapper-postprocessor.js')
 const CYPHER_LANGUAGE_ADAPTER = path.join(__dirname, '../vendor/extensions/cypher-language-adapter.js')
+const KROKI_ADAPTER = path.join(__dirname, '../vendor/extensions/kroki-adapter.js')
 const TABBED_EXAMPLE_POSTPROCESSOR = path.join(__dirname, '../vendor/extensions/tabbed-example-postprocessor.js')
 
 // Unlike the extensions above, `@djencks/asciidoctor-mathjax` isn't a
@@ -298,6 +299,7 @@ Promise.all([buildStylesheet(), readStdin()]).then(([stylesheet, adoc]) => {
     '--extension', ROLES_LABELS_POSTPROCESSOR,
     '--extension', REMOTE_INCLUDE_ADAPTER,
     '--extension', MACROS_ADAPTER,
+    '--extension', KROKI_ADAPTER,
     '--extension', COLOPHON_POSTPROCESSOR,
     '--extension', ABSOLUTE_LINKS_POSTPROCESSOR,
     '--extension', DOC_WRAPPER_POSTPROCESSOR,
