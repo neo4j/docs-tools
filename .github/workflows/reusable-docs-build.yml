@@ -31,7 +31,7 @@ on:
         description: 'The Antora version to install'
         required: false
         type: string
-        default: '3.1.15'
+        default: '3.2.2'
       package-script:
         description: 'The name of the script to run in package.json '
         type: string
@@ -363,6 +363,13 @@ jobs:
     - name: Install required extensions - except any excluded by the workflow input
       working-directory: ${{ env.DOCS_DIR }}
       run: |
+        # Antora 3.2 and later need js-yaml ~5.4. A js-yaml entry under "overrides" in the
+        # docset package.json pins 4.x, and Antora then fails to start (yaml.CORE_SCHEMA.withTags
+        # is not a function), so drop it for this build. Only the CI copy of package.json changes.
+        if [ "$(printf '%s\n%s\n' "3.2.0" "$ANTORA_VERSION" | sort -V | head -1)" = "3.2.0" ]; then
+          npm pkg delete overrides.js-yaml
+        fi
+
         # Install dependencies
         printf "\n\n<!---- Install npm packages -->"
         npm install --omit=dev
