@@ -65,6 +65,16 @@ on:
         required: false
         type: string
         default: ''
+      docset-path:
+        description: 'For a repository with several docsets: the folder of the one docset to build a PDF for (as written in the start_paths of the playbook, relative to docs-dir), for example java-manual. Its antora.yml gives the docset name and version, and only that docset is built (see @neo4j-antora/pdf-generator, PDF_DOCSET_PATH). Leave blank for a repository with one docset, where antora.yml is in docs-dir.'
+        required: false
+        type: string
+        default: ''
+      shared-paths:
+        description: 'Only with docset-path: comma-separated folders the docset depends on, for example common-content. They are built with the docset but get no PDF.'
+        required: false
+        type: string
+        default: ''
 
     outputs:
       docset:
@@ -93,6 +103,8 @@ jobs:
       ANTORA_EXTENSIONS: ${{ inputs.antora-extensions }}
       ANTORA_EXTENSIONS_EXCLUDE: ${{ inputs.antora-extensions-exclude }}
       VERSIONLESS: ${{ inputs.versionless }}
+      DOCSET_PATH: ${{ inputs.docset-path }}
+      SHARED_PATHS: ${{ inputs.shared-paths }}
       # Same dev/prod split as reusable-docs-build.yml's own DOCS_PUBLISH_URL (see its
       # own comment on this - TEMPORARY hardcoded values, same reason: secrets.* always
       # resolves empty here, no caller of this reusable workflow has secrets: inherit).
@@ -146,16 +158,25 @@ jobs:
       working-directory: ${{ env.DOCS_DIR }}
       id: antora-yml
       run: |
-        name=$(grep -m1 '^name:' antora.yml | sed -E "s/^name:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
+        # A repository with several docsets keeps each one's antora.yml in its own folder.
+        descriptor=antora.yml
+        if [ -n "$DOCSET_PATH" ]; then
+          descriptor="${DOCSET_PATH%/}/antora.yml"
+        fi
+        if [ ! -f "$descriptor" ]; then
+          echo "::error::${descriptor} not found in ${DOCS_DIR}"
+          exit 1
+        fi
+        name=$(grep -m1 '^name:' "$descriptor" | sed -E "s/^name:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
         if [ -z "$name" ]; then
-          echo "::error::Could not read 'name' from antora.yml"
+          echo "::error::Could not read 'name' from ${descriptor}"
           exit 1
         fi
         echo "name=$name" >> "$GITHUB_OUTPUT"
         if [ "${VERSIONLESS}" != "true" ]; then
-          version=$(grep -m1 '^version:' antora.yml | sed -E "s/^version:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
+          version=$(grep -m1 '^version:' "$descriptor" | sed -E "s/^version:[[:space:]]*['\"]?([^'\"]*)['\"]?[[:space:]]*\$/\1/")
           if [ -z "$version" ]; then
-            echo "::error::Could not read 'version' from antora.yml"
+            echo "::error::Could not read 'version' from ${descriptor}"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -263,6 +284,9 @@ jobs:
         # so those extensions can still find hoisted deps (e.g. vinyl) that
         # are only installed under docs-dir's node_modules.
         NODE_PATH: ${{ github.workspace }}/${{ env.DOCS_DIR }}/node_modules
+        # Read by @neo4j-antora/pdf-generator: build only this docset (blank: all components).
+        PDF_DOCSET_PATH: ${{ env.DOCSET_PATH }}
+        PDF_SHARED_PATHS: ${{ env.SHARED_PATHS }}
       # --url, same as reusable-docs-build.yml's own HTML build: cascades into the
       # docset's own site-url (used for canonical links/sitemaps). DOCS_PUBLISH_URL
       # itself (this step's own env, set above) is also what convert.js reads
@@ -284,6 +308,15 @@ jobs:
         if [ -z "$pdf_candidates" ]; then
           echo "::error::No PDF found under build/ - check the Antora log above"
           exit 1
+        fi
+        if [ -n "$DOCSET_PATH" ]; then
+          # The docsets of a repository share one build/, and the version alone (the same for
+          # all of them in docs-drivers) does not say which PDF is which: match the docset name.
+          pdf_candidates=$(echo "$pdf_candidates" | grep -F "/${{ steps.antora-yml.outputs.name }}/" || true)
+          if [ -z "$pdf_candidates" ]; then
+            echo "::error::No PDF found for docset '${{ steps.antora-yml.outputs.name }}' under build/"
+            exit 1
+          fi
         fi
         if [ "${VERSIONLESS}" = "true" ]; then
           # No version segment to disambiguate by - only one PDF is expected.

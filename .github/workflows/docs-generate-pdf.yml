@@ -1,5 +1,5 @@
 name: "Generate PDF"
-run-name: "Generate PDF from ${{ inputs.build-ref || github.ref_name }} for ${{ inputs.publish-env }}"
+run-name: "Generate PDF${{ inputs.docset-path && format(' of {0}', inputs.docset-path) || '' }} from ${{ inputs.build-ref || github.ref_name }} for ${{ inputs.publish-env }}"
 
 permissions:
   contents: read
@@ -24,6 +24,16 @@ on:
         type: string
         required: false
         default: ''
+      docset-path:
+        description: "Only for a repository with several docsets: the folder of the one docset to build. Set by the trigger."
+        type: string
+        required: false
+        default: ''
+      shared-paths:
+        description: "Only with docset-path: comma-separated folders the docset depends on. Set by the trigger."
+        type: string
+        required: false
+        default: ''
 
 jobs:
 
@@ -35,6 +45,8 @@ jobs:
       build-ref: ${{ inputs.build-ref || github.ref_name }}
       fetch-depth: 0
       publish-env: ${{ inputs.publish-env }}
+      docset-path: ${{ inputs.docset-path }}
+      shared-paths: ${{ inputs.shared-paths }}
 
   # Hand off to docs-publish (a separate repo) to actually publish this run's "pdf"
   # artifact - same mechanism docs-generate-html.yml already uses for its "docs"
