@@ -62,17 +62,20 @@ function limitToDocset ({ playbook }, config) {
   const sharedPaths = (process.env.PDF_SHARED_PATHS ?? '').split(',').map(normalizePath).filter(Boolean)
   let componentName
   for (const source of playbook?.content?.sources ?? []) {
-    if (REMOTE_URL.test(source.url ?? '') || !source.start_paths) continue
-    const startPaths = [].concat(source.start_paths)
+    // Antora camel-cases the keys of the playbook it builds (startPaths); start_paths is the
+    // spelling in the file, kept as a fallback.
+    const key = source.startPaths ? 'startPaths' : 'start_paths'
+    if (REMOTE_URL.test(source.url ?? '') || !source[key]) continue
+    const startPaths = [].concat(source[key])
     if (!startPaths.some((startPath) => normalizePath(startPath) === docsetPath)) continue
-    source.start_paths = startPaths.filter((startPath) => {
+    source[key] = startPaths.filter((startPath) => {
       const normalized = normalizePath(startPath)
       return normalized === docsetPath || sharedPaths.includes(normalized)
     })
     const descriptor = path.resolve(playbook.dir ?? '.', source.url ?? '.', docsetPath, 'antora.yml')
     componentName = yaml.load(fs.readFileSync(descriptor, 'utf8'))?.name
     if (!componentName) throw new Error(`@neo4j-antora/pdf-generator: no name in ${descriptor}`)
-    logger?.info({ source: { url: source.url } }, 'Building %s only (start_paths: %s)', docsetPath, source.start_paths.join(', '))
+    logger?.info({ source: { url: source.url } }, 'Building %s only (start_paths: %s)', docsetPath, source[key].join(', '))
   }
   if (!componentName) {
     throw new Error(`@neo4j-antora/pdf-generator: PDF_DOCSET_PATH "${docsetPath}" is not in the start_paths of a local content source in the playbook`)
