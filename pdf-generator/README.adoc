@@ -38,6 +38,28 @@ A PDF contains a single version: the one being built. When the playbook is built
 source (the repository being built) is limited to `branches: [HEAD]`, so the other versions the
 playbook lists are not collected or rendered. Remote content sources are left as they are.
 
+=== Repositories with several docsets
+
+By default every component in the playbook gets a PDF. A repository that holds several docsets
+(for example `docs-drivers`) builds one PDF per run instead, by setting two environment variables:
+
+[cols="1,3"]
+|===
+| Variable | Meaning
+
+| `PDF_DOCSET_PATH`
+| The folder of the docset to build, as written in the `start_paths` of the playbook (for example `java-manual`). Not set: every component gets a PDF.
+
+| `PDF_SHARED_PATHS`
+| Comma-separated folders the docset depends on (for example `common-content`). They are kept in the build and get no PDF.
+|===
+
+When `PDF_DOCSET_PATH` is set:
+
+* The local content sources keep only the docset folder and the shared folders in `start_paths`, so the other docsets are not loaded.
+* The assembler is limited to the component named in the `antora.yml` of the docset folder.
+* The build fails if the folder is not in the `start_paths` of a local content source, or if more than one PDF is produced.
+
 Generating a PDF this way always regenerates the full HTML site alongside
 it in the same Antora run (`@antora/assembler`/`@antora/pdf-extension` hook
 into normal site generation rather than replacing it) - there's no way to
