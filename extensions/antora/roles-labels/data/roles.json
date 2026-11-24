@@ -1,5 +1,6 @@
 {
     "products": [
+        "APOC",
         "Bloom",
         "Cypher",
         "Neo4j",

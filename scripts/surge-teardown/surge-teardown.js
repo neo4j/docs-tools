@@ -62,9 +62,11 @@ surgeList().then((deploys) => {
   for (let deploy of deploys) {
     const deployDetails = deploy.replace(/[ \s\t]+/g,' ').trim().split(' ');
 
-    // ge the deploy url
+    // get the deploy url
     const deployUrl = deployDetails[0]
-    if (!deployUrl) continue;
+    // skip anything that is not a surge domain, such as the "50 of 239" count
+    // line that `surge list` prints when the list is truncated
+    if (!deployUrl?.endsWith('.surge.sh')) continue;
     console.log('checking PR:', deployUrl)
     // derive the pr details from the deploy url
     const prDetails = deployUrl.replace('.surge.sh','').split(/[.-]/);

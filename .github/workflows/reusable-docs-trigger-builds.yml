@@ -13,6 +13,8 @@ name: Trigger docs builds
 # - prod: the branch is the prod branch, or is listed in the playbook on the prod branch
 #   -> build from the prod branch and publish to prod.
 # - Neither -> nothing is built.
+# With pdf-docsets, a repository with several docsets gets one PDF run for each docset the
+# push changed (see select_pdf_docsets below), instead of one PDF for the repository.
 # A branch can belong to both (for example when dev and prod are the same branch), and
 # then both are built, as two runs from their own branches. The dev and prod branch come
 # from the branch record in docs-publish (config/branch-record.yml), which docs-publish
@@ -37,6 +39,18 @@ on:
         description: "Whether to also build a PDF (docs-generate-pdf.yml) of the triggering branch. On by default, because the PDF workflow is standard; set it to false for a repository that does not have one yet, which would otherwise fail to dispatch it."
         type: boolean
         default: true
+      pdf-docsets:
+        description: "Set to true for a repository with several docsets (an antora.yml in each folder listed in start_paths, such as docs-drivers), to build one PDF for each docset and only for the docsets a push changed. The docsets are the folders in the local start_paths of the playbook that have an antora.yml, less pdf-shared-paths. Each PDF is its own run of docs-generate-pdf.yml, which gets the folder in its docset-path input. False builds the single PDF of a repository with one docset."
+        type: boolean
+        default: false
+      pdf-shared-paths:
+        description: "Only with pdf-docsets: comma-separated folders of content the docsets share, for example common-content. They are not docsets themselves, and a change in one builds the PDF of every docset. Passed on to docs-generate-pdf.yml as shared-paths."
+        type: string
+        default: ""
+      pdf-docset:
+        description: "Only with pdf-docsets, for a manual run: the folder of the one docset to build, or all. Blank works out the docsets from the changes of the push, and builds all of them when there is no push to compare."
+        type: string
+        default: ""
     secrets:
       DOCS_DISPATCH_TOKEN:
         required: true
@@ -93,6 +107,12 @@ jobs:
           DOCS_DIR: ${{ inputs.docs-dir }}
           ANTORA_PLAYBOOK: ${{ inputs.antora-playbook }}
           PDF: ${{ inputs.pdf }}
+          PDF_DOCSETS: ${{ inputs.pdf-docsets }}
+          PDF_SHARED_PATHS: ${{ inputs.pdf-shared-paths }}
+          PDF_DOCSET: ${{ inputs.pdf-docset }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
         run: |
           dev_branch="${DEV_BRANCH}"
           prod_branch="${PROD_BRANCH}"
@@ -106,12 +126,23 @@ jobs:
             playbook="${DOCS_DIR%/}/${ANTORA_PLAYBOOK}"
           fi
 
+          # Is the content source url $1 this repository: a relative path, or its own GitHub URL?
+          is_this_repo () {
+            local url_lc
+            url_lc=$(tr '[:upper:]' '[:lower:]' <<< "$1")
+            case "${url_lc}" in
+              .*) return 0 ;;
+              "https://github.com/${repo}"|"https://github.com/${repo}.git"|"https://github.com/${repo}/"|"git@github.com:${repo}"|"git@github.com:${repo}.git") return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
           # Does the playbook on branch $1 list my_branch as a branch of this repository?
           # Only content sources that are this repository count (a relative path, or its own
           # GitHub URL). HEAD is the branch itself, which the caller has already compared.
           # A branch pattern (*, ?, [], {}, !) is not evaluated.
           lists_branch () {
-            local ref="$1" text rows url url_lc branch
+            local ref="$1" text rows url branch
             if ! text=$(gh api -H "Accept: application/vnd.github.raw" "repos/${GITHUB_REPOSITORY}/contents/${playbook}?ref=${ref}" 2>/dev/null); then
               echo "::warning::Could not read ${playbook} on ${ref}, so ${my_branch} is treated as not listed in it."
               return 1
@@ -122,13 +153,8 @@ jobs:
               return 1
             fi
             while IFS=$'\t' read -r url branch; do
-              url_lc=$(tr '[:upper:]' '[:lower:]' <<< "${url}")
-              case "${url_lc}" in
-                .*) ;;
-                "https://github.com/${repo}"|"https://github.com/${repo}.git"|"https://github.com/${repo}/"|"git@github.com:${repo}"|"git@github.com:${repo}.git") ;;
-                *) continue ;;
-              esac
-              [[ -z "${branch}" || "${branch}" == "HEAD" || "${branch}" == "null" ]] && continue
+              is_this_repo "${url}" || continue
+              [[ -z "${branch}"|| "${branch}" == "HEAD" || "${branch}" == "null" ]] && continue
               if [[ "${branch}" =~ [][*?{}!] ]]; then
                 echo "::notice::The branch pattern ${branch} in ${playbook} on ${ref} is not evaluated."
                 continue
@@ -182,15 +208,154 @@ jobs:
           # is built from the triggering branch and dispatched from that environment's branch,
           # which is the branch docs-publish checks, with the triggering branch in build-ref
           # unless it is that branch.
+          #
+          # A repository with several docsets (pdf-docsets) gets one PDF run for each docset
+          # instead, and only for the docsets the push changed - see select_pdf_docsets.
+          # pdf_docsets is a list of docset folders; a single blank entry is the one PDF of a
+          # repository with one docset.
+          # Strips a leading ./ and trailing / from a path, so paths compare equal.
+          normalize_path () {
+            local p="$1"
+            while [[ "${p}" == ./* ]]; do p="${p#./}"; done
+            echo "${p%/}"
+          }
+
+          # Sets pdf_docsets (the folders to build a PDF for, as written in start_paths) and
+          # pdf_shared (the shared folders, normalized). Rules, so that no PDF is left stale:
+          # - A change under a shared folder builds every docset.
+          # - A change under no docset (root files, the playbook, the UI bundle) builds every docset.
+          # - No usable range (not a push, a new branch, a force push, or 300 or more files, which
+          #   is all the compare API returns, without saying it stopped) builds every docset.
+          # - pdf-docset, from a manual run, is one folder or all.
+          select_pdf_docsets () {
+            local prefix="" text rows url start_path path folder all_reason="" i
+            local -a docset_paths=() docset_repo_paths=() shared_repo_paths=()
+            local picked=" "
+            pdf_docsets=()
+            pdf_shared=()
+            [[ -n "${DOCS_DIR}" && "${DOCS_DIR}" != "." ]] && prefix="${DOCS_DIR%/}/"
+
+            IFS=',' read -ra shared_raw <<< "${PDF_SHARED_PATHS}"
+            for path in "${shared_raw[@]}"; do
+              path=$(normalize_path "${path// /}")
+              [[ -z "${path}" ]] && continue
+              pdf_shared+=("${path}")
+              shared_repo_paths+=("${prefix}${path}")
+            done
+
+            # The docsets: the local start_paths of the playbook on the branch being built that
+            # have an antora.yml, less the shared folders. A start_path is relative to the root of
+            # the source, which is assumed to be docs-dir.
+            if ! text=$(gh api -H "Accept: application/vnd.github.raw" "repos/${GITHUB_REPOSITORY}/contents/${playbook}?ref=${my_branch}" 2>/dev/null); then
+              echo "::error::pdf-docsets: could not read ${playbook} on ${my_branch}."
+              return 1
+            fi
+            # shellcheck disable=SC2016 # $u is a yq variable, not a shell one
+            if ! rows=$(yq -r '.content.sources[] | select(.start_paths != null) | .url as $u | [.start_paths] | flatten | .[] | $u + "\t" + (. | tostring)' <<< "${text}" 2>/dev/null); then
+              echo "::error::pdf-docsets: could not read the sources in ${playbook} on ${my_branch}."
+              return 1
+            fi
+            while IFS=$'\t' read -r url start_path; do
+              [[ -z "${start_path}" ]] && continue
+              is_this_repo "${url}" || continue
+              folder=$(normalize_path "${start_path}")
+              [[ " ${pdf_shared[*]} " == *" ${folder} "* ]] && continue
+              if gh api "repos/${GITHUB_REPOSITORY}/contents/${prefix}${folder}/antora.yml?ref=${my_branch}" --silent 2>/dev/null; then
+                docset_paths+=("${folder}")
+                docset_repo_paths+=("${prefix}${folder}")
+              else
+                echo "::notice::${folder} is in the start_paths of ${playbook} but has no antora.yml on ${my_branch}, so it is not a docset and gets no PDF."
+              fi
+            done <<< "${rows}"
+            if [[ "${#docset_paths[@]}" -eq 0 ]]; then
+              echo "::error::pdf-docsets: no docset found. A docset is a folder in the local start_paths of ${playbook} that has an antora.yml."
+              return 1
+            fi
+
+            if [[ "${PDF_DOCSET}" == "all" ]]; then
+              all_reason="a manual run asked for all docsets"
+            elif [[ -n "${PDF_DOCSET}" ]]; then
+              folder=$(normalize_path "${PDF_DOCSET}")
+              [[ " ${docset_paths[*]} " == *" ${folder} "* ]] || {
+                echo "::error::pdf-docset '${PDF_DOCSET}' is not a docset. The docsets are: ${docset_paths[*]}"
+                return 1
+              }
+              pdf_docsets=("${folder}")
+              return 0
+            elif [[ "${EVENT_NAME}" != "push" ]]; then
+              all_reason="this is not a push, so there is nothing to compare"
+            elif [[ -z "${BEFORE}" || "${BEFORE}" =~ ^0+$ ]]; then
+              all_reason="the push has no previous commit (a new branch)"
+            else
+              local changes
+              if ! changes=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/compare/${BEFORE}...${AFTER}?per_page=100" \
+                --jq '.files[]? | [.filename, (.previous_filename // "")] | @tsv' 2>/dev/null); then
+                all_reason="the changes of the push could not be compared (a force push or a rewritten branch)"
+              elif [[ -n "${changes}" && "$(wc -l <<< "${changes}")" -ge 300 ]]; then
+                all_reason="the push changes 300 or more files, which is all the compare API returns"
+              else
+                local file previous f s matched
+                while IFS=$'\t' read -r file previous; do
+                  [[ -z "${file}" ]] && continue
+                  for f in "${file}" "${previous}"; do
+                    [[ -z "${f}" ]] && continue
+                    matched=""
+                    for s in "${shared_repo_paths[@]}"; do
+                      if [[ "${f}" == "${s}"/* ]]; then
+                        all_reason="${f} is in the shared folder ${s}"
+                        break 3
+                      fi
+                    done
+                    for i in "${!docset_repo_paths[@]}"; do
+                      if [[ "${f}" == "${docset_repo_paths[${i}]}"/* ]]; then
+                        picked+="${docset_paths[${i}]} "
+                        matched=1
+                      fi
+                    done
+                    if [[ -z "${matched}" ]]; then
+                      all_reason="${f} is in no docset"
+                      break 2
+                    fi
+                  done
+                done <<< "${changes}"
+              fi
+            fi
+
+            if [[ -n "${all_reason}" ]]; then
+              pdf_docsets=("${docset_paths[@]}")
+              echo "::notice::Building the PDF of every docset (${pdf_docsets[*]}): ${all_reason}."
+              return 0
+            fi
+            for folder in "${docset_paths[@]}"; do
+              [[ "${picked}" == *" ${folder} "* ]] && pdf_docsets+=("${folder}")
+            done
+            echo "Docsets with changes: ${pdf_docsets[*]:-none}"
+          }
+
           pdf_build='[]'
           if [[ "${PDF}" == "true" ]]; then
+            pdf_docsets=("")
+            pdf_shared=()
+            if [[ "${PDF_DOCSETS}" == "true" ]]; then
+              select_pdf_docsets || exit 1
+              if [[ "${#pdf_docsets[@]}" -eq 0 ]]; then
+                {
+                  echo "### No PDF to build"
+                  echo
+                  echo "No docset has changes in this push, so no PDF builds were triggered."
+                } >> "${GITHUB_STEP_SUMMARY}"
+              fi
+            fi
+            shared_csv=$(IFS=,; echo "${pdf_shared[*]}")
             for env in "${envs[@]}"; do
               ref="${dev_branch}"
               [[ "${env}" == "prod" ]] && ref="${prod_branch}"
               pdf_ref=""
               [[ "${my_branch}" != "${ref}" ]] && pdf_ref="${my_branch}"
-              pdf_build=$(jq -c --arg ref "${ref}" --arg env "${env}" --arg pdf_ref "${pdf_ref}" \
-                '. + [{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env,buildRefInput:$pdf_ref}]' <<< "${pdf_build}")
+              for docset in "${pdf_docsets[@]}"; do
+                pdf_build=$(jq -c --arg ref "${ref}" --arg env "${env}" --arg pdf_ref "${pdf_ref}" --arg docset "${docset}" --arg shared "${shared_csv}" \
+                  '. + [{workflow:"docs-generate-pdf.yml",buildRef:$ref,publishEnv:$env,buildRefInput:$pdf_ref,docsetPath:$docset,sharedPaths:$shared}]' <<< "${pdf_build}")
+              done
             done
           fi
 
@@ -204,7 +369,7 @@ jobs:
   # normally-named artifacts (no collisions, since they're separate runs, not jobs sharing
   # one run). Skipped when there is nothing to build, because an empty matrix is an error.
   trigger:
-    name: Trigger ${{ matrix.build.workflow }} (${{ matrix.build.buildRef }})
+    name: Trigger ${{ matrix.build.workflow }} (${{ matrix.build.buildRef }}${{ matrix.build.docsetPath && format(', {0}', matrix.build.docsetPath) || '' }})
     needs: plan
     if: ${{ needs.plan.outputs.builds != '[]' }}
     strategy:
@@ -226,6 +391,11 @@ jobs:
             const inputs = { 'publish-env': build.publishEnv }
             // Only a PDF of a branch other than the one it is dispatched on has a build-ref.
             if (build.buildRefInput) inputs['build-ref'] = build.buildRefInput
+            // Only a PDF of a repository with several docsets has these: the folder of the one
+            // docset to build, and the shared folders it depends on. A repository without them
+            // never gets inputs its workflow doesn't declare.
+            if (build.docsetPath) inputs['docset-path'] = build.docsetPath
+            if (build.docsetPath && build.sharedPaths) inputs['shared-paths'] = build.sharedPaths
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -243,5 +413,6 @@ jobs:
               ref: build.buildRef,
               inputs,
             })
-            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\` for \`${build.publishEnv}\``, true)
+            const docset = build.docsetPath ? ` (docset \`${build.docsetPath}\`)` : ''
+            core.summary.addRaw(`Triggered \`${build.workflow}\` on branch \`${build.buildRef}\` for \`${build.publishEnv}\`${docset}`, true)
             await core.summary.write()
