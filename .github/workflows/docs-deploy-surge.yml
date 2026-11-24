@@ -218,7 +218,8 @@ jobs:
           SURGE_TOKEN: "${{ secrets.DOCS_SURGE_TOKEN }}"
           DEPLOY_DIR: ${{ runner.temp }}/deploy-docs
         run: |
-          npm install -g surge
+          # install only a surge release that is at least 7 days old
+          npm install -g surge --min-release-age=7
           cd "$DEPLOY_DIR"
           surge . "$DEPLOY_URL" --token "$SURGE_TOKEN"
 
