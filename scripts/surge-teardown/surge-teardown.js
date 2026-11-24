@@ -1,11 +1,15 @@
 import util from 'util';
-import { exec as execCallback } from 'child_process';
+import { execFile as execFileCallback } from 'child_process';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { Octokit } from 'octokit';
 import { env } from 'process';
 import dotenv from 'dotenv';
 
-const exec = util.promisify(execCallback);
+const execFile = util.promisify(execFileCallback);
+
+// use the surge installed as a dependency of this script, not a global one
+const surge = fileURLToPath(new URL('./node_modules/.bin/surge', import.meta.url));
 
 // quiet: dotenv 17+ logs a line on every load unless told not to
 dotenv.config({ quiet: true })
@@ -17,7 +21,7 @@ const octokit = new Octokit({
 
 async function teardownDeploy(deploy) {
   try {
-    const { stdout, stderr } = await exec(`surge teardown ${deploy}`);
+    const { stdout, stderr } = await execFile(surge, ['teardown', deploy]);
     console.log('stdout:', stdout);
     console.log('stderr:', stderr);
   }catch (err) {
@@ -27,7 +31,7 @@ async function teardownDeploy(deploy) {
 
 async function surgeList() {
   try {
-      const { stdout, stderr } = await exec('surge list');
+      const { stdout, stderr } = await execFile(surge, ['list']);
       console.log('stdout:', stdout);
       console.log('stderr:', stderr);
 

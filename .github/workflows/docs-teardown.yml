@@ -43,7 +43,8 @@ jobs:
           SURGE_TOKEN: "${{ secrets.DOCS_SURGE_TOKEN }}"
           DEPLOY_URL: ${{ steps.get-deploy-url.outputs.deploy-url }}
         run: |
-          npm install -g surge
+          # install only a surge release that is at least 7 days old
+          npm install -g surge --min-release-age=7
           surge teardown $DEPLOY_URL --token "$SURGE_TOKEN"
 
       - name: Comment on PR
