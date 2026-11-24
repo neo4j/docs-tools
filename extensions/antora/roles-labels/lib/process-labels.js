@@ -16,7 +16,8 @@ const { parse: parseHTML } = require('node-html-parser')
 const semver = require('semver')
 const rolesData = require('../data/roles.json')
 
-const lowercaseProducts = rolesData.products.map((p) => p.toLowerCase())
+// lowercase product name -> canonical display name from roles.json (eg apoc -> APOC)
+const productDisplayNames = new Map(rolesData.products.map((p) => [p.toLowerCase(), p]))
 
 // synonyms can be applied as bare roles (eg [.neo4j-ee.aura-dbe]) without the label-- prefix
 // build a selector so these are picked up alongside label-- classes
@@ -28,12 +29,6 @@ const BARE_HEADING_TAGS = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
 
 function createElement (el, className, text = '') {
     return parseHTML(`<${el} class="${className}">${text}</${el}>`)
-}
-
-function camelCased (str) {
-    return str.split(/-|\./)
-        .map((text) => text.substr(0, 1).toUpperCase() + text.substr(1))
-        .join('')
 }
 
 function getLabelDetails (src, el, role, attributes, { logger, defaultLogLevel, replaceInlineLabelText }) {
@@ -121,7 +116,7 @@ function getLabelDetails (src, el, role, attributes, { logger, defaultLogLevel, 
 
     // if anything is left it might be a product name
     while (dataExtras.length > 0) {
-        dataProduct = lowercaseProducts.indexOf(dataExtras.join(' ').toLowerCase()) !== -1 ? camelCased(dataExtras.join(' ')) : ''
+        dataProduct = productDisplayNames.get(dataExtras.join(' ').toLowerCase()) || ''
         if (!dataProduct) dataExtras.pop()
         else break
     }

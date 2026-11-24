@@ -25,7 +25,7 @@
   "license": "MIT",
   "dependencies": {
     "@antora/pdf-extension": "1.0.0",
-    "@neo4j-antora/roles-labels": "0.1.16",
+    "@neo4j-antora/roles-labels": "0.1.17",
     "@neo4j-documentation/macros": "1.0.4",
     "@neo4j-documentation/remote-include": "1.0.0",
     "js-yaml": "5.4.2",
